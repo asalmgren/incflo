@@ -8,8 +8,6 @@ using namespace amrex;
 void godunov::predict_godunov (int lev, Real time, MultiFab& u_mac, MultiFab& v_mac,
                                MultiFab& w_mac, MultiFab const& mac_phi, 
                                MultiFab const& vel, MultiFab const& vel_forces,
-                               MultiFab const& inv_rho_x, MultiFab const& inv_rho_y,
-                               MultiFab const& inv_rho_z,
                                Vector<BCRec> const& h_bcrec,
                                       BCRec  const* d_bcrec,
                                Vector<Geometry> geom, Real l_dt, 
@@ -40,9 +38,6 @@ void godunov::predict_godunov (int lev, Real time, MultiFab& u_mac, MultiFab& v_
             Array4<Real      > const& a_wmac      = w_mac.array(mfi);
 
             Array4<Real const> const& mac_phi_arr   = mac_phi.const_array(mfi);
-            Array4<Real const> const& inv_rho_x_arr = inv_rho_x.const_array(mfi);
-            Array4<Real const> const& inv_rho_y_arr = inv_rho_y.const_array(mfi);
-            Array4<Real const> const& inv_rho_z_arr = inv_rho_z.const_array(mfi);
 
             Array4<Real const> const& gmacphi_x_arr = gmacphi_x.const_array(mfi);
             Array4<Real const> const& gmacphi_y_arr = gmacphi_y.const_array(mfi);
@@ -94,7 +89,6 @@ void godunov::predict_godunov (int lev, Real time, MultiFab& u_mac, MultiFab& v_
 
             predict_godunov_on_box(lev, bx, ncomp, xbx, ybx, zbx, a_umac, a_vmac, a_wmac,
                                    a_vel, u_ad, v_ad, w_ad, mac_phi_arr, 
-                                   inv_rho_x_arr, inv_rho_y_arr, inv_rho_z_arr,
                                    Imx, Imy, Imz, Ipx, Ipy, Ipz, a_f, 
                                    domain, dx, l_dt, d_bcrec, use_forces_in_trans, 
                                    gmacphi_x_arr, gmacphi_y_arr, gmacphi_z_arr,
@@ -200,9 +194,6 @@ void godunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
                                       Array4<Real const> const& v_ad,
                                       Array4<Real const> const& w_ad,
                                       Array4<Real const> const& mac_phi,
-                                      Array4<Real const> const& inv_rho_x,
-                                      Array4<Real const> const& inv_rho_y,
-                                      Array4<Real const> const& inv_rho_z,
                                       Array4<Real> const& Imx,
                                       Array4<Real> const& Imy,
                                       Array4<Real> const& Imz,
