@@ -15,8 +15,7 @@
 
 namespace hybrid {
 
-    void predict_vels_on_faces (int lev,  
-                                AMREX_D_DECL(amrex::MultiFab& u_mac,
+    void predict_vels_on_faces (AMREX_D_DECL(amrex::MultiFab& u_mac,
                                              amrex::MultiFab& v_mac, 
                                              amrex::MultiFab& w_mac),
                                 amrex::MultiFab const& vel,

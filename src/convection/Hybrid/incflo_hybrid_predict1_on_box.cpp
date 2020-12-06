@@ -72,7 +72,7 @@ hybrid::predict_vels_on_faces ( Box const& bx,
 
             Real upls = vcc(i  ,j,k,0) - 0.5 * amrex_calc_xslope_extdir(
                  i  ,j,k,0,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
-            Real umns = (i-1,j,k,0) + 0.5 * amrex_calc_xslope_extdir(
+            Real umns = vcc(i-1,j,k,0) + 0.5 * amrex_calc_xslope_extdir(
                  i-1,j,k,0,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
 
             Real vpls = vcc(i  ,j,k,1) - 0.5 * amrex_calc_xslope_extdir(

@@ -36,9 +36,11 @@ hybrid::predict_vels_with_forces ( Box const& bx,
                                    Array4<Real const> const& dudt,
                                    Vector<BCRec> const& h_bcrec,
                                           BCRec  const* d_bcrec,
-                                   Real dt, Geometry& geom )
+                                   Real dt_in, Geometry& geom )
 {
     constexpr Real small_vel = 1.e-10;
+
+    Real dt = 0.0;
 
     int ncomp = AMREX_SPACEDIM; // This is only used because h_bcrec and d_bcrec hold the 
                                 // bc's for all three velocity components

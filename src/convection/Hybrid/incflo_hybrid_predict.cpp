@@ -21,10 +21,9 @@ namespace {
 }
 
 void 
-hybrid::predict_vels_on_faces (int lev, 
-                               AMREX_D_DECL(MultiFab& u_mac, 
-                                            MultiFab& v_mac,
-                                            MultiFab& w_mac), 
+hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac, 
+                                             MultiFab& v_mac,
+                                             MultiFab& w_mac), 
                                MultiFab const& vel,
                                MultiFab const& vel_forces,
                                Vector<BCRec> const& h_bcrec,
@@ -153,10 +152,6 @@ hybrid::predict_vels_on_faces (int lev,
 
             FArrayBox tmpfab(tmpbox, AMREX_SPACEDIM*AMREX_SPACEDIM);
             Elixir eli = tmpfab.elixir();
-
-            AMREX_D_TERM(Array4<Real> fx = tmpfab.array(0);,
-                         Array4<Real> fy = tmpfab.array(3);,
-                         Array4<Real> fz = tmpfab.array(6););
 
 #ifdef AMREX_USE_EB
            Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz), AMREX_D_DECL(apx, apy, apz);

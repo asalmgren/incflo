@@ -24,9 +24,6 @@ incflo::compute_MAC_projected_velocities (
     BL_PROFILE("incflo::compute_MAC_projected_velocities()");
     Real l_dt = m_dt;
 
-    amrex::Print() << "CONV_U NGHOST " << conv_u[0]->nGrow() << std::endl;
-    amrex::Print() << "VELF   NGHOST " << vel_forces[0]->nGrow() << std::endl;
-
     auto mac_phi = get_mac_phi();
 
     Vector<Array<MultiFab const*,AMREX_SPACEDIM> > inv_rho(finest_level+1);
@@ -108,7 +105,7 @@ incflo::compute_MAC_projected_velocities (
                                        geom); 
         } else if (m_advection_type == "Hybrid") {
 
-            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]),
+            hybrid::predict_vels_on_faces(AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]),
                                           *vel[lev], *vel_forces[lev], 
                                           get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
 #ifdef AMREX_USE_EB
