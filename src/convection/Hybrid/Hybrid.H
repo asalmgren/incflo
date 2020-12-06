@@ -20,21 +20,19 @@ namespace hybrid {
                                              amrex::MultiFab& v_mac, 
                                              amrex::MultiFab& w_mac),
                                 amrex::MultiFab const& vel,
+                                amrex::MultiFab const& vel_forces,
                                 amrex::MultiFab& dudt,
                                 amrex::Vector<amrex::BCRec> const& h_bcrec,
                                               amrex::BCRec  const* d_bcrec,
 #ifdef AMREX_USE_EB
                                 amrex::EBFArrayBoxFactory const* ebfact,
 #endif
-                                amrex::Geometry& geom);
+                                amrex::Real dt, amrex::Geometry& geom);
 
     void predict_vels_on_faces (amrex::Box const& bx,
                                 AMREX_D_DECL(amrex::Box const& ubx,
                                              amrex::Box const& vbx,
                                              amrex::Box const& wbx),
-                                AMREX_D_DECL(amrex::Array4<amrex::Real> const& u,
-                                             amrex::Array4<amrex::Real> const& v,
-                                             amrex::Array4<amrex::Real> const& w),
                                 AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
                                              amrex::Array4<amrex::Real> const& fy,
                                              amrex::Array4<amrex::Real> const& fz),
@@ -42,6 +40,20 @@ namespace hybrid {
                                 amrex::Vector<amrex::BCRec> const& h_bcrec,
                                               amrex::BCRec  const* d_bcrec,
                                 amrex::Geometry& geom);
+
+    void predict_vels_with_forces (amrex::Box const& bx,
+                                AMREX_D_DECL(amrex::Box const& ubx,
+                                             amrex::Box const& vbx,
+                                             amrex::Box const& wbx),
+                                AMREX_D_DECL(amrex::Array4<amrex::Real> const& u,
+                                             amrex::Array4<amrex::Real> const& v,
+                                             amrex::Array4<amrex::Real> const& w),
+                                amrex::Array4<amrex::Real const> const& vel,
+                                amrex::Array4<amrex::Real const> const& vel_forces,
+                                amrex::Array4<amrex::Real const> const& du_dt,
+                                amrex::Vector<amrex::BCRec> const& h_bcrec,
+                                              amrex::BCRec  const* d_bcrec,
+                                amrex::Real dt, amrex::Geometry& geom);
 
     void compute_convective_fluxes (int lev, amrex::Box const& bx, int ncomp,
                                     AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
@@ -60,10 +72,10 @@ namespace hybrid {
                                    AMREX_D_DECL(amrex::Box const& ubx,
                                                 amrex::Box const& vbx,
                                                 amrex::Box const& wbx),
-                                   AMREX_D_DECL(amrex::Array4<amrex::Real> const& u,
-                                                amrex::Array4<amrex::Real> const& v,
-                                                amrex::Array4<amrex::Real> const& w),
-                                   amrex::Array4<amrex::Real const> const& vcc,
+                                   AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
+                                                amrex::Array4<amrex::Real> const& fy,
+                                                amrex::Array4<amrex::Real> const& fz),
+                                   amrex::Array4<amrex::Real const> const& vel,
                                    amrex::Array4<amrex::EBCellFlag const> const& flag,
                                    AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
                                                 amrex::Array4<amrex::Real const> const& fcy,
@@ -72,6 +84,25 @@ namespace hybrid {
                                    amrex::Vector<amrex::BCRec> const& h_bcrec,
                                                  amrex::BCRec  const* d_bcrec,
                                    amrex::Geometry& geom);
+
+    void predict_vels_with_forces_eb (amrex::Box const& bx,
+                                   AMREX_D_DECL(amrex::Box const& ubx,
+                                                amrex::Box const& vbx,
+                                                amrex::Box const& wbx),
+                                   AMREX_D_DECL(amrex::Array4<amrex::Real> const& u,
+                                                amrex::Array4<amrex::Real> const& v,
+                                                amrex::Array4<amrex::Real> const& w),
+                                   amrex::Array4<amrex::Real const> const& vel,
+                                   amrex::Array4<amrex::Real const> const& vel_forces,
+                                   amrex::Array4<amrex::Real const> const& du_dt,
+                                   amrex::Array4<amrex::EBCellFlag const> const& flag,
+                                   AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
+                                                amrex::Array4<amrex::Real const> const& fcy,
+                                                amrex::Array4<amrex::Real const> const& fcz), 
+                                   amrex::Array4<amrex::Real const> const& ccc,
+                                   amrex::Vector<amrex::BCRec> const& h_bcrec,
+                                                 amrex::BCRec  const* d_bcrec,
+                                   amrex::Real dt, amrex::Geometry& geom);
 
     void compute_convective_fluxes_eb (int lev, amrex::Box const& bx, int ncomp,
                                        AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,

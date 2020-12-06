@@ -107,15 +107,15 @@ incflo::compute_MAC_projected_velocities (
 
 #ifdef AMREX_USE_EB
             const EBFArrayBoxFactory* ebfact = &EBFactory(lev);
-            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), *vel[lev],
-                                          *conv_u[lev], 
+            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]),
+                                          *vel[lev], *vel_forces[lev], *conv_u[lev], 
                                           get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
-                                          ebfact, geom[lev]); 
+                                          ebfact, l_dt, geom[lev]); 
 #else
-            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), *vel[lev],
-                                          *conv_u[lev], 
+            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), 
+                                          *vel[lev], *vel_forces[lev], *conv_u[lev], 
                                           get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
-                                          geom[lev]); 
+                                          l_dt, geom[lev]); 
 #endif
         } else {
             amrex::Abort("Dont know this advection type");
