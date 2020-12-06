@@ -51,8 +51,6 @@ hybrid::predict_vels_on_faces ( Box const& bx,
     const int domain_khi = domain_box.bigEnd(2);
 #endif
 
-    FArrayBox tmpfab(amrex::grow(bx,1), AMREX_SPACEDIM);
-
     // At an ext_dir or hoextrap boundary, 
     //    the boundary value is on the face, not cell center.
     auto extdir_lohi = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::x));

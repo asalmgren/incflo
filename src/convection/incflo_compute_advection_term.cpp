@@ -266,7 +266,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         }
         Gpu::streamSynchronize();
     }
-    else if (m_advection_type == "MOL")
+    else if ( (m_advection_type == "MOL") or (m_advection_type == "Hybrid") )
     {
         Box tmpbox = amrex::surroundingNodes(bx);
         int tmpcomp = nmaxcomp*AMREX_SPACEDIM;

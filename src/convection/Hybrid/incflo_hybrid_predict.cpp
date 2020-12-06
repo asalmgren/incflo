@@ -27,7 +27,6 @@ hybrid::predict_vels_on_faces (int lev,
                                             MultiFab& w_mac), 
                                MultiFab const& vel,
                                MultiFab const& vel_forces,
-                               MultiFab& dudt,
                                Vector<BCRec> const& h_bcrec,
                                    BCRec  const* d_bcrec,
 #ifdef AMREX_USE_EB
@@ -41,6 +40,9 @@ hybrid::predict_vels_on_faces (int lev,
     auto const& ccent = ebfact->getCentroid();
     auto const& vfrac = ebfact->getVolFrac();
 #endif
+
+    // Temporary to hold div(uu) computed in Step 1 to use as source term in Step 2
+    MultiFab dudt(vel.boxArray(), vel.DistributionMap(), AMREX_SPACEDIM, 1);
 
     // 
     // STEP 1:  Compute div(uu) by predicting to faces, upwinding, and computing the divergence
@@ -66,8 +68,8 @@ hybrid::predict_vels_on_faces (int lev,
             Elixir eli = tmpfab.elixir();
 
             AMREX_D_TERM(Array4<Real> fx = tmpfab.array(0);,
-                         Array4<Real> fy = tmpfab.array(3);,
-                         Array4<Real> fz = tmpfab.array(6););
+                         Array4<Real> fy = tmpfab.array(AMREX_SPACEDIM);,
+                         Array4<Real> fz = tmpfab.array(2*AMREX_SPACEDIM););
 
 #ifdef AMREX_USE_EB
            Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz), AMREX_D_DECL(apx, apy, apz);
@@ -118,8 +120,13 @@ hybrid::predict_vels_on_faces (int lev,
                 const auto dxinv = geom.InvCellSizeArray();
                 amrex_compute_divergence(bx, dudt_arr, AMREX_D_DECL(fx, fy, fz), dxinv);
             }
-        }
+        } // MFIter
     }
+
+    // 
+    // Make sure to FillBoundary since we will need the ghost cell values
+    // 
+    dudt.FillBoundary(geom.periodicity());
 
     // 
     // STEP 2:  Predict to faces using u_t = -div(uu) that was computed above
@@ -196,7 +203,6 @@ hybrid::predict_vels_on_faces (int lev,
                 hybrid::predict_vels_with_forces(bx,AMREX_D_DECL(ubx,vbx,wbx),
                                                  AMREX_D_DECL(u,v,w),vel_arr,vf_arr,dudt_arr,
                                                  h_bcrec,d_bcrec,dt,geom);
-                const auto dxinv = geom.InvCellSizeArray();
             }
         }
     }

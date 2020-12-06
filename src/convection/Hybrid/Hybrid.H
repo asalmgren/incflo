@@ -21,7 +21,6 @@ namespace hybrid {
                                              amrex::MultiFab& w_mac),
                                 amrex::MultiFab const& vel,
                                 amrex::MultiFab const& vel_forces,
-                                amrex::MultiFab& dudt,
                                 amrex::Vector<amrex::BCRec> const& h_bcrec,
                                               amrex::BCRec  const* d_bcrec,
 #ifdef AMREX_USE_EB
