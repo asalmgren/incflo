@@ -331,12 +331,16 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         else
 #endif
         {
+            const auto dxinv = geom[lev].InvCellSizeArray();
+
             // velocity
             mol::compute_convective_fluxes(lev, bx, AMREX_SPACEDIM, AMREX_D_DECL(fx, fy, fz), vel,
                                            AMREX_D_DECL(umac, vmac, wmac),
                                            get_velocity_bcrec().data(),
                                            get_velocity_bcrec_device_ptr(), Geom());
-            mol::compute_convective_rate(lev, bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), Geom());
+
+            amrex_compute_divergence(bx,dvdt,AMREX_D_DECL(fx,fy,fz),dxinv);
+            // mol::compute_convective_rate(lev, bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), Geom());
 
             // density
             if (!m_constant_density) {
@@ -344,7 +348,8 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                AMREX_D_DECL(umac, vmac, wmac),
                                                get_density_bcrec().data(),
                                                get_density_bcrec_device_ptr(), Geom());
-                mol::compute_convective_rate(lev, bx, 1, drdt, AMREX_D_DECL(fx, fy, fz), Geom());
+                amrex_compute_divergence(bx,drdt,AMREX_D_DECL(fx,fy,fz), dxinv);
+                // mol::compute_convective_rate(lev, bx, 1, drdt, AMREX_D_DECL(fx, fy, fz), Geom());
             }
 
             // tracer
@@ -353,7 +358,8 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                AMREX_D_DECL(umac, vmac, wmac),
                                                get_tracer_bcrec().data(),
                                                get_tracer_bcrec_device_ptr(), Geom());
-                mol::compute_convective_rate(lev, bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), Geom());
+                amrex_compute_divergence(bx,dtdt,AMREX_D_DECL(fx,fy,fz), dxinv);
+                // mol::compute_convective_rate(lev, bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), Geom());
             }
         }
     } else if (m_advection_type == "Hybrid") {

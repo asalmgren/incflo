@@ -1,5 +1,6 @@
 #include <Hybrid.H>
 #include <AMReX_Slopes_K.H>
+#include <AMReX_MultiFabUtil.H>
 
 using namespace amrex;
 
@@ -37,6 +38,7 @@ hybrid::predict_vels_on_faces (int lev,
     auto const& flags = ebfact->getMultiEBCellFlagFab();
     auto const& fcent = ebfact->getFaceCent();
     auto const& ccent = ebfact->getCentroid();
+    auto const& vfrac = ebfact->getVolFrac();
 #endif
 
 #ifdef _OPENMP
@@ -66,8 +68,17 @@ hybrid::predict_vels_on_faces (int lev,
                          Array4<Real> fz = tmpfab.array(6););
 
 #ifdef AMREX_USE_EB
-            EBCellFlagFab const& flagfab = flags[mfi];
-            Array4<EBCellFlag const> const& flagarr = flagfab.const_array();
+           Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz), AMREX_D_DECL(apx, apy, apz);
+
+           EBCellFlagFab const& flagfab = flags[mfi];
+
+           bool regular = (flagfab.getType(amrex::grow(bx,2)) == FabType::regular);
+           if (!regular) {
+               AMREX_D_TERM(apx = ebfact->getAreaFrac()[0]->const_array(mfi);,
+                            apy = ebfact->getAreaFrac()[1]->const_array(mfi);,
+                            apz = ebfact->getAreaFrac()[2]->const_array(mfi););
+            }
+            Array4<EBCellFlag const> const& flag_arr = flagfab.const_array();
             auto const typ = flagfab.getType(amrex::grow(bx,2));
             if (typ == FabType::covered)
             {
@@ -87,12 +98,14 @@ hybrid::predict_vels_on_faces (int lev,
                 AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
                              Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
                              Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
-                Array4<Real const> const& ccc = ccent.const_array(mfi);
+                Array4<Real const> ccent_arr = ccent.const_array(mfi);
+                Array4<Real const> vfrac_arr = vfrac.const_array(mfi);
+                
                 hybrid::predict_vels_on_faces_eb(bx,AMREX_D_DECL(ubx,vbx,wbx),
-                                                 AMREX_D_DECL(u,v,w),vcc,flagarr,AMREX_D_DECL(fcx,fcy,fcz),ccc,
+                                                 AMREX_D_DECL(u,v,w),vcc,flag_arr,AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                                  h_bcrec,d_bcrec,geom);
-//              hybrid::compute_convective_rate_eb(bx, AMREX_SPACEDIM, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
-//                                                 flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom);
+                hybrid::compute_convective_rate_eb(bx, AMREX_SPACEDIM, dudt_arr, AMREX_D_DECL(fx, fy, fz),
+                                                   flag_arr, vfrac_arr, AMREX_D_DECL(apx, apy, apz), geom);
             }
             else
 #endif
@@ -100,7 +113,9 @@ hybrid::predict_vels_on_faces (int lev,
                 hybrid::predict_vels_on_faces(bx,AMREX_D_DECL(ubx,vbx,wbx),
                                               AMREX_D_DECL(u,v,w), AMREX_D_DECL(fx,fy,fz),
                                               vcc,h_bcrec,d_bcrec,geom);
-                hybrid::compute_convective_rate(bx, AMREX_SPACEDIM, dudt_arr, AMREX_D_DECL(fx, fy, fz), geom);
+                const auto dxinv = geom.InvCellSizeArray();
+                amrex_compute_divergence(bx, dudt_arr, AMREX_D_DECL(fx, fy, fz), dxinv);
+                // hybrid::compute_convective_rate(bx, AMREX_SPACEDIM, dudt_arr, AMREX_D_DECL(fx, fy, fz), geom);
             }
         }
     }
@@ -215,10 +230,10 @@ hybrid::predict_vels_on_faces ( Box const& bx,
 #endif
             }
 
-            fx(i,j,k,0) = u_val;
-            fx(i,j,k,1) = v_val;
+            fx(i,j,k,0) = u_val*u_val;
+            fx(i,j,k,1) = v_val*u_val;
 #if (AMREX_SPACEDIM == 3)
-            fx(i,j,k,2) = w_val;
+            fx(i,j,k,2) = w_val*u_val;
 #endif
         });
     }
@@ -266,10 +281,10 @@ hybrid::predict_vels_on_faces ( Box const& bx,
                 }
             }
 
-            fx(i,j,k,0) = u_val;
-            fx(i,j,k,1) = v_val;
+            fx(i,j,k,0) = u_val*u_val;
+            fx(i,j,k,1) = v_val*u_val;
 #if (AMREX_SPACEDIM == 3)
-            fx(i,j,k,2) = w_val;
+            fx(i,j,k,2) = w_val*u_val;
 #endif
         });
     }
@@ -350,10 +365,10 @@ hybrid::predict_vels_on_faces ( Box const& bx,
 #endif
             }
 
-            fy(i,j,k,0) = u_val;
-            fy(i,j,k,1) = v_val;
+            fy(i,j,k,0) = u_val*v_val;
+            fy(i,j,k,1) = v_val*v_val;
 #if (AMREX_SPACEDIM == 3)
-            fy(i,j,k,2) = w_val;
+            fy(i,j,k,2) = w_val*v_val;
 #endif
         });
     }
@@ -400,10 +415,10 @@ hybrid::predict_vels_on_faces ( Box const& bx,
                 }
             }
 
-            fy(i,j,k,0) = u_val;
-            fy(i,j,k,1) = v_val;
+            fy(i,j,k,0) = u_val*v_val;
+            fy(i,j,k,1) = v_val*v_val;
 #if (AMREX_SPACEDIM == 3)
-            fy(i,j,k,2) = w_val;
+            fy(i,j,k,2) = w_val*v_val;
 #endif
         });
     }
@@ -486,74 +501,3 @@ hybrid::predict_vels_on_faces ( Box const& bx,
     }
 #endif
 }
-
-void 
-hybrid::compute_convective_rate (Box const& bx, int ncomp,
-                                Array4<Real> const& dUdt,
-                                AMREX_D_DECL(Array4<Real const> const& fx,
-                                             Array4<Real const> const& fy,
-                                             Array4<Real const> const& fz),
-                                Geometry& geom)
-{
-    const auto dxinv = geom.InvCellSizeArray();
-    amrex::ParallelFor(bx, ncomp,
-    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-    {
-#if (AMREX_SPACEDIM == 3)
-        dUdt(i,j,k,n) = dxinv[0] * (fx(i,j,k,n) - fx(i+1,j,k,n))
-            +           dxinv[1] * (fy(i,j,k,n) - fy(i,j+1,k,n))
-            +           dxinv[2] * (fz(i,j,k,n) - fz(i,j,k+1,n));
-#else
-        dUdt(i,j,k,n) = dxinv[0] * (fx(i,j,k,n) - fx(i+1,j,k,n))
-            +           dxinv[1] * (fy(i,j,k,n) - fy(i,j+1,k,n));
-#endif
-    });
-}
-
-#ifdef AMREX_USE_EB
-void 
-hybrid::compute_convective_rate_eb (Box const& bx, int ncomp,
-                                 Array4<Real> const& dUdt,
-                                 AMREX_D_DECL(Array4<Real const> const& fx,
-                                              Array4<Real const> const& fy,
-                                              Array4<Real const> const& fz),
-                                 Array4<EBCellFlag const> const& flag,
-                                 Array4<Real const> const& vfrac,
-                                 AMREX_D_DECL(Array4<Real const> const& apx,
-                                              Array4<Real const> const& apy,
-                                              Array4<Real const> const& apz),
-                                 Geometry& geom)
-{
-    const auto dxinv = geom.InvCellSizeArray();
-    const Box dbox   = geom.growPeriodicDomain(2);
-    amrex::ParallelFor(bx, ncomp,
-    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-    {
-#if (AMREX_SPACEDIM == 3)
-        if (!dbox.contains(IntVect(AMREX_D_DECL(i,j,k))) or flag(i,j,k).isCovered()) {
-            dUdt(i,j,k,n) = 0.0;
-        } else if (flag(i,j,k).isRegular()) {
-            dUdt(i,j,k,n) = dxinv[0] * (fx(i,j,k,n) - fx(i+1,j,k,n))
-                +           dxinv[1] * (fy(i,j,k,n) - fy(i,j+1,k,n))
-                +           dxinv[2] * (fz(i,j,k,n) - fz(i,j,k+1,n));
-        } else {
-            dUdt(i,j,k,n) = (1.0/vfrac(i,j,k)) *
-                ( dxinv[0] * (apx(i,j,k)*fx(i,j,k,n) - apx(i+1,j,k)*fx(i+1,j,k,n))
-                + dxinv[1] * (apy(i,j,k)*fy(i,j,k,n) - apy(i,j+1,k)*fy(i,j+1,k,n))
-                + dxinv[2] * (apz(i,j,k)*fz(i,j,k,n) - apz(i,j,k+1)*fz(i,j,k+1,n)) );
-        }
-#else
-        if (!dbox.contains(IntVect(AMREX_D_DECL(i,j,k))) or flag(i,j,k).isCovered()) {
-            dUdt(i,j,k,n) = 0.0;
-        } else if (flag(i,j,k).isRegular()) {
-            dUdt(i,j,k,n) = dxinv[0] * (fx(i,j,k,n) - fx(i+1,j,k,n))
-                +           dxinv[1] * (fy(i,j,k,n) - fy(i,j+1,k,n));
-        } else {
-            dUdt(i,j,k,n) = (1.0/vfrac(i,j,k)) *
-                ( dxinv[0] * (apx(i,j,k)*fx(i,j,k,n) - apx(i+1,j,k)*fx(i+1,j,k,n))
-                + dxinv[1] * (apy(i,j,k)*fy(i,j,k,n) - apy(i,j+1,k)*fy(i,j+1,k,n)) );
-        }
-#endif
-    });
-}
-#endif

@@ -55,13 +55,6 @@ namespace hybrid {
                                     amrex::BCRec const* d_bcrec,
                                     amrex::Vector<amrex::Geometry> geom);
 
-    void compute_convective_rate (amrex::Box const& bx, int ncomp,
-                                  amrex::Array4<amrex::Real> const& dUdt,
-                                  AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fx,
-                                               amrex::Array4<amrex::Real const> const& fy,
-                                               amrex::Array4<amrex::Real const> const& fz),
-                                  amrex::Geometry& geom);
-
 #ifdef AMREX_USE_EB
     void predict_vels_on_faces_eb (amrex::Box const& bx,
                                    AMREX_D_DECL(amrex::Box const& ubx,
