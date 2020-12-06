@@ -24,26 +24,26 @@ namespace {
 
 #ifdef AMREX_USE_EB
 void 
-hybrid::predict_vels_on_faces_eb (int lev, Box const& ccbx,
-                               AMREX_D_DECL(Box const& ubx, 
-                                            Box const& vbx, 
-                                            Box const& wbx),
-                               AMREX_D_DECL(Array4<Real> const& u, 
-                                            Array4<Real> const& v,
-                                            Array4<Real> const& w), 
-                               Array4<Real const> const& vcc,
-                               Array4<EBCellFlag const> const& flag,
-                               AMREX_D_DECL(Array4<Real const> const& fcx,
-                                            Array4<Real const> const& fcy,
-                                            Array4<Real const> const& fcz),
-                               Array4<Real const> const& ccc,
-                               Vector<BCRec> const& h_bcrec,
-                                      BCRec  const* d_bcrec,
-                               Vector<Geometry> geom)
+hybrid::predict_vels_on_faces_eb (Box const& bx,
+                                  AMREX_D_DECL(Box const& ubx, 
+                                               Box const& vbx, 
+                                               Box const& wbx),
+                                  AMREX_D_DECL(Array4<Real> const& u, 
+                                               Array4<Real> const& v,
+                                               Array4<Real> const& w), 
+                                  Array4<Real const> const& vcc,
+                                  Array4<EBCellFlag const> const& flag,
+                                  AMREX_D_DECL(Array4<Real const> const& fcx,
+                                               Array4<Real const> const& fcy,
+                                               Array4<Real const> const& fcz),
+                                  Array4<Real const> const& ccc,
+                                  Vector<BCRec> const& h_bcrec,
+                                         BCRec  const* d_bcrec,
+                               Geometry& geom)
 {
     constexpr Real small_vel = 1.e-10;
 
-    const Box& domain_box = geom[lev].Domain();
+    const Box& domain_box = geom.Domain();
     const int domain_ilo = domain_box.smallEnd(0);
     const int domain_ihi = domain_box.bigEnd(0);
     const int domain_jlo = domain_box.smallEnd(1);

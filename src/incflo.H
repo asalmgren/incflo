@@ -120,7 +120,8 @@ public: // for cuda
                                   AMREX_D_DECL(amrex::Vector<amrex::MultiFab*> const& inv_rho_x,
                                                amrex::Vector<amrex::MultiFab*> const& inv_rho_y,
                                                amrex::Vector<amrex::MultiFab*> const& inv_rho_z),
-                                  amrex::Vector<amrex::MultiFab      *> const& vel_forces,
+                                  amrex::Vector<amrex::MultiFab*> const& conv_u, // just used as temp space
+                                  amrex::Vector<amrex::MultiFab*> const& vel_forces,
                                   amrex::Real time);
 
     void compute_convective_term (amrex::Box const& bx, int lev, amrex::MFIter const& mfi,

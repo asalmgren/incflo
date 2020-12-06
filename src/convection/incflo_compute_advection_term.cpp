@@ -83,11 +83,12 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
         }
     }
 
+    // Note we pass conv_u in here just as a temporary
     compute_MAC_projected_velocities(vel, 
                                      AMREX_D_DECL(u_mac,v_mac,w_mac),
                                      AMREX_D_DECL(GetVecOfPtrs(inv_rho_x), GetVecOfPtrs(inv_rho_y),
                                                   GetVecOfPtrs(inv_rho_z)),
-                                     vel_forces, time);
+                                     vel_forces, conv_u, time);
 
     // We now re-compute the velocity forcing terms including the pressure gradient,
     //    and compute the tracer forcing terms for the first time

@@ -17,7 +17,8 @@ incflo::compute_MAC_projected_velocities (
                                  AMREX_D_DECL(Vector<MultiFab*> const& inv_rho_x,
                                               Vector<MultiFab*> const& inv_rho_y,
                                               Vector<MultiFab*> const& inv_rho_z),
-                                 Vector<MultiFab*      > const& vel_forces,
+                                 Vector<MultiFab*> const& vel_forces,
+                                 Vector<MultiFab*> const& conv_u,
                                  Real time)
 {
     BL_PROFILE("incflo::compute_MAC_projected_velocities()");
@@ -86,7 +87,7 @@ incflo::compute_MAC_projected_velocities (
                                      AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), 
                                      *mac_phi[lev], *vel[lev], *vel_forces[lev], 
                                      get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
-                                     Geom(), l_dt, m_godunov_ppm, m_godunov_use_forces_in_trans,
+                                     geom, l_dt, m_godunov_ppm, m_godunov_use_forces_in_trans,
                                      AMREX_D_DECL(m_fluxes[lev][0], m_fluxes[lev][1], m_fluxes[lev][2]), 
                                      m_use_mac_phi_in_godunov);
 #endif
@@ -101,13 +102,25 @@ incflo::compute_MAC_projected_velocities (
             mol::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), *vel[lev],
                                        get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
 #endif
-                                       Geom()); 
+                                       geom); 
         } else if (m_advection_type == "Hybrid") {
+
+#ifdef AMREX_USE_EB
+            const EBFArrayBoxFactory* ebfact = &EBFactory(lev);
+            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), *vel[lev],
+                                          *conv_u[lev], 
+                                          get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
+                                          ebfact, geom[lev]); 
+#else
+            hybrid::predict_vels_on_faces(lev, AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), *vel[lev],
+                                          *conv_u[lev], 
+                                          get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
+                                          geom[lev]); 
+#endif
         } else {
             amrex::Abort("Dont know this advection type");
         }
     }
-
     Vector<Array<MultiFab*,AMREX_SPACEDIM> > mac_vec(finest_level+1);
     for (int lev=0; lev <= finest_level; ++lev)
     {
