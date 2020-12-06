@@ -116,8 +116,9 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
                 hybrid::predict_vels_on_faces(bx,AMREX_D_DECL(ubx,vbx,wbx),
                                               AMREX_D_DECL(fx,fy,fz),
                                               vel_arr,h_bcrec,d_bcrec,geom);
-                const auto dxinv = geom.InvCellSizeArray();
-                amrex_compute_divergence(bx, dudt_arr, AMREX_D_DECL(fx, fy, fz), dxinv);
+                hybrid::compute_convective_rate(bx, AMREX_SPACEDIM, dudt_arr, AMREX_D_DECL(fx, fy, fz), geom);
+                // const auto dxinv = geom.InvCellSizeArray();
+                // amrex_compute_divergence(bx, dudt_arr, AMREX_D_DECL(fx, fy, fz), dxinv);
             }
         } // MFIter
     }
