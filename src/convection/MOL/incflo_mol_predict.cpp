@@ -192,7 +192,6 @@ mol::predict_vels_on_faces (int lev,
             }
 
             u(i,j,k) = u_val;
-            amrex::Print() << "U " << IntVect(i,j) << " " << u(i,j,k) << std::endl;
         });
     }
 
@@ -269,7 +268,6 @@ mol::predict_vels_on_faces (int lev,
             }
 
             v(i,j,k) = v_val;
-            amrex::Print() << "V " << IntVect(i,j) << " " << v(i,j,k) << std::endl;
         });
     }
 
