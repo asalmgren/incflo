@@ -300,14 +300,14 @@ hybrid::predict_vels_on_faces ( Box const& bx,
                     u_val = vcc(i,j-1,k,0);
                     v_val = vcc(i,j-1,k,1);
 #if (AMREX_SPACEDIM == 3)
-                    v_val = vcc(i,j-1,k,2);
+                    w_val = vcc(i,j-1,k,2);
 #endif
                 }
                 else if (avg <= -small_vel) {
                     u_val = vcc(i,j  ,k,0);
                     v_val = vcc(i,j  ,k,1);
 #if (AMREX_SPACEDIM == 3)
-                    v_val = vcc(i,j  ,k,2);
+                    w_val = vcc(i,j  ,k,2);
 #endif
                 }
             }
@@ -481,8 +481,8 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
 
                Real u_mns = vel(i-1,j,k,0);
                Real u_pls = vel(i  ,j,k,0);
-               Real v_mns = vel(i-1,j,k,0);
-               Real v_pls = vel(i  ,j,k,0);
+               Real v_mns = vel(i-1,j,k,1);
+               Real v_pls = vel(i  ,j,k,1);
 
                Real cc_umax = amrex::max(u_pls, u_mns);
                Real cc_umin = amrex::min(u_pls, u_mns);
@@ -509,13 +509,13 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                Real upls = vel(i,j,k,0) - delta_x * slopes_eb_hi_u[0]
                                         + delta_y * slopes_eb_hi_u[1]
                                         + delta_z * slopes_eb_hi_u[2];
-               Real vpls = vel(i,j,k,0) - delta_x * slopes_eb_hi_v[0]
+               Real vpls = vel(i,j,k,1) - delta_x * slopes_eb_hi_v[0]
                                         + delta_y * slopes_eb_hi_v[1]
                                         + delta_z * slopes_eb_hi_v[2];
 #else
                Real upls = vel(i,j,k,0) - delta_x * slopes_eb_hi_u[0]
                                         + delta_y * slopes_eb_hi_u[1];
-               Real vpls = vel(i,j,k,0) - delta_x * slopes_eb_hi_v[0]
+               Real vpls = vel(i,j,k,1) - delta_x * slopes_eb_hi_v[0]
                                         + delta_y * slopes_eb_hi_v[1];
 #endif
                upls = amrex::max(amrex::min(upls, cc_umax), cc_umin);
