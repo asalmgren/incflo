@@ -1,4 +1,5 @@
 #include <Godunov.H>
+#include <Hybrid.H>
 #include <MOL.H>
 #include <incflo.H>
 
@@ -77,7 +78,7 @@ incflo::compute_MAC_projected_velocities (
         // Predict normal velocity to faces -- note that the {u_mac, v_mac, w_mac}
         //    returned from this call are on face CENTROIDS
 
-        if (m_use_godunov) {
+        if (m_advection_type == "Godunov") {
 
 #ifdef AMREX_USE_EB
 #else
@@ -89,7 +90,7 @@ incflo::compute_MAC_projected_velocities (
                                      AMREX_D_DECL(m_fluxes[lev][0], m_fluxes[lev][1], m_fluxes[lev][2]), 
                                      m_use_mac_phi_in_godunov);
 #endif
-        } else {
+        } else if (m_advection_type == "MOL") {
 
 #ifdef AMREX_USE_EB
             const EBFArrayBoxFactory* ebfact = &EBFactory(lev);
@@ -101,6 +102,9 @@ incflo::compute_MAC_projected_velocities (
                                        get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
 #endif
                                        Geom()); 
+        } else if (m_advection_type == "Hybrid") {
+        } else {
+            amrex::Abort("Dont know this advection type");
         }
     }
 

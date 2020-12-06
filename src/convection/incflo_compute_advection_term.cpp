@@ -1,4 +1,5 @@
 #include <Godunov.H>
+#include <Hybrid.H>
 #include <MOL.H>
 #include <incflo.H>
 
@@ -34,7 +35,7 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
 
     // We first compute the velocity forcing terms to be used in predicting
     //    to faces before the MAC projection
-    if (m_use_godunov) {
+    if (m_advection_type != "MOL") {
 
         bool include_pressure_gradient = !(m_use_mac_phi_in_godunov);
         compute_vel_forces(vel_forces, vel, density, tracer, tracer, include_pressure_gradient);
@@ -90,7 +91,7 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
 
     // We now re-compute the velocity forcing terms including the pressure gradient,
     //    and compute the tracer forcing terms for the first time
-    if (m_use_godunov)
+    if (m_advection_type != "MOL")
     {
         compute_vel_forces(vel_forces, vel, density, tracer, tracer);
 
@@ -201,7 +202,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
 #endif
 
     Box rhotrac_box = amrex::grow(bx,2);
-    if (m_use_godunov) rhotrac_box.grow(1);
+    if (m_advection_type != "MOL")  rhotrac_box.grow(1);
 #ifdef AMREX_USE_EB
     if (!regular) rhotrac_box.grow(2);
 #endif
@@ -211,7 +212,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
     Array4<Real> rhotrac;
     if (m_advect_tracer) {
         rhotracfab.resize(rhotrac_box, m_ntrac);
-        if (!m_use_godunov) {
+        if (m_advection_type != "MOL") {
             eli_rt = rhotracfab.elixir();
         }
         rhotrac = rhotracfab.array();
@@ -225,7 +226,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
     int nmaxcomp = AMREX_SPACEDIM;
     if (m_advect_tracer) nmaxcomp = std::max(nmaxcomp,m_ntrac);
 
-    if (m_use_godunov)
+    if (m_advection_type == "Godunov")
     {
 #if (AMREX_SPACEDIM == 3)
         FArrayBox tmpfab(amrex::grow(bx,1), nmaxcomp*14+1);
@@ -264,7 +265,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         }
         Gpu::streamSynchronize();
     }
-    else
+    else if (m_advection_type == "MOL")
     {
         Box tmpbox = amrex::surroundingNodes(bx);
         int tmpcomp = nmaxcomp*AMREX_SPACEDIM;
@@ -354,7 +355,10 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                 mol::compute_convective_rate(lev, bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), Geom());
             }
         }
-    }
+    } else if (m_advection_type == "Hybrid") {
+    } else { 
+        amrex::Abort("Dont konw this advection type!");
+    } 
 }
 
 void 

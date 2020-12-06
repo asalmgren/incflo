@@ -1,0 +1,7 @@
+CEXE_headers += Hybrid.H
+
+CEXE_sources += incflo_hybrid_predict_eb.cpp
+CEXE_sources += incflo_hybrid_predict.cpp
+
+CEXE_sources += incflo_hybrid_fluxes_eb.cpp
+CEXE_sources += incflo_hybrid_fluxes.cpp

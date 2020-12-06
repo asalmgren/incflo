@@ -196,7 +196,7 @@ void incflo::MakeNewLevelFromScratch (int lev, Real time, const BoxArray& new_gr
 
     m_leveldata[lev].reset(new LevelData(grids[lev], dmap[lev], *m_factory[lev],
                                          m_ntrac, nghost_state(),
-                                         m_use_godunov,
+                                         m_advection_type,
                                          m_diff_type==DiffusionType::Implicit,
                                            use_tensor_correction,
                                          m_advect_tracer));

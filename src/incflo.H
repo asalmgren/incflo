@@ -389,8 +389,11 @@ private:
     bool m_advect_tracer    = false;
     bool m_test_tracer_conservation = false;
 
-    // Default to MOL (not Godunov)
-    bool m_use_godunov         = false;
+#ifdef AMREX_USE_EB
+    std::string m_advection_type = "MOL";
+#else
+    std::string m_advection_type = "Godunov";
+#endif
 
     // If using Godunov, default to PPM (not PLM)
     bool m_godunov_ppm         = true;
@@ -473,7 +476,7 @@ private:
                    amrex::DistributionMapping const& dm,
                    amrex::FabFactory<amrex::FArrayBox> const& fact,
                    int ntrac, int ng_state,
-                   bool use_godunov, bool implicit_diffusion, 
+                   std::string advection_type, bool implicit_diffusion, 
                    bool use_tensor_correction, bool advect_tracer);
         // cell-centered multifabs
         amrex::MultiFab velocity;
@@ -559,31 +562,31 @@ private:
     // Number of ghost cells for field arrays.
     int nghost_state () const {
 #ifdef AMREX_USE_EB
-        if (!EBFactory(0).isAllRegular()) return (m_use_godunov) ? 5 : 4;
+        if (!EBFactory(0).isAllRegular()) return (m_advection_type != "MOL") ? 5 : 4;
 #endif
-        return (m_use_godunov) ? 3 : 2;
+        return (m_advection_type != "MOL") ? 3 : 2;
     }
 
-    int nghost_force () const { return (m_use_godunov) ? 1 : 0; }
+    int nghost_force () const { return (m_advection_type != "MOL") ? 1 : 0; }
 
     int nghost_mac () const {
 #ifdef AMREX_USE_EB
-        if (!EBFactory(0).isAllRegular()) return (m_use_godunov) ? 4 : 3;
+        if (!EBFactory(0).isAllRegular()) return (m_advection_type != "MOL") ? 4 : 3;
 #endif
-        return (m_use_godunov) ? 1 : 0;
+        return (m_advection_type != "MOL") ? 1 : 0;
     }
 
 #ifdef AMREX_USE_EB
     int nghost_eb_basic () const {
-        return (m_use_godunov) ? 5 : 4;
+        return (m_advection_type != "MOL") ? 5 : 4;
     }
 
     int nghost_eb_volume () const {
-        return (m_use_godunov) ? 5 : 4;
+        return (m_advection_type != "MOL") ? 5 : 4;
     }
 
     int nghost_eb_full () const {
-        return (m_use_godunov) ? 3 : 2;
+        return (m_advection_type != "MOL") ? 3 : 2;
     }
 #endif
 
