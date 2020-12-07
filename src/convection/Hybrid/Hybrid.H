@@ -52,7 +52,19 @@ namespace hybrid {
                                               amrex::BCRec  const* d_bcrec,
                                 amrex::Real dt, amrex::Geometry& geom);
 
-    void compute_convective_fluxes (amrex::Box const& bx, int ncomp,
+    void compute_convective_fluxes1(amrex::Box const& bx, int ncomp,
+                                    AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
+                                                 amrex::Array4<amrex::Real> const& fy,
+                                                 amrex::Array4<amrex::Real> const& fz),
+                                    amrex::Array4<amrex::Real const> const& q,
+                                    AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
+                                                 amrex::Array4<amrex::Real const> const& vmac,
+                                                 amrex::Array4<amrex::Real const> const& wmac),
+                                    amrex::BCRec const* h_bcrec,
+                                    amrex::BCRec const* d_bcrec,
+                                    amrex::Geometry& geom);
+
+    void compute_convective_fluxes2(amrex::Box const& bx, int ncomp,
                                     AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
                                                  amrex::Array4<amrex::Real> const& fy,
                                                  amrex::Array4<amrex::Real> const& fz),
@@ -110,7 +122,24 @@ namespace hybrid {
                                                  amrex::BCRec  const* d_bcrec,
                                    amrex::Real dt, amrex::Geometry& geom);
 
-    void compute_convective_fluxes_eb (amrex::Box const& bx, int ncomp,
+    void compute_convective_fluxes_eb1(amrex::Box const& bx, int ncomp,
+                                       AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
+                                                    amrex::Array4<amrex::Real> const& fy,
+                                                    amrex::Array4<amrex::Real> const& fz),
+                                       amrex::Array4<amrex::Real const> const& q,
+                                       AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
+                                                    amrex::Array4<amrex::Real const> const& vmac,
+                                                    amrex::Array4<amrex::Real const> const& wmac),
+                                       amrex::BCRec const* h_bcrec,
+                                       amrex::BCRec const* d_bcrec,
+                                       amrex::Array4<amrex::EBCellFlag const> const& flag,
+                                       AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
+                                                    amrex::Array4<amrex::Real const> const& fcy,
+                                                    amrex::Array4<amrex::Real const> const& fcz),
+                                       amrex::Array4<amrex::Real const> const& ccc,
+                                       amrex::Geometry& geom);
+
+    void compute_convective_fluxes_eb2(amrex::Box const& bx, int ncomp,
                                        AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
                                                     amrex::Array4<amrex::Real> const& fy,
                                                     amrex::Array4<amrex::Real> const& fz),
