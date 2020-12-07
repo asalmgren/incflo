@@ -42,7 +42,7 @@ hybrid::compute_convective_fluxes_eb (int lev, Box const& bx, int ncomp,
                                                 Array4<Real const> const& fcy,
                                                 Array4<Real const> const& fcz),
                                    Array4<Real const> const& ccc,
-                                   Vector<Geometry> geom)
+                                   Real dt, Vector<Geometry> geom)
 {
     constexpr Real small_vel = 1.e-10;
 

@@ -32,7 +32,7 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
                                                 Array4<Real const> const& vmac,
                                                 Array4<Real const> const& wmac),
                                    BCRec const* h_bcrec, BCRec const* d_bcrec,
-                                   Geometry& geom)
+                                   Real dt, Geometry& geom)
 {
     constexpr Real small_vel = 1.e-10;
 

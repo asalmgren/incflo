@@ -65,7 +65,7 @@ namespace hybrid {
                                                  amrex::Array4<amrex::Real const> const& wmac),
                                     amrex::BCRec const* h_bcrec,
                                     amrex::BCRec const* d_bcrec,
-                                    amrex::Geometry& geom);
+                                    amrex::Real dt, amrex::Geometry& geom);
 
     void compute_convective_rate (amrex::Box const& bx, int ncomp,
                                   amrex::Array4<amrex::Real> const& dUdt,
@@ -128,7 +128,7 @@ namespace hybrid {
                                                     amrex::Array4<amrex::Real const> const& fcy,
                                                     amrex::Array4<amrex::Real const> const& fcz),
                                        amrex::Array4<amrex::Real const> const& ccc,
-                                       amrex::Geometry& geom);
+                                       amrex::Real dt, amrex::Geometry& geom);
 
     void compute_convective_rate_eb (amrex::Box const& bx, int ncomp,
                                      amrex::Array4<amrex::Real> const& dUdt,
