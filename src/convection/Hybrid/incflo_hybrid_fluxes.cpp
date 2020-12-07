@@ -74,9 +74,11 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
             } else {
                 int order = 2;
                 Real qpls = q(i,j,k,n) - 0.5 * amrex_calc_xslope_extdir
-                    (i  ,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
+                    (i  ,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi)
+                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
                 Real qmns = q(i-1,j,k,n) + 0.5 * amrex_calc_xslope_extdir
-                    (i-1,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
+                    (i-1,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi)
+                    + 0.5*dt*(forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
                 if (umac(i,j,k) > small_vel) {
                     qs = qmns;
                 } else if (umac(i,j,k) < -small_vel) {
@@ -94,8 +96,10 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             int order = 2;
-            Real qpls = q(i  ,j,k,n) - 0.5 * amrex_calc_xslope(i  ,j,k,n,order,q);
-            Real qmns = q(i-1,j,k,n) + 0.5 * amrex_calc_xslope(i-1,j,k,n,order,q);
+            Real qpls = q(i  ,j,k,n) - 0.5 * amrex_calc_xslope(i  ,j,k,n,order,q)
+                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
+            Real qmns = q(i-1,j,k,n) + 0.5 * amrex_calc_xslope(i-1,j,k,n,order,q)
+                    + 0.5*dt*(forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
             Real qs;
             if (umac(i,j,k) > small_vel) {
                 qs = qmns;
@@ -132,9 +136,11 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
             } else {
                 int order = 2;
                 Real qpls = q(i,j  ,k,n) - 0.5 * amrex_calc_yslope_extdir(
-                     i,j  ,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
+                     i,j  ,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi)
+                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
                 Real qmns = q(i,j-1,k,n) + 0.5 * amrex_calc_yslope_extdir(
-                     i,j-1,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
+                     i,j-1,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi)
+                    + 0.5*dt*(forces(i,j-1,k,n) + dqdt(i,j-1,k,n));
                 if (vmac(i,j,k) > small_vel) {
                     qs = qmns;
                 } else if (vmac(i,j,k) < -small_vel) {
@@ -152,8 +158,10 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             int order = 2;
-            Real qpls = q(i,j  ,k,n) - 0.5 * amrex_calc_yslope(i,j  ,k,n,order,q);
-            Real qmns = q(i,j-1,k,n) + 0.5 * amrex_calc_yslope(i,j-1,k,n,order,q);
+            Real qpls = q(i,j  ,k,n) - 0.5 * amrex_calc_yslope(i,j  ,k,n,order,q)
+                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
+            Real qmns = q(i,j-1,k,n) + 0.5 * amrex_calc_yslope(i,j-1,k,n,order,q)
+                    + 0.5*dt*(forces(i,j-1,k,n) + dqdt(i,j-1,k,n));
             Real qs;
             if (vmac(i,j,k) > small_vel) {
                 qs = qmns;
@@ -191,9 +199,11 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
             } else {
                 int order = 2;
                 Real qpls = q(i,j,k,n) - 0.5 * amrex_calc_zslope_extdir(
-                    i,j,k  ,n,order,q,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
+                    i,j,k  ,n,order,q,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi)
+                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
                 Real qmns = q(i,j,k-1,n) + 0.5 * amrex_calc_zslope_extdir(
-                    i,j,k-1,n,order,q,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
+                    i,j,k-1,n,order,q,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi)
+                    + 0.5*dt*(forces(i,j,k-1,n) + dqdt(i,j,k-1,n));
                 if (wmac(i,j,k) > small_vel) {
                     qs = qmns;
                 } else if (wmac(i,j,k) < -small_vel) {
@@ -211,8 +221,10 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             int order = 2;
-            Real qpls = q(i,j,k  ,n) - 0.5 * amrex_calc_zslope(i,j,k  ,n,order,q);
-            Real qmns = q(i,j,k-1,n) + 0.5 * amrex_calc_zslope(i,j,k-1,n,order,q);
+            Real qpls = q(i,j,k  ,n) - 0.5 * amrex_calc_zslope(i,j,k  ,n,order,q)
+                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
+            Real qmns = q(i,j,k-1,n) + 0.5 * amrex_calc_zslope(i,j,k-1,n,order,q)
+                    + 0.5*dt*(forces(i,j,k-1,n) + dqdt(i,j,k-1,n));
             Real qs;
             if (wmac(i,j,k) > small_vel) {
                 qs = qmns;
