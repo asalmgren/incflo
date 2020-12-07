@@ -568,7 +568,10 @@ private:
         return (m_advection_type != "MOL") ? 3 : 2;
     }
 
-    int nghost_force () const { return (m_advection_type != "MOL") ? 1 : 0; }
+    // For Hybrid , we need 2 ghost cells
+    // For Godunov, we need 1 ghost cell 
+    // For MOL    , we need 0 ghost cells
+    int nghost_force () const { return (m_advection_type != "MOL") ? 2 : 0; }
 
     int nghost_mac () const {
 #ifdef AMREX_USE_EB

@@ -96,10 +96,10 @@ hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             int order = 2;
-            Real qpls = q(i  ,j,k,n) - 0.5 * amrex_calc_xslope(i  ,j,k,n,order,q)
-                    + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
-            Real qmns = q(i-1,j,k,n) + 0.5 * amrex_calc_xslope(i-1,j,k,n,order,q)
-                    + 0.5*dt*(forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
+            Real qpls = q(i  ,j,k,n) - 0.5 * amrex_calc_xslope(i  ,j,k,n,order,q) 
+                                     + 0.5*dt*(forces(i,j,k,n) + dqdt(i,j,k,n));
+            Real qmns = q(i-1,j,k,n) + 0.5 * amrex_calc_xslope(i-1,j,k,n,order,q) 
+                                     + 0.5*dt*(forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
             Real qs;
             if (umac(i,j,k) > small_vel) {
                 qs = qmns;

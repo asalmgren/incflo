@@ -75,11 +75,11 @@ hybrid::predict_vels_with_forces ( Box const& bx,
             int order = 2;
 
             Real upls = vel(i  ,j,k,0) - 0.5 * amrex_calc_xslope_extdir(
-                 i  ,j,k,0,order,vel,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
-//               + 0.5 * dt * (vel_forces(i,j,k,0) + dudt(i,j,k,0)) ;
+                 i  ,j,k,0,order,vel,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi) 
+                 + 0.5 * dt * (vel_forces(i,j,k,0) + dudt(i,j,k,0)) ;
             Real umns = vel(i-1,j,k,0) + 0.5 * amrex_calc_xslope_extdir(
-                 i-1,j,k,0,order,vel,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
-//               + 0.5 * dt * (vel_forces(i-1,j,k,0) + dudt(i-1,j,k,0)) ;
+                 i-1,j,k,0,order,vel,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi) 
+                 + 0.5 * dt * (vel_forces(i-1,j,k,0) + dudt(i-1,j,k,0)) ;
 
             Real u_val = 0.;
 
@@ -111,10 +111,10 @@ hybrid::predict_vels_with_forces ( Box const& bx,
         {
             int order = 2;
 
-            Real upls = vel(i  ,j,k,0) - 0.5 * amrex_calc_xslope(i  ,j,k,0,order,vel);
-//                                     + 0.5 * dt * (vel_forces(i,j,k,0) + dudt(i,j,k,0));
-            Real umns = vel(i-1,j,k,0) + 0.5 * amrex_calc_xslope(i-1,j,k,0,order,vel);
-//                                     + 0.5 * dt * (vel_forces(i-1,j,k,0) + dudt(i-1,j,k,0));
+            Real upls = vel(i  ,j,k,0) - 0.5 * amrex_calc_xslope(i  ,j,k,0,order,vel) 
+                                       + 0.5 * dt * (vel_forces(i,j,k,0) + dudt(i,j,k,0));
+            Real umns = vel(i-1,j,k,0) + 0.5 * amrex_calc_xslope(i-1,j,k,0,order,vel) 
+                                       + 0.5 * dt * (vel_forces(i-1,j,k,0) + dudt(i-1,j,k,0));
 
             Real u_val(0);
 
@@ -154,11 +154,11 @@ hybrid::predict_vels_with_forces ( Box const& bx,
             int order = 2;
     
             Real vpls = vel(i,j  ,k,1) - 0.5 * amrex_calc_yslope_extdir(
-                 i,j,k,1,order,vel,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
-//                                     + 0.5 * dt * (vel_forces(i,j,k,1) + dudt(i,j,k,1)) ;
+                 i,j,k,1,order,vel,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi) 
+                                       + 0.5 * dt * (vel_forces(i,j,k,1) + dudt(i,j,k,1));
             Real vmns = vel(i,j-1,k,1) + 0.5 * amrex_calc_yslope_extdir(
-                 i,j-1,k,1,order,vel,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
-//                                     + 0.5 * dt * (vel_forces(i,j-1,k,1) + dudt(i,j-1,k,1)) ;
+                 i,j-1,k,1,order,vel,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi) 
+                                       + 0.5 * dt * (vel_forces(i,j-1,k,1) + dudt(i,j-1,k,1));
 
             Real v_val(0);
 
@@ -190,10 +190,10 @@ hybrid::predict_vels_with_forces ( Box const& bx,
         {
             int order = 2;
 
-            Real vpls = vel(i,j  ,k,1) - 0.5 * amrex_calc_yslope(i,j  ,k,1,order,vel);
-//                                     + 0.5 * dt * (vel_forces(i,j,k,1) + dudt(i,j,k,1)) ;
-            Real vmns = vel(i,j-1,k,1) + 0.5 * amrex_calc_yslope(i,j-1,k,1,order,vel);
-//                                     + 0.5 * dt * (vel_forces(i,j-1,k,1) + dudt(i,j-1,k,1)) ;
+            Real vpls = vel(i,j  ,k,1) - 0.5 * amrex_calc_yslope(i,j  ,k,1,order,vel) 
+                                       + 0.5 * dt * (vel_forces(i,j,k,1) + dudt(i,j,k,1));
+            Real vmns = vel(i,j-1,k,1) + 0.5 * amrex_calc_yslope(i,j-1,k,1,order,vel) 
+                                       + 0.5 * dt * (vel_forces(i,j-1,k,1) + dudt(i,j-1,k,1));
 
             Real v_val(0);
 
@@ -238,10 +238,10 @@ hybrid::predict_vels_with_forces ( Box const& bx,
 
             Real wpls = vel_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,2,order,vel,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi)
-                                       + 0.5 * dt * (vel_forces(i,j,k,2) + dudt(i,j,k,2)) ;
+                                + 0.5 * dt * (vel_forces(i,j,k,2) + dudt(i,j,k,2)) ;
             Real wmns = vel_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,2,order,vel,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi)
-                                       + 0.5 * dt * (vel_forces(i,j,k-1,2) + dudt(i,j-1,k,2)) ;
+                                + 0.5 * dt * (vel_forces(i,j,k-1,2) + dudt(i,j-1,k,2)) ;
 
             Real w_val(0);
 
