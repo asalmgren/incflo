@@ -3,14 +3,14 @@
 using namespace amrex;
 
 void 
-mol::compute_convective_rate (int lev, Box const& bx, int ncomp,
+mol::compute_convective_rate (Box const& bx, int ncomp,
                               Array4<Real> const& dUdt,
                               AMREX_D_DECL(Array4<Real const> const& fx,
                                            Array4<Real const> const& fy,
                                            Array4<Real const> const& fz),
-                              Vector<Geometry> geom)
+                              Geometry& geom)
 {
-    const auto dxinv = geom[lev].InvCellSizeArray();
+    const auto dxinv = geom.InvCellSizeArray();
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
@@ -27,7 +27,7 @@ mol::compute_convective_rate (int lev, Box const& bx, int ncomp,
 
 #ifdef AMREX_USE_EB
 void 
-mol::compute_convective_rate_eb (int lev, Box const& bx, int ncomp,
+mol::compute_convective_rate_eb (Box const& bx, int ncomp,
                                  Array4<Real> const& dUdt,
                                  AMREX_D_DECL(Array4<Real const> const& fx,
                                               Array4<Real const> const& fy,
@@ -37,10 +37,10 @@ mol::compute_convective_rate_eb (int lev, Box const& bx, int ncomp,
                                  AMREX_D_DECL(Array4<Real const> const& apx,
                                               Array4<Real const> const& apy,
                                               Array4<Real const> const& apz),
-                                 Vector<Geometry> geom)
+                                 Geometry& geom)
 {
-    const auto dxinv = geom[lev].InvCellSizeArray();
-    const Box dbox   = geom[lev].growPeriodicDomain(2);
+    const auto dxinv = geom.InvCellSizeArray();
+    const Box dbox   = geom.growPeriodicDomain(2);
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {

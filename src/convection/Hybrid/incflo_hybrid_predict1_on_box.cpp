@@ -51,6 +51,10 @@ hybrid::predict_vels_on_faces ( Box const& bx,
     const int domain_khi = domain_box.bigEnd(2);
 #endif
 
+    // 
+    // Make fluxes on x-faces
+    // 
+
     // At an ext_dir or hoextrap boundary, 
     //    the boundary value is on the face, not cell center.
     auto extdir_lohi = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::x));
@@ -185,6 +189,10 @@ hybrid::predict_vels_on_faces ( Box const& bx,
 #endif
         });
     }
+
+    // 
+    // Make fluxes on y-faces
+    // 
 
     // At an ext_dir or hoextrap boundary, 
     //    the boundary value is on the face, not cell center.
@@ -321,6 +329,9 @@ hybrid::predict_vels_on_faces ( Box const& bx,
     }
 
 #if (AMREX_SPACEDIM == 3)
+    // 
+    // Make fluxes on z-faces
+    // 
     // At an ext_dir or hoextrap boundary, 
     //    the boundary value is on the face, not cell center.
     extdir_lohi = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::z));
@@ -330,7 +341,7 @@ hybrid::predict_vels_on_faces ( Box const& bx,
     if ((has_extdir_or_ho_lo and domain_klo >= wbx.smallEnd(2)-1) or
         (has_extdir_or_ho_hi and domain_khi <= wbx.bigEnd(2)))
     {
-        amrex::ParallelFor(wbx, [vcc,domain_klo,domain_khi,w,d_bcrec]
+        amrex::ParallelFor(wbx, [vcc,fz,domain_klo,domain_khi,d_bcrec]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
             bool extdir_or_ho_klo = (d_bcrec[2].lo(2) == BCType::ext_dir) or
@@ -338,62 +349,105 @@ hybrid::predict_vels_on_faces ( Box const& bx,
             bool extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
                                     (d_bcrec[2].hi(2) == BCType::hoextrap);
 
-            const Real vcc_pls = vcc(i,j,k,2);
-            const Real vcc_mns = vcc(i,j,k-1,2);
+            const Real ucc_pls = vcc(i,j,k  ,0);
+            const Real ucc_mns = vcc(i,j,k-1,0);
+
+            const Real vcc_pls = vcc(i,j,k  ,1);
+            const Real vcc_mns = vcc(i,j,k-1,1);
+
+            const Real wcc_pls = vcc(i,j,k  ,2);
+            const Real wcc_mns = vcc(i,j,k-1,2);
 
             int order = 2;
+            Real upls = ucc_pls - 0.5 * amrex_calc_zslope_extdir(
+                 i,j,k  ,0,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
+            Real umns = ucc_mns + 0.5 * amrex_calc_zslope_extdir(
+                 i,j,k-1,0,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
 
-            Real wpls = vcc_pls - 0.5 * amrex_calc_zslope_extdir(
+            Real vpls = vcc_pls - 0.5 * amrex_calc_zslope_extdir(
+                 i,j,k  ,1,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
+            Real vmns = vcc_mns + 0.5 * amrex_calc_zslope_extdir(
+                 i,j,k-1,1,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
+
+            Real wpls = wcc_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,2,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
-            Real wmns = vcc_mns + 0.5 * amrex_calc_zslope_extdir(
+            Real wmns = wcc_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,2,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
 
             Real w_val(0);
+            Real u_val(0.5*(upls+umns));
+            Real v_val(0.5*(vpls+vmns));
 
-            if (wmns >= 0.0 or wpls <= 0.0) {
+            if (wmns >= 0.0 or wpls <= 0.0) 
+            {
                 Real avg = 0.5 * (wpls + wmns);
 
                 if (avg >= small_vel) {
+                    u_val = umns;
+                    v_val = vmns;
                     w_val = wmns;
                 }
                 else if (avg <= -small_vel) {
+                    u_val = upls;
+                    v_val = vpls;
                     w_val = wpls;
                 }
             }
 
             if (k == domain_klo && (d_bcrec[2].lo(2) == BCType::ext_dir)) {
-                w_val = vcc_mns;
+                u_val = ucc_mns;
+                v_val = vcc_mns;
+                w_val = wcc_mns;
             } else if (k == domain_khi+1 && (d_bcrec[2].hi(2) == BCType::ext_dir)) {
-                w_val = vcc_pls;
+                u_val = ucc_pls;
+                v_val = vcc_pls;
+                w_val = wcc_pls;
             }
 
-            w(i,j,k) = w_val;
+            fz(i,j,k,0) = u_val*w_val;
+            fz(i,j,k,1) = v_val*w_val;
+            fz(i,j,k,2) = w_val*w_val;
         });
     }
     else
     {
-        amrex::ParallelFor(wbx, [vcc,w]
+        amrex::ParallelFor(wbx, [vcc,fz]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
             int order = 2;
+
+            Real upls = vcc(i,j,k  ,0) - 0.5 * amrex_calc_zslope(i,j,k  ,0,order,vcc);
+            Real umns = vcc(i,j,k-1,0) + 0.5 * amrex_calc_zslope(i,j,k-1,0,order,vcc);
+
+            Real vpls = vcc(i,j,k  ,1) - 0.5 * amrex_calc_zslope(i,j,k  ,1,order,vcc);
+            Real vmns = vcc(i,j,k-1,1) + 0.5 * amrex_calc_zslope(i,j,k-1,1,order,vcc);
 
             Real wpls = vcc(i,j,k  ,2) - 0.5 * amrex_calc_zslope(i,j,k  ,2,order,vcc);
             Real wmns = vcc(i,j,k-1,2) + 0.5 * amrex_calc_zslope(i,j,k-1,2,order,vcc);
 
             Real w_val(0);
+            Real u_val(0.5*(upls+umns));
+            Real v_val(0.5*(vpls+vmns));
 
-            if (wmns >= 0.0 or wpls <= 0.0) {
+            if (wmns >= 0.0 or wpls <= 0.0) 
+            {
                 Real avg = 0.5 * (wpls + wmns);
 
                 if (avg >= small_vel) {
+                    u_val = umns;
+                    v_val = vmns;
                     w_val = wmns;
                 }
                 else if (avg <= -small_vel) {
+                    u_val = upls;
+                    v_val = vpls;
                     w_val = wpls;
                 }
             }
 
-            w(i,j,k) = w_val;
+            fz(i,j,k,0) = u_val*w_val;
+            fz(i,j,k,1) = v_val*w_val;
+            fz(i,j,k,2) = w_val*w_val;
         });
     }
 #endif

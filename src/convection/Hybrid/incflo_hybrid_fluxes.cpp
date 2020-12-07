@@ -21,20 +21,22 @@ namespace {
 }
 
 void
-hybrid::compute_convective_fluxes (int lev, Box const& bx, int ncomp,
-                                AMREX_D_DECL(Array4<Real> const& fx,
-                                             Array4<Real> const& fy,
-                                             Array4<Real> const& fz),
-                                Array4<Real const> const& q,
-                                AMREX_D_DECL(Array4<Real const> const& umac,
-                                             Array4<Real const> const& vmac,
-                                             Array4<Real const> const& wmac),
-                                BCRec const* h_bcrec, BCRec const* d_bcrec,
-                                Vector<Geometry> geom)
+hybrid::compute_convective_fluxes (Box const& bx, int ncomp,
+                                   AMREX_D_DECL(Array4<Real> const& fx,
+                                                Array4<Real> const& fy,
+                                                Array4<Real> const& fz),
+                                   Array4<Real const> const& q,
+                                   Array4<Real const> const& forces,
+                                   Array4<Real const> const& dqdt,
+                                   AMREX_D_DECL(Array4<Real const> const& umac,
+                                                Array4<Real const> const& vmac,
+                                                Array4<Real const> const& wmac),
+                                   BCRec const* h_bcrec, BCRec const* d_bcrec,
+                                   Geometry& geom)
 {
     constexpr Real small_vel = 1.e-10;
 
-    const Box& domain_box = geom[lev].Domain();
+    const Box& domain_box = geom.Domain();
     const int domain_ilo = domain_box.smallEnd(0);
     const int domain_ihi = domain_box.bigEnd(0);
     const int domain_jlo = domain_box.smallEnd(1);

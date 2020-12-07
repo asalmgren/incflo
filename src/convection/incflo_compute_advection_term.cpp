@@ -266,7 +266,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         }
         Gpu::streamSynchronize();
     }
-    else if ( (m_advection_type == "MOL") or (m_advection_type == "Hybrid") )
+    else if (m_advection_type == "MOL")
     {
         Box tmpbox = amrex::surroundingNodes(bx);
         int tmpcomp = nmaxcomp*AMREX_SPACEDIM;
@@ -293,38 +293,38 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
             Array4<Real> dUdt_tmp = tmpfab.array(nmaxcomp*AMREX_SPACEDIM);
 
             // velocity
-            mol::compute_convective_fluxes_eb(lev, gbx, AMREX_SPACEDIM,
+            mol::compute_convective_fluxes_eb(gbx, AMREX_SPACEDIM,
                                               AMREX_D_DECL(fx, fy, fz), vel, 
                                               AMREX_D_DECL(umac, vmac, wmac),
                                               get_velocity_bcrec().data(),
                                               get_velocity_bcrec_device_ptr(),
-                                              flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, Geom());
-            mol::compute_convective_rate_eb(lev, gbx, AMREX_SPACEDIM, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
-                                            flag, vfrac, AMREX_D_DECL(apx, apy, apz), Geom());
+                                              flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
+            mol::compute_convective_rate_eb(gbx, AMREX_SPACEDIM, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
+                                            flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
             redistribute_eb(lev, bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag, vfrac);
 
             // density
             if (!m_constant_density) {
-                mol::compute_convective_fluxes_eb(lev, gbx, 1,
+                mol::compute_convective_fluxes_eb(gbx, 1,
                                                   AMREX_D_DECL(fx, fy, fz), rho, 
                                                   AMREX_D_DECL(umac, vmac, wmac),
                                                   get_density_bcrec().data(),
                                                   get_density_bcrec_device_ptr(),
-                                                  flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, Geom());
-                mol::compute_convective_rate_eb(lev, gbx, 1, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
-                                                flag, vfrac, AMREX_D_DECL(apx, apy, apz), Geom());
+                                                  flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
+                mol::compute_convective_rate_eb( gbx, 1, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
+                                                flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(lev, bx, 1, drdt, dUdt_tmp, scratch, flag, vfrac);
             }
 
             if (m_advect_tracer) {
-                mol::compute_convective_fluxes_eb(lev, gbx, m_ntrac,
+                mol::compute_convective_fluxes_eb(gbx, m_ntrac,
                                                   AMREX_D_DECL(fx, fy, fz), rhotrac, 
                                                   AMREX_D_DECL(umac, vmac, wmac),
                                                   get_tracer_bcrec().data(),
                                                   get_tracer_bcrec_device_ptr(),
-                                                  flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, Geom());
-                mol::compute_convective_rate_eb(lev, gbx, m_ntrac, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
-                                                flag, vfrac, AMREX_D_DECL(apx, apy, apz), Geom());
+                                                  flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
+                mol::compute_convective_rate_eb(gbx, m_ntrac, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
+                                                flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(lev, bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag, vfrac);
             }
         }
@@ -334,33 +334,132 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
             const auto dxinv = geom[lev].InvCellSizeArray();
 
             // velocity
-            mol::compute_convective_fluxes(lev, bx, AMREX_SPACEDIM, AMREX_D_DECL(fx, fy, fz), vel,
+            mol::compute_convective_fluxes(bx, AMREX_SPACEDIM, AMREX_D_DECL(fx, fy, fz), vel,
                                            AMREX_D_DECL(umac, vmac, wmac),
                                            get_velocity_bcrec().data(),
-                                           get_velocity_bcrec_device_ptr(), Geom());
+                                           get_velocity_bcrec_device_ptr(),geom[lev]);
 
             amrex_compute_divergence(bx,dvdt,AMREX_D_DECL(fx,fy,fz),dxinv);
-            mol::compute_convective_rate(lev, bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), Geom());
+            mol::compute_convective_rate(bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
 
             // density
             if (!m_constant_density) {
-                mol::compute_convective_fluxes(lev, bx, 1, AMREX_D_DECL(fx, fy, fz), rho,
+                mol::compute_convective_fluxes(bx, 1, AMREX_D_DECL(fx, fy, fz), rho,
                                                AMREX_D_DECL(umac, vmac, wmac),
                                                get_density_bcrec().data(),
-                                               get_density_bcrec_device_ptr(), Geom());
-                mol::compute_convective_rate(lev, bx, 1, drdt, AMREX_D_DECL(fx, fy, fz), Geom());
+                                               get_density_bcrec_device_ptr(),geom[lev]);
+                mol::compute_convective_rate(bx, 1, drdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
             }
 
             // tracer
             if (m_advect_tracer) {
-                mol::compute_convective_fluxes(lev, bx, m_ntrac, AMREX_D_DECL(fx, fy, fz), rhotrac,
+                mol::compute_convective_fluxes(bx, m_ntrac, AMREX_D_DECL(fx, fy, fz), rhotrac,
                                                AMREX_D_DECL(umac, vmac, wmac),
                                                get_tracer_bcrec().data(),
-                                               get_tracer_bcrec_device_ptr(), Geom());
-                mol::compute_convective_rate(lev, bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), Geom());
+                                               get_tracer_bcrec_device_ptr(), geom[lev]);
+                mol::compute_convective_rate(bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
             }
         }
-    } else if (m_advection_type == "Hybrid") {
+    }
+    else if ( m_advection_type == "Hybrid" ) 
+    {
+        Box tmpbox = amrex::surroundingNodes(bx);
+        int tmpcomp = nmaxcomp*AMREX_SPACEDIM;
+#ifdef AMREX_USE_EB
+        Box gbx = bx;
+        if (!regular) {
+            gbx.grow(2);
+            tmpbox.grow(3);
+            tmpcomp += nmaxcomp;
+        }
+#endif
+
+        FArrayBox tmpfab(tmpbox, tmpcomp);
+        Elixir eli = tmpfab.elixir();
+
+        AMREX_D_TERM(Array4<Real> fx = tmpfab.array(0);,
+                     Array4<Real> fy = tmpfab.array(nmaxcomp);,
+                     Array4<Real> fz = tmpfab.array(nmaxcomp*2););
+
+#ifdef AMREX_USE_EB 
+        if (!regular)
+        {
+            Array4<Real> scratch = tmpfab.array(0);
+            Array4<Real> dUdt_tmp = tmpfab.array(nmaxcomp*AMREX_SPACEDIM);
+
+            // velocity
+            hybrid::compute_convective_fluxes_eb(gbx, AMREX_SPACEDIM,
+                                                 AMREX_D_DECL(fx, fy, fz), 
+                                                 vel,  fvel, dudt, 
+                                                 AMREX_D_DECL(umac, vmac, wmac),
+                                                 get_velocity_bcrec().data(),
+                                                 get_velocity_bcrec_device_ptr(),
+                                                 flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
+            hybrid::compute_convective_rate_eb(gbx, AMREX_SPACEDIM, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
+                                               flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
+            redistribute_eb(lev, bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag, vfrac);
+
+            // density
+            if (!m_constant_density) {
+                hybrid::compute_convective_fluxes_eb(gbx, 1,
+                                                     AMREX_D_DECL(fx, fy, fz), 
+                                                     rho, {}, drdt, 
+                                                     AMREX_D_DECL(umac, vmac, wmac),
+                                                     get_density_bcrec().data(),
+                                                     get_density_bcrec_device_ptr(),
+                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, 
+                hybrid::compute_convective_rate_eb(gbx, 1, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),geom[lev]);
+                                                   flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
+                redistribute_eb(lev, bx, 1, drdt, dUdt_tmp, scratch, flag, vfrac);
+            }
+
+            if (m_advect_tracer) {
+                hybrid::compute_convective_fluxes_eb(gbx, m_ntrac,
+                                                     AMREX_D_DECL(fx, fy, fz), 
+                                                     rhotrac, ftra, dtdt, 
+                                                     AMREX_D_DECL(umac, vmac, wmac),
+                                                     get_tracer_bcrec().data(),
+                                                     get_tracer_bcrec_device_ptr(),
+                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
+                hybrid::compute_convective_rate_eb(gbx, m_ntrac, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
+                                                   flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
+                redistribute_eb(lev, bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag, vfrac);
+            }
+        }
+        else
+#endif
+        {
+            const auto dxinv = geom[lev].InvCellSizeArray();
+
+            // velocity
+            hybrid::compute_convective_fluxes(bx, AMREX_SPACEDIM, AMREX_D_DECL(fx, fy, fz), 
+                                              vel,  fvel, dvdt, 
+                                              AMREX_D_DECL(umac, vmac, wmac),
+                                              get_velocity_bcrec().data(),
+                                              get_velocity_bcrec_device_ptr(), geom[lev]);
+
+            hybrid::compute_convective_rate(bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
+
+            // density
+            if (!m_constant_density) {
+                hybrid::compute_convective_fluxes(bx, 1, AMREX_D_DECL(fx, fy, fz), 
+                                                  rho, {}, drdt, 
+                                                  AMREX_D_DECL(umac, vmac, wmac),
+                                                  get_density_bcrec().data(),
+                                                  get_density_bcrec_device_ptr(), geom[lev]);
+                hybrid::compute_convective_rate(bx, 1, drdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
+            }
+
+            // tracer
+            if (m_advect_tracer) {
+                hybrid::compute_convective_fluxes(bx, m_ntrac, AMREX_D_DECL(fx, fy, fz), 
+                                                  rhotrac, ftra, dtdt, 
+                                                  AMREX_D_DECL(umac, vmac, wmac),
+                                                  get_tracer_bcrec().data(),
+                                                  get_tracer_bcrec_device_ptr(), geom[lev]);
+                hybrid::compute_convective_rate(bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
+            }
+        }
     } else { 
         amrex::Abort("Dont konw this advection type!");
     } 

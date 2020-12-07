@@ -53,17 +53,19 @@ namespace hybrid {
                                               amrex::BCRec  const* d_bcrec,
                                 amrex::Real dt, amrex::Geometry& geom);
 
-    void compute_convective_fluxes (int lev, amrex::Box const& bx, int ncomp,
+    void compute_convective_fluxes (amrex::Box const& bx, int ncomp,
                                     AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
                                                  amrex::Array4<amrex::Real> const& fy,
                                                  amrex::Array4<amrex::Real> const& fz),
                                     amrex::Array4<amrex::Real const> const& q,
+                                    amrex::Array4<amrex::Real const> const& q_forces,
+                                    amrex::Array4<amrex::Real const> const& dqdt,
                                     AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
                                                  amrex::Array4<amrex::Real const> const& vmac,
                                                  amrex::Array4<amrex::Real const> const& wmac),
                                     amrex::BCRec const* h_bcrec,
                                     amrex::BCRec const* d_bcrec,
-                                    amrex::Vector<amrex::Geometry> geom);
+                                    amrex::Geometry& geom);
 
     void compute_convective_rate (amrex::Box const& bx, int ncomp,
                                   amrex::Array4<amrex::Real> const& dUdt,
@@ -109,11 +111,13 @@ namespace hybrid {
                                                  amrex::BCRec  const* d_bcrec,
                                    amrex::Real dt, amrex::Geometry& geom);
 
-    void compute_convective_fluxes_eb (int lev, amrex::Box const& bx, int ncomp,
+    void compute_convective_fluxes_eb (amrex::Box const& bx, int ncomp,
                                        AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
                                                     amrex::Array4<amrex::Real> const& fy,
                                                     amrex::Array4<amrex::Real> const& fz),
                                        amrex::Array4<amrex::Real const> const& q,
+                                       amrex::Array4<amrex::Real const> const& q_forces,
+                                       amrex::Array4<amrex::Real const> const& dqdt,
                                        AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
                                                     amrex::Array4<amrex::Real const> const& vmac,
                                                     amrex::Array4<amrex::Real const> const& wmac),
@@ -124,7 +128,7 @@ namespace hybrid {
                                                     amrex::Array4<amrex::Real const> const& fcy,
                                                     amrex::Array4<amrex::Real const> const& fcz),
                                        amrex::Array4<amrex::Real const> const& ccc,
-                                       amrex::Vector<amrex::Geometry> geom);
+                                       amrex::Geometry& geom);
 
     void compute_convective_rate_eb (amrex::Box const& bx, int ncomp,
                                      amrex::Array4<amrex::Real> const& dUdt,
