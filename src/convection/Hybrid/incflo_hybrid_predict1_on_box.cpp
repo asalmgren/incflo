@@ -24,8 +24,7 @@ namespace {
 }
 
 void 
-hybrid::predict_vels_on_faces ( Box const& bx,
-                                AMREX_D_DECL(Box const& ubx, 
+hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx, 
                                              Box const& vbx, 
                                              Box const& wbx),
                                 AMREX_D_DECL(Array4<Real> const& fx, 

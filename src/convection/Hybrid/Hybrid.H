@@ -27,8 +27,7 @@ namespace hybrid {
 #endif
                                 amrex::Real dt, amrex::Geometry& geom);
 
-    void predict_vels_on_faces (amrex::Box const& bx,
-                                AMREX_D_DECL(amrex::Box const& ubx,
+    void predict_vels_on_faces (AMREX_D_DECL(amrex::Box const& ubx,
                                              amrex::Box const& vbx,
                                              amrex::Box const& wbx),
                                 AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
