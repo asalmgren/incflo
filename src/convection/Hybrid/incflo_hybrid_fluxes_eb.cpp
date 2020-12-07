@@ -96,7 +96,7 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
         // Predict to x-faces
         // ****************************************************************************
         amrex::ParallelFor(xbx, ncomp,
-        [d_bcrec,q,ccc,flag,umac,small_vel,fx,
+        [d_bcrec,q,ccc,flag,umac,small_vel,fx,forces,dqdt,dt,
         AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
         AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
         AMREX_D_DECL(fcx,fcy,fcz)]
@@ -149,10 +149,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3) 
                    Real qpls = q(i  ,j,k,n) - delta_x * slopes_eb_hi[0]
                                             + delta_y * slopes_eb_hi[1]
-                                            + delta_z * slopes_eb_hi[2];
+                                            + delta_z * slopes_eb_hi[2]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #else
                    Real qpls = q(i  ,j,k,n) - delta_x * slopes_eb_hi[0]
-                                            + delta_y * slopes_eb_hi[1];
+                                            + delta_y * slopes_eb_hi[1]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #endif
                    Real cc_qmax = amrex::max(q(i,j,k,n),q(i-1,j,k,n));
                    Real cc_qmin = amrex::min(q(i,j,k,n),q(i-1,j,k,n));
@@ -178,10 +180,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)    
                    Real qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                             + delta_y * slopes_eb_lo[1]
-                                            + delta_z * slopes_eb_lo[2];
+                                            + delta_z * slopes_eb_lo[2]
+                              + 0.5 * dt * ( forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
 #else
                    Real qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
-                                            + delta_y * slopes_eb_lo[1];
+                                            + delta_y * slopes_eb_lo[1]
+                              + 0.5 * dt * ( forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
 #endif
                    qmns = amrex::max(amrex::min(qmns, cc_qmax), cc_qmin);
 
@@ -205,7 +209,7 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
         // Predict to y-faces
         // ****************************************************************************
         amrex::ParallelFor(ybx, ncomp,
-        [d_bcrec,q,ccc,flag,vmac,small_vel,fy,
+        [d_bcrec,q,ccc,flag,vmac,small_vel,fy,forces,dqdt,dt,
          AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
          AMREX_D_DECL(fcx,fcy,fcz)]
@@ -264,10 +268,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)
                    Real qpls = q(i,j  ,k,n) + delta_x * slopes_eb_hi[0]
                                             - delta_y * slopes_eb_hi[1]
-                                            + delta_z * slopes_eb_hi[2];
+                                            + delta_z * slopes_eb_hi[2]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #else
                    Real qpls = q(i,j  ,k,n) + delta_x * slopes_eb_hi[0]
-                                            - delta_y * slopes_eb_hi[1];
+                                            - delta_y * slopes_eb_hi[1]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #endif
                    qpls = amrex::max(amrex::min(qpls, cc_qmax), cc_qmin);
     
@@ -290,10 +296,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)    
                    Real qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
                                             + delta_y * slopes_eb_lo[1]
-                                            + delta_z * slopes_eb_lo[2];
+                                            + delta_z * slopes_eb_lo[2]
+                              + 0.5 * dt * ( forces(i,j-1,k,n) + dqdt(i,j-1,k,n));
 #else
                    Real qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
-                                            + delta_y * slopes_eb_lo[1];
+                                            + delta_y * slopes_eb_lo[1]
+                              + 0.5 * dt * ( forces(i,j-1,k,n) + dqdt(i,j-1,k,n));
 #endif
                    qmns = amrex::max(amrex::min(qmns, cc_qmax), cc_qmin);
 
@@ -318,7 +326,7 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
         // ****************************************************************************
 #if (AMREX_SPACEDIM == 3)
         amrex::ParallelFor(zbx, ncomp,
-        [d_bcrec,q,ccc,flag,wmac,small_vel,fz,
+        [d_bcrec,q,ccc,flag,wmac,small_vel,fz,forces,dqdt,dt,
          domain_ilo,domain_jlo,domain_klo,
          domain_ihi,domain_jhi,domain_khi,
          fcx,fcy,fcz]
@@ -370,7 +378,8 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
  
                     Real qpls = q(i,j,k  ,n) + delta_x * slopes_eb_hi[0]
                                              + delta_y * slopes_eb_hi[1]
-                                             - delta_z * slopes_eb_hi[2];
+                                             - delta_z * slopes_eb_hi[2]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
      
                     qpls = amrex::max(amrex::min(qpls, cc_qmax), cc_qmin);
      
@@ -391,7 +400,8 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
                                                AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
                     Real qmns = q(i,j,k-1,n) + delta_x * slopes_eb_lo[0]
                                              + delta_y * slopes_eb_lo[1]
-                                             + delta_z * slopes_eb_lo[2];
+                                             + delta_z * slopes_eb_lo[2]
+                              + 0.5 * dt * ( forces(i,j,k-1,n) + dqdt(i,j,k-1,n));
     
                     qmns = amrex::max(amrex::min(qmns, cc_qmax), cc_qmin);
 
@@ -419,7 +429,7 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
         // Predict to x-faces
         // ****************************************************************************
         amrex::ParallelFor(xbx, ncomp,
-        [q,ccc,fcx,flag,umac,small_vel,fx]
+        [q,ccc,fcx,flag,umac,small_vel,fx,forces,dqdt,dt]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
            Real qs;
@@ -447,10 +457,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)
                Real qpls = q(i  ,j,k,n) - delta_x * slopes_eb_hi[0]
                                         + delta_y * slopes_eb_hi[1]
-                                        + delta_z * slopes_eb_hi[2];
+                                        + delta_z * slopes_eb_hi[2]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #else
                Real qpls = q(i  ,j,k,n) - delta_x * slopes_eb_hi[0]
-                                        + delta_y * slopes_eb_hi[1];
+                                        + delta_y * slopes_eb_hi[1]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #endif
                qpls = amrex::max(amrex::min(qpls, cc_qmax), cc_qmin);
 
@@ -468,10 +480,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)
                Real qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                         + delta_y * slopes_eb_lo[1]
-                                        + delta_z * slopes_eb_lo[2];
+                                        + delta_z * slopes_eb_lo[2]
+                              + 0.5 * dt * ( forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
 #else
                Real qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
-                                        + delta_y * slopes_eb_lo[1];
+                                        + delta_y * slopes_eb_lo[1]
+                              + 0.5 * dt * ( forces(i-1,j,k,n) + dqdt(i-1,j,k,n));
 #endif
                qmns = amrex::max(amrex::min(qmns, cc_qmax), cc_qmin);
 
@@ -494,7 +508,7 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
         // Predict to y-faces
         // ****************************************************************************
         amrex::ParallelFor(ybx, ncomp,
-        [q,ccc,fcy,flag,vmac,small_vel,fy]
+        [q,ccc,fcy,flag,vmac,small_vel,fy,forces,dqdt,dt]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qs;
@@ -522,10 +536,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)
                Real qpls = q(i,j  ,k,n) + delta_x * slopes_eb_hi[0]
                                         - delta_y * slopes_eb_hi[1]
-                                        + delta_z * slopes_eb_hi[2];
+                                        + delta_z * slopes_eb_hi[2]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #else
                Real qpls = q(i,j  ,k,n) + delta_x * slopes_eb_hi[0]
-                                        - delta_y * slopes_eb_hi[1];
+                                        - delta_y * slopes_eb_hi[1]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
 #endif
                qpls = amrex::max(amrex::min(qpls, cc_qmax), cc_qmin);
 
@@ -543,10 +559,12 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 #if (AMREX_SPACEDIM == 3)
                Real qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
                                         + delta_y * slopes_eb_lo[1]
-                                        + delta_z * slopes_eb_lo[2];
+                                        + delta_z * slopes_eb_lo[2]
+                              + 0.5 * dt * ( forces(i,j-1,k,n) + dqdt(i,j-1,k,n));
 #else
                Real qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
-                                        + delta_y * slopes_eb_lo[1];
+                                        + delta_y * slopes_eb_lo[1]
+                              + 0.5 * dt * ( forces(i,j-1,k,n) + dqdt(i,j-1,k,n));
 #endif
                qmns = amrex::max(amrex::min(qmns, cc_qmax), cc_qmin);
 
@@ -570,7 +588,7 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
         // Predict to z-faces
         // ****************************************************************************
         amrex::ParallelFor(zbx, ncomp,
-        [q,ccc,fcz,flag,wmac,small_vel,fz]
+        [q,ccc,fcz,flag,wmac,small_vel,fz,forces,dqdt,dt]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             if (flag(i,j,k).isConnected(0,0,-1)) {
@@ -595,7 +613,8 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
  
                 Real qpls = q(i,j,k  ,n) + delta_x * slopes_eb_hi[0]
                                          + delta_y * slopes_eb_hi[1]
-                                         - delta_z * slopes_eb_hi[2];
+                                         - delta_z * slopes_eb_hi[2]
+                              + 0.5 * dt * ( forces(i,j,k,n) + dqdt(i,j,k,n));
  
                 qpls = amrex::max(amrex::min(qpls, cc_qmax), cc_qmin);
  
@@ -612,7 +631,8 @@ hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
 
                 Real qmns = q(i,j,k-1,n) + delta_x * slopes_eb_lo[0]
                                          + delta_y * slopes_eb_lo[1]
-                                         + delta_z * slopes_eb_lo[2];
+                                         + delta_z * slopes_eb_lo[2]
+                              + 0.5 * dt * ( forces(i,j,k-1,n) + dqdt(i,j,k-1,n));
 
                 qmns = amrex::max(amrex::min(qmns, cc_qmax), cc_qmin);
 
