@@ -394,7 +394,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                  AMREX_D_DECL(umac, vmac, wmac),
                                                  get_velocity_bcrec().data(),
                                                  get_velocity_bcrec_device_ptr(),
-                                                 flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, dt, geom[lev]);
+                                                 flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, m_dt, geom[lev]);
             hybrid::compute_convective_rate_eb(gbx, AMREX_SPACEDIM, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
                                                flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
             redistribute_eb(lev, bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag, vfrac);
@@ -407,8 +407,8 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      AMREX_D_DECL(umac, vmac, wmac),
                                                      get_density_bcrec().data(),
                                                      get_density_bcrec_device_ptr(),
-                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, 
-                hybrid::compute_convective_rate_eb(gbx, 1, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),dt, geom[lev]);
+                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, m_dt, geom[lev]);
+                hybrid::compute_convective_rate_eb(gbx, 1, dUdt_tmp, AMREX_D_DECL(fx, fy, fz), 
                                                    flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(lev, bx, 1, drdt, dUdt_tmp, scratch, flag, vfrac);
             }
@@ -420,7 +420,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      AMREX_D_DECL(umac, vmac, wmac),
                                                      get_tracer_bcrec().data(),
                                                      get_tracer_bcrec_device_ptr(),
-                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, dt, geom[lev]);
+                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, m_dt, geom[lev]);
                 hybrid::compute_convective_rate_eb(gbx, m_ntrac, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
                                                    flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(lev, bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag, vfrac);
@@ -436,7 +436,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                               vel,  fvel, dvdt, 
                                               AMREX_D_DECL(umac, vmac, wmac),
                                               get_velocity_bcrec().data(),
-                                              get_velocity_bcrec_device_ptr(), dt, geom[lev]);
+                                              get_velocity_bcrec_device_ptr(), m_dt, geom[lev]);
 
             hybrid::compute_convective_rate(bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
 
@@ -446,7 +446,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                   rho, {}, drdt, 
                                                   AMREX_D_DECL(umac, vmac, wmac),
                                                   get_density_bcrec().data(),
-                                                  get_density_bcrec_device_ptr(), dt, geom[lev]);
+                                                  get_density_bcrec_device_ptr(), m_dt, geom[lev]);
                 hybrid::compute_convective_rate(bx, 1, drdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
             }
 
@@ -456,7 +456,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                   rhotrac, ftra, dtdt, 
                                                   AMREX_D_DECL(umac, vmac, wmac),
                                                   get_tracer_bcrec().data(),
-                                                  get_tracer_bcrec_device_ptr(), dt, geom[lev]);
+                                                  get_tracer_bcrec_device_ptr(), m_dt, geom[lev]);
                 hybrid::compute_convective_rate(bx, m_ntrac, dtdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
             }
         }
