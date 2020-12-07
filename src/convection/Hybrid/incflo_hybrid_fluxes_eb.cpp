@@ -25,28 +25,28 @@ namespace {
 
 #ifdef AMREX_USE_EB
 void 
-hybrid::compute_convective_fluxes_eb (int lev, Box const& bx, int ncomp,
-                                   AMREX_D_DECL(Array4<Real> const& fx,
-                                                Array4<Real> const& fy,
-                                                Array4<Real> const& fz),
-                                   Array4<Real const> const& q,
-                                   Array4<Real const> const& forces,
-                                   Array4<Real const> const& dqdt,
-                                   AMREX_D_DECL(Array4<Real const> const& umac,
-                                                Array4<Real const> const& vmac,
-                                                Array4<Real const> const& wmac),
-                                   BCRec const* h_bcrec,
-                                   BCRec const* d_bcrec,
-                                   Array4<EBCellFlag const> const& flag,
-                                   AMREX_D_DECL(Array4<Real const> const& fcx,
-                                                Array4<Real const> const& fcy,
-                                                Array4<Real const> const& fcz),
-                                   Array4<Real const> const& ccc,
-                                   Real dt, Vector<Geometry> geom)
+hybrid::compute_convective_fluxes_eb (Box const& bx, int ncomp,
+                                      AMREX_D_DECL(Array4<Real> const& fx,
+                                                   Array4<Real> const& fy,
+                                                   Array4<Real> const& fz),
+                                      Array4<Real const> const& q,
+                                      Array4<Real const> const& forces,
+                                      Array4<Real const> const& dqdt,
+                                      AMREX_D_DECL(Array4<Real const> const& umac,
+                                                   Array4<Real const> const& vmac,
+                                                   Array4<Real const> const& wmac),
+                                      BCRec const* h_bcrec,
+                                      BCRec const* d_bcrec,
+                                      Array4<EBCellFlag const> const& flag,
+                                      AMREX_D_DECL(Array4<Real const> const& fcx,
+                                                   Array4<Real const> const& fcy,
+                                                   Array4<Real const> const& fcz),
+                                      Array4<Real const> const& ccc,
+                                      Real dt, Geometry& geom)
 {
     constexpr Real small_vel = 1.e-10;
 
-    const Box& domain_box = geom[lev].Domain();
+    const Box& domain_box = geom.Domain();
     AMREX_D_TERM(
         const int domain_ilo = domain_box.smallEnd(0);
         const int domain_ihi = domain_box.bigEnd(0);,
