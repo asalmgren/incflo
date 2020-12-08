@@ -66,24 +66,31 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
         amrex::ParallelFor(ubx, [vcc,fx,domain_ilo,domain_ihi,d_bcrec]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
+            int order = 2;
+
             bool extdir_or_ho_ilo = (d_bcrec[0].lo(0) == BCType::ext_dir) or
                                     (d_bcrec[0].lo(0) == BCType::hoextrap);
             bool extdir_or_ho_ihi = (d_bcrec[0].hi(0) == BCType::ext_dir) or
                                     (d_bcrec[0].hi(0) == BCType::hoextrap);
-
-            int order = 2;
-
             Real upls = vcc(i  ,j,k,0) - 0.5 * amrex_calc_xslope_extdir(
                  i  ,j,k,0,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
             Real umns = vcc(i-1,j,k,0) + 0.5 * amrex_calc_xslope_extdir(
                  i-1,j,k,0,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
 
+                 extdir_or_ho_ilo = (d_bcrec[1].lo(0) == BCType::ext_dir) or
+                                    (d_bcrec[1].lo(0) == BCType::hoextrap);
+                 extdir_or_ho_ihi = (d_bcrec[1].hi(0) == BCType::ext_dir) or
+                                    (d_bcrec[1].hi(0) == BCType::hoextrap);
             Real vpls = vcc(i  ,j,k,1) - 0.5 * amrex_calc_xslope_extdir(
                  i  ,j,k,1,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
             Real vmns = vcc(i-1,j,k,1) + 0.5 * amrex_calc_xslope_extdir(
                  i-1,j,k,1,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
 
 #if (AMREX_SPACEDIM == 3)
+                 extdir_or_ho_ilo = (d_bcrec[2].lo(0) == BCType::ext_dir) or
+                                    (d_bcrec[2].lo(0) == BCType::hoextrap);
+                 extdir_or_ho_ihi = (d_bcrec[2].hi(0) == BCType::ext_dir) or
+                                    (d_bcrec[2].hi(0) == BCType::hoextrap);
             Real wpls = vcc(i  ,j,k,2) - 0.5 * amrex_calc_xslope_extdir(
                  i  ,j,k,2,order,vcc,extdir_or_ho_ilo, extdir_or_ho_ihi, domain_ilo, domain_ihi);
             Real wmns = vcc(i-1,j,k,2) + 0.5 * amrex_calc_xslope_extdir(
@@ -118,17 +125,23 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
 
             if (i == domain_ilo && (d_bcrec[0].lo(0) == BCType::ext_dir)) {
                 u_val = vcc(i-1,j,k,0);
-                v_val = vcc(i-1,j,k,1);
-#if (AMREX_SPACEDIM == 3)
-                w_val = vcc(i-1,j,k,2);
-#endif
             } else if (i == domain_ihi+1 && (d_bcrec[0].hi(0) == BCType::ext_dir)) {
                 u_val = vcc(i  ,j,k,0);
-                v_val = vcc(i  ,j,k,1);
-#if (AMREX_SPACEDIM == 3)
-                w_val = vcc(i  ,j,k,2);
-#endif
             }
+
+            if (i == domain_ilo && (d_bcrec[1].lo(0) == BCType::ext_dir)) {
+                v_val = vcc(i-1,j,k,1);
+            } else if (i == domain_ihi+1 && (d_bcrec[1].hi(0) == BCType::ext_dir)) {
+                v_val = vcc(i  ,j,k,1);
+            }
+
+#if (AMREX_SPACEDIM == 3)
+            if (i == domain_ilo && (d_bcrec[2].lo(0) == BCType::ext_dir)) {
+                w_val = vcc(i-1,j,k,2);
+            } else if (i == domain_ihi+1 && (d_bcrec[2].hi(0) == BCType::ext_dir)) {
+                w_val = vcc(i  ,j,k,2);
+            }
+#endif
 
             fx(i,j,k,0) = u_val*u_val;
             fx(i,j,k,1) = v_val*u_val;
@@ -205,24 +218,32 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
         amrex::ParallelFor(vbx, [vcc,fy,domain_jlo,domain_jhi,d_bcrec]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            bool extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
-                                    (d_bcrec[1].lo(1) == BCType::hoextrap);
-            bool extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
-                                    (d_bcrec[1].hi(1) == BCType::hoextrap);
 
             int order = 2;
     
+            bool extdir_or_ho_jlo = (d_bcrec[0].lo(1) == BCType::ext_dir) or
+                                    (d_bcrec[0].lo(1) == BCType::hoextrap);
+            bool extdir_or_ho_jhi = (d_bcrec[0].hi(1) == BCType::ext_dir) or
+                                    (d_bcrec[0].hi(1) == BCType::hoextrap);
             Real upls = vcc(i,j  ,k,0) - 0.5 * amrex_calc_yslope_extdir(
                  i,j,k,0,order,vcc,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
             Real umns = vcc(i,j-1,k,0) + 0.5 * amrex_calc_yslope_extdir(
                  i,j-1,0,1,order,vcc,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
     
+                 extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
+                                    (d_bcrec[1].lo(1) == BCType::hoextrap);
+                 extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
+                                    (d_bcrec[1].hi(1) == BCType::hoextrap);
             Real vpls = vcc(i,j  ,k,1) - 0.5 * amrex_calc_yslope_extdir(
                  i,j,k,1,order,vcc,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
             Real vmns = vcc(i,j-1,k,1) + 0.5 * amrex_calc_yslope_extdir(
                  i,j-1,k,1,order,vcc,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
 #if (AMREX_SPACEDIM == 3)
+                 extdir_or_ho_jlo = (d_bcrec[2].lo(1) == BCType::ext_dir) or
+                                    (d_bcrec[2].lo(1) == BCType::hoextrap);
+                 extdir_or_ho_jhi = (d_bcrec[2].hi(1) == BCType::ext_dir) or
+                                    (d_bcrec[2].hi(1) == BCType::hoextrap);
             Real wpls = vcc(i,j  ,k,2) - 0.5 * amrex_calc_yslope_extdir(
                  i,j,k,2,order,vcc,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
             Real wmns = vcc(i,j-1,k,2) + 0.5 * amrex_calc_yslope_extdir(
@@ -255,23 +276,26 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
                 }
             }
 
-            if (j == domain_jlo && (d_bcrec[1].lo(1) == BCType::ext_dir)) {
+            if (j == domain_jlo && (d_bcrec[0].lo(1) == BCType::ext_dir)) {
                 u_val = vcc(i,j-1,k,0);
-                v_val = vcc(i,j-1,k,1);
-#if (AMREX_SPACEDIM == 3)
-                w_val = vcc(i,j-1,k,2);
-#endif
-            } else if (j == domain_jhi+1 && (d_bcrec[1].hi(1) == BCType::ext_dir)) {
+            } else if (j == domain_jhi+1 && (d_bcrec[0].hi(1) == BCType::ext_dir)) {
                 u_val = vcc(i,j  ,k,0);
-                v_val = vcc(i,j  ,k,1);
-#if (AMREX_SPACEDIM == 3)
-                w_val = vcc(i,j  ,k,2);
-#endif
             }
-
             fy(i,j,k,0) = u_val*v_val;
+
+            if (j == domain_jlo && (d_bcrec[1].lo(1) == BCType::ext_dir)) {
+                v_val = vcc(i,j-1,k,1);
+            } else if (j == domain_jhi+1 && (d_bcrec[1].hi(1) == BCType::ext_dir)) {
+                v_val = vcc(i,j  ,k,1);
+            }
             fy(i,j,k,1) = v_val*v_val;
+
 #if (AMREX_SPACEDIM == 3)
+            if (j == domain_jlo && (d_bcrec[2].lo(1) == BCType::ext_dir)) {
+                w_val = vcc(i,j-1,k,2);
+            } else if (j == domain_jhi+1 && (d_bcrec[2].hi(1) == BCType::ext_dir)) {
+                w_val = vcc(i,j  ,k,2);
+            }
             fy(i,j,k,2) = w_val*v_val;
 #endif
         });
@@ -288,14 +312,14 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
 
             Real vpls = vcc(i,j  ,k,1) - 0.5 * amrex_calc_yslope(i,j  ,k,1,order,vcc);
             Real vmns = vcc(i,j-1,k,1) + 0.5 * amrex_calc_yslope(i,j-1,k,1,order,vcc);
-#if (AMREX_SPACEDIM == 3)
-            Real wpls = vcc(i,j  ,k,2) - 0.5 * amrex_calc_yslope(i,j  ,k,2,order,vcc);
-            Real wmns = vcc(i,j-1,k,2) + 0.5 * amrex_calc_yslope(i,j-1,k,2,order,vcc);
-#endif
 
             Real u_val(0.5 * (upls + umns));
             Real v_val(0);
+
 #if (AMREX_SPACEDIM == 3)
+            Real wpls = vcc(i,j  ,k,2) - 0.5 * amrex_calc_yslope(i,j  ,k,2,order,vcc);
+            Real wmns = vcc(i,j-1,k,2) + 0.5 * amrex_calc_yslope(i,j-1,k,2,order,vcc);
+
             Real w_val(0.5 * (wpls + wmns));
 #endif
 
@@ -343,10 +367,6 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
         amrex::ParallelFor(wbx, [vcc,fz,domain_klo,domain_khi,d_bcrec]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            bool extdir_or_ho_klo = (d_bcrec[2].lo(2) == BCType::ext_dir) or
-                                    (d_bcrec[2].lo(2) == BCType::hoextrap);
-            bool extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
-                                    (d_bcrec[2].hi(2) == BCType::hoextrap);
 
             const Real ucc_pls = vcc(i,j,k  ,0);
             const Real ucc_mns = vcc(i,j,k-1,0);
@@ -358,16 +378,29 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
             const Real wcc_mns = vcc(i,j,k-1,2);
 
             int order = 2;
+
+            bool extdir_or_ho_klo = (d_bcrec[0].lo(2) == BCType::ext_dir) or
+                                    (d_bcrec[0].lo(2) == BCType::hoextrap);
+            bool extdir_or_ho_khi = (d_bcrec[0].hi(2) == BCType::ext_dir) or
+                                    (d_bcrec[0].hi(2) == BCType::hoextrap);
             Real upls = ucc_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,0,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
             Real umns = ucc_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,0,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
 
+                 extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
+                                    (d_bcrec[1].lo(1) == BCType::hoextrap);
+                 extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
+                                    (d_bcrec[1].hi(1) == BCType::hoextrap);
             Real vpls = vcc_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,1,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
             Real vmns = vcc_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,1,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
 
+                 extdir_or_ho_jlo = (d_bcrec[2].lo(1) == BCType::ext_dir) or
+                                    (d_bcrec[2].lo(1) == BCType::hoextrap);
+                 extdir_or_ho_jhi = (d_bcrec[2].hi(1) == BCType::ext_dir) or
+                                    (d_bcrec[2].hi(1) == BCType::hoextrap);
             Real wpls = wcc_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,2,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
             Real wmns = wcc_mns + 0.5 * amrex_calc_zslope_extdir(
@@ -393,18 +426,25 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
                 }
             }
 
-            if (k == domain_klo && (d_bcrec[2].lo(2) == BCType::ext_dir)) {
+            if (k == domain_klo && (d_bcrec[0].lo(2) == BCType::ext_dir)) {
                 u_val = ucc_mns;
+            } else if (k == domain_khi+1 && (d_bcrec[0].hi(2) == BCType::ext_dir)) {
+                u_val = ucc_pls;
+            }
+            fz(i,j,k,0) = u_val*w_val;
+
+            if (k == domain_klo && (d_bcrec[1].lo(2) == BCType::ext_dir)) {
                 v_val = vcc_mns;
+            } else if (k == domain_khi+1 && (d_bcrec[1].hi(2) == BCType::ext_dir)) {
+                v_val = vcc_pls;
+            }
+            fz(i,j,k,1) = v_val*w_val;
+
+            if (k == domain_klo && (d_bcrec[2].lo(2) == BCType::ext_dir)) {
                 w_val = wcc_mns;
             } else if (k == domain_khi+1 && (d_bcrec[2].hi(2) == BCType::ext_dir)) {
-                u_val = ucc_pls;
-                v_val = vcc_pls;
                 w_val = wcc_pls;
             }
-
-            fz(i,j,k,0) = u_val*w_val;
-            fz(i,j,k,1) = v_val*w_val;
             fz(i,j,k,2) = w_val*w_val;
         });
     }
@@ -503,19 +543,6 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi)]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            AMREX_D_TERM(bool extdir_or_ho_ilo = (d_bcrec[0].lo(0) == BCType::ext_dir) or
-                                                 (d_bcrec[0].lo(0) == BCType::hoextrap);,
-                         bool extdir_or_ho_jlo = (d_bcrec[0].lo(1) == BCType::ext_dir) or
-                                                 (d_bcrec[0].lo(1) == BCType::hoextrap);,
-                         bool extdir_or_ho_klo = (d_bcrec[0].lo(2) == BCType::ext_dir) or
-                                                 (d_bcrec[0].lo(2) == BCType::hoextrap););
-
-            AMREX_D_TERM(bool extdir_or_ho_ihi = (d_bcrec[0].hi(0) == BCType::ext_dir) or
-                                                 (d_bcrec[0].hi(0) == BCType::hoextrap);,
-                         bool extdir_or_ho_jhi = (d_bcrec[0].hi(1) == BCType::ext_dir) or
-                                                 (d_bcrec[0].hi(1) == BCType::hoextrap);,
-                         bool extdir_or_ho_khi = (d_bcrec[0].hi(2) == BCType::ext_dir) or
-                                                 (d_bcrec[0].hi(2) == BCType::hoextrap););
 
             // Initialize to zero just in case
             fx(i,j,k,0) = 0.0;
@@ -553,6 +580,18 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
 #endif
 
                // Compute slopes of component "0" of vel
+               AMREX_D_TERM(bool extdir_or_ho_ilo = (d_bcrec[0].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(0) == BCType::hoextrap);,
+                            bool extdir_or_ho_jlo = (d_bcrec[0].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(1) == BCType::hoextrap);,
+                            bool extdir_or_ho_klo = (d_bcrec[0].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(bool extdir_or_ho_ihi = (d_bcrec[0].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(0) == BCType::hoextrap);,
+                            bool extdir_or_ho_jhi = (d_bcrec[0].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(1) == BCType::hoextrap);,
+                            bool extdir_or_ho_khi = (d_bcrec[0].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_hi_u = amrex_calc_slopes_extdir_eb(i,j,k,0,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -560,7 +599,18 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                                             AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
-               // Compute slopes of component "1" of vel
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[1].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[1].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[1].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[1].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_hi_v = amrex_calc_slopes_extdir_eb(i,j,k,1,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -569,6 +619,18 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
 #if (AMREX_SPACEDIM == 3)
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[2].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[2].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[2].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[2].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[2].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_hi_w = amrex_calc_slopes_extdir_eb(i,j,k,2,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -603,6 +665,18 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                             delta_y = yf  - ccc(i-1,j,k,1);,
                             delta_z = zf  - ccc(i-1,j,k,2););
 
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[0].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[0].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[0].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[0].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[0].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[0].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_lo_u = amrex_calc_slopes_extdir_eb(i-1,j,k,0,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -610,6 +684,18 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                                             AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[1].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[1].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[1].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[1].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_lo_v = amrex_calc_slopes_extdir_eb(i-1,j,k,1,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -618,6 +704,18 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
 #if (AMREX_SPACEDIM == 3)
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[2].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[2].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[2].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[2].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[2].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_lo_w = amrex_calc_slopes_extdir_eb(i-1,j,k,2,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -849,19 +947,6 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi)]
         AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            AMREX_D_TERM(bool extdir_or_ho_ilo = (d_bcrec[1].lo(0) == BCType::ext_dir) or
-                                                 (d_bcrec[1].lo(0) == BCType::hoextrap);,
-                         bool extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
-                                                 (d_bcrec[1].lo(1) == BCType::hoextrap);,
-                         bool extdir_or_ho_klo = (d_bcrec[1].lo(2) == BCType::ext_dir) or
-                                                 (d_bcrec[1].lo(2) == BCType::hoextrap););
-
-            AMREX_D_TERM(bool extdir_or_ho_ihi = (d_bcrec[1].hi(0) == BCType::ext_dir) or
-                                                 (d_bcrec[1].hi(0) == BCType::hoextrap);,
-                         bool extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
-                                                 (d_bcrec[1].hi(1) == BCType::hoextrap);,
-                         bool extdir_or_ho_khi = (d_bcrec[1].hi(2) == BCType::ext_dir) or
-                                                 (d_bcrec[1].hi(2) == BCType::hoextrap););
 
             // Initialize to zero just in case
             fy(i,j,k,0) = 0.0;
@@ -891,12 +976,37 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                Real cc_vmin = amrex::min(v_pls, v_mns);
 
                // Compute slopes of both components of vel
+               AMREX_D_TERM(bool extdir_or_ho_ilo = (d_bcrec[0].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(0) == BCType::hoextrap);,
+                            bool extdir_or_ho_jlo = (d_bcrec[0].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(1) == BCType::hoextrap);,
+                            bool extdir_or_ho_klo = (d_bcrec[0].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[0].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(bool extdir_or_ho_ihi = (d_bcrec[0].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(0) == BCType::hoextrap);,
+                            bool extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(1) == BCType::hoextrap);,
+                            bool extdir_or_ho_khi = (d_bcrec[0].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[0].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_hi_u = amrex_calc_slopes_extdir_eb(i,j,k,0,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                             AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
                                             AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
+
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[1].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[1].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[1].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[1].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[1].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[1].hi(2) == BCType::hoextrap););
                const auto& slopes_eb_hi_v = amrex_calc_slopes_extdir_eb(i,j,k,1,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -912,12 +1022,26 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                Real cc_wmax = amrex::max(w_pls, w_mns);
                Real cc_wmin = amrex::min(w_pls, w_mns);
 
-               const auto& slopes_eb_hi_w = amrex_calc_slopes_extdir_eb(i,j,k,2,vel,ccc,
+               AMREX_D_TERM(     extdir_or_ho_ilo = (d_bcrec[2].lo(0) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jlo = (d_bcrec[2].lo(1) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(1) == BCType::hoextrap);,
+                                 extdir_or_ho_klo = (d_bcrec[2].lo(2) == BCType::ext_dir) or
+                                                    (d_bcrec[2].lo(2) == BCType::hoextrap););
+               AMREX_D_TERM(     extdir_or_ho_ihi = (d_bcrec[2].hi(0) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(0) == BCType::hoextrap);,
+                                 extdir_or_ho_jhi = (d_bcrec[2].hi(1) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(1) == BCType::hoextrap);,
+                                 extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
+                                                    (d_bcrec[2].hi(2) == BCType::hoextrap););
+
+               const auto& slopes_eb_hi_w = amrex_calc_slopes2extdir_eb(i,j,k,2,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                             AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
                                             AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
+
                Real upls = u_pls + delta_x * slopes_eb_hi_u[0]
                                  - delta_y * slopes_eb_hi_u[1]
                                  + delta_z * slopes_eb_hi_u[2];
