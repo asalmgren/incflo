@@ -1,3 +1,5 @@
+#ifdef AMREX_USE_EB
+
 #include <Hybrid.H>
 #include <AMReX_Slopes_K.H>
 #include <AMReX_EB_slopes_K.H>
@@ -5,7 +7,6 @@
 
 using namespace amrex;
 
-#ifdef AMREX_USE_EB
 namespace {
     std::pair<bool,bool> has_extdir_or_ho (BCRec const* bcrec, int ncomp, int dir)
     {
