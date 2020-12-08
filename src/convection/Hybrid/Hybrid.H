@@ -33,7 +33,7 @@ namespace hybrid {
                                 AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,
                                              amrex::Array4<amrex::Real> const& fy,
                                              amrex::Array4<amrex::Real> const& fz),
-                                amrex::Array4<amrex::Real const> const& vcc,
+                                amrex::Array4<amrex::Real const> const& vel,
                                 amrex::Vector<amrex::BCRec> const& h_bcrec,
                                               amrex::BCRec  const* d_bcrec,
                                 amrex::Geometry& geom);

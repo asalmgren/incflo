@@ -50,7 +50,8 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
     {
-        for (MFIter mfi(vel, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        // Turn off tiling due to overlap needed to make (dvdt)
+        for (MFIter mfi(vel, false); mfi.isValid(); ++mfi)
         {
             AMREX_D_TERM(Box const& ubx = mfi.nodaltilebox(0);,
                          Box const& vbx = mfi.nodaltilebox(1);,

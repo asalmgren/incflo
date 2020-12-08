@@ -123,13 +123,11 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
                          w_mac[lev]->FillBoundary(geom[lev].periodicity()););
         }
 
-        MFItInfo mfi_info;
-        // if (Gpu::notInLaunchRegion()) mfi_info.EnableTiling(IntVect(1024,16,16)).SetDynamic(true);
-        if (Gpu::notInLaunchRegion()) mfi_info.EnableTiling(IntVect(AMREX_D_DECL(1024,1024,1024))).SetDynamic(true);
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-        for (MFIter mfi(*density[lev],mfi_info); mfi.isValid(); ++mfi)
+        // Turn off tiling due to overlap needed in Hybrid scheme
+        for (MFIter mfi(*density[lev],false); mfi.isValid(); ++mfi)
         {
 
             Box const& bx = mfi.tilebox();
