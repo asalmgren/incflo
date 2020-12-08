@@ -316,7 +316,6 @@ hybrid::compute_convective_fluxes2 (Box const& bx, int ncomp,
             fx(i,j,k,n) = qs * umac(i,j,k);
         });
     }
-    exit(0);
 
     // At an ext_dir or hoextrap boundary, 
     //    the boundary value is on the face, not cell center.

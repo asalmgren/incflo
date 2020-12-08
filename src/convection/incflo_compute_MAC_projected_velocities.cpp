@@ -18,7 +18,6 @@ incflo::compute_MAC_projected_velocities (
                                               Vector<MultiFab*> const& inv_rho_y,
                                               Vector<MultiFab*> const& inv_rho_z),
                                  Vector<MultiFab*> const& vel_forces,
-                                 Vector<MultiFab*> const& conv_u,
                                  Real time)
 {
     BL_PROFILE("incflo::compute_MAC_projected_velocities()");

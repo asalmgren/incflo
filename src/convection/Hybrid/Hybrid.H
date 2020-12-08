@@ -86,8 +86,7 @@ namespace hybrid {
                                   amrex::Geometry& geom);
 
 #ifdef AMREX_USE_EB
-    void predict_vels_on_faces_eb (amrex::Box const& bx,
-                                   AMREX_D_DECL(amrex::Box const& ubx,
+    void predict_vels_on_faces_eb (AMREX_D_DECL(amrex::Box const& ubx,
                                                 amrex::Box const& vbx,
                                                 amrex::Box const& wbx),
                                    AMREX_D_DECL(amrex::Array4<amrex::Real> const& fx,

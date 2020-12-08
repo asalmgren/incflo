@@ -241,7 +241,7 @@ hybrid::predict_vels_with_forces ( Box const& bx,
                                 + 0.5 * dt * (vel_forces(i,j,k,2) + dudt(i,j,k,2)) ;
             Real wmns = vel_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,2,order,vel,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi)
-                                + 0.5 * dt * (vel_forces(i,j,k-1,2) + dudt(i,j-1,k,2)) ;
+                                + 0.5 * dt * (vel_forces(i,j,k-1,2) + dudt(i,j,k-1,2)) ;
 
             Real w_val(0);
 
@@ -275,7 +275,7 @@ hybrid::predict_vels_with_forces ( Box const& bx,
             Real wpls = vel(i,j,k  ,2) - 0.5 * amrex_calc_zslope(i,j,k  ,2,order,vel)
                                        + 0.5 * dt * (vel_forces(i,j,k,2) + dudt(i,j,k,2)) ;
             Real wmns = vel(i,j,k-1,2) + 0.5 * amrex_calc_zslope(i,j,k-1,2,order,vel)
-                                       + 0.5 * dt * (vel_forces(i,j,k-1,2) + dudt(i,j-1,k,2)) ;
+                                       + 0.5 * dt * (vel_forces(i,j,k-1,2) + dudt(i,j,k-1,2)) ;
             Real w_val(0);
 
             if (wmns >= 0.0 or wpls <= 0.0) {
@@ -478,11 +478,11 @@ hybrid::predict_vels_with_forces_eb (Box const& bx,
                Real upls = vel_pls - delta_x * slopes_eb_hi[0]
                                    + delta_y * slopes_eb_hi[1]
                                    + delta_z * slopes_eb_hi[2];
-                                   + 0.5 * dt * (vel_forces(i,j,k,1) + dudt(i,j,k,1)) ;
+                                   + 0.5 * dt * (vel_forces(i,j,k,0) + dudt(i,j,k,0)) ;
 #else
                Real upls = vel_pls - delta_x * slopes_eb_hi[0]
                                    + delta_y * slopes_eb_hi[1];
-                                   + 0.5 * dt * (vel_forces(i,j,k,1) + dudt(i,j,k,1)) ;
+                                   + 0.5 * dt * (vel_forces(i,j,k,0) + dudt(i,j,k,0)) ;
 #endif
                upls = amrex::max(amrex::min(upls, cc_umax), cc_umin);
 
@@ -497,11 +497,11 @@ hybrid::predict_vels_with_forces_eb (Box const& bx,
                Real umns = vel_mns + delta_x * slopes_eb_lo[0]
                                    + delta_y * slopes_eb_lo[1]
                                    + delta_z * slopes_eb_lo[2];
-                                   + 0.5 * dt * (vel_forces(i,j-1,k,1) + dudt(i,j-1,k,1)) ;
+                                   + 0.5 * dt * (vel_forces(i-1,j,k,0) + dudt(i-1,j,k,0)) ;
 #else
                Real umns = vel_mns + delta_x * slopes_eb_lo[0]
                                    + delta_y * slopes_eb_lo[1];
-                                   + 0.5 * dt * (vel_forces(i,j-1,k,1) + dudt(i,j-1,k,1)) ;
+                                   + 0.5 * dt * (vel_forces(i-1,j,k,0) + dudt(i-1,j,k,0)) ;
 #endif
                umns = amrex::max(amrex::min(umns, cc_umax), cc_umin);
 
@@ -759,7 +759,7 @@ hybrid::predict_vels_with_forces_eb (Box const& bx,
                Real delta_z = 0.5 + ccc(i,j,k,2);
 
                const Real vel_mns = vel(i,j,k-1,2);
-               const Real vel_pls = vel(i,j,k,2);
+               const Real vel_pls = vel(i,j,k  ,2);
 
                Real cc_wmax = amrex::max(vel_pls, vel_mns);
                Real cc_wmin = amrex::min(vel_pls, vel_mns);

@@ -66,14 +66,17 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
             Box tmpbox = amrex::surroundingNodes(gbx);
 
             FArrayBox tmpfab(tmpbox, AMREX_SPACEDIM*AMREX_SPACEDIM);
+            tmpfab.setVal(0.);
             Elixir eli = tmpfab.elixir();
 
-            AMREX_D_TERM(Array4<Real> fx = tmpfab.array(0);,
-                         Array4<Real> fy = tmpfab.array(AMREX_SPACEDIM);,
-                         Array4<Real> fz = tmpfab.array(2*AMREX_SPACEDIM););
+            AMREX_D_TERM(Array4<Real> const& fx = tmpfab.array(0);,
+                         Array4<Real> const& fy = tmpfab.array(AMREX_SPACEDIM);,
+                         Array4<Real> const& fz = tmpfab.array(2*AMREX_SPACEDIM););
 
 #ifdef AMREX_USE_EB
-           Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz), AMREX_D_DECL(apx, apy, apz);
+
+           Array4<Real const> AMREX_D_DECL(apx, apy, apz);
+           Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz);
 
            EBCellFlagFab const& flagfab = flags[mfi];
 
@@ -87,22 +90,14 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
             auto const typ = flagfab.getType(amrex::grow(bx,2));
             if (typ == FabType::covered)
             {
-#if (AMREX_SPACEDIM == 3)
-                amrex::ParallelFor(ubx, vbx, wbx,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept { u(i,j,k) = 0.0; },
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept { v(i,j,k) = 0.0; },
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept { w(i,j,k) = 0.0; });
-#else
-                amrex::ParallelFor(ubx, vbx,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept { u(i,j,k) = 0.0; },
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept { v(i,j,k) = 0.0; });
-#endif
+                // We have already zeroed out fx,fy,fz above
             }
             else if (typ == FabType::singlevalued)
             {
-                AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
-                             Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
-                             Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
+                AMREX_D_TERM(fcx = fcent[0]->const_array(mfi);,
+                             fcy = fcent[1]->const_array(mfi);,
+                             fcz = fcent[2]->const_array(mfi););
+
                 Array4<Real const> ccent_arr = ccent.const_array(mfi);
                 Array4<Real const> vfrac_arr = vfrac.const_array(mfi);
                 
@@ -120,12 +115,6 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
                 hybrid::compute_convective_rate_eb(gbx, AMREX_SPACEDIM, dudt_arr, AMREX_D_DECL(fx, fy, fz),
                                                    flag_arr, vfrac_arr, AMREX_D_DECL(apx, apy, apz), geom);
 
-                AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
-                             Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
-                             Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
-                Array4<Real const> ccent_arr = ccent.const_array(mfi);
-                Array4<Real const> vfrac_arr = vfrac.const_array(mfi);
-                
                 // 
                 // STEP 3:  Predict to faces using u_t = -div(uu) + F 
                 // 
@@ -136,7 +125,7 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
                 hybrid::predict_vels_with_forces_eb(bx,AMREX_D_DECL(ubx,vbx,wbx),
                                                     AMREX_D_DECL(u,v,w),vel_arr,vf_arr,dudt_arr,
                                                     flag_arr,AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
-                                                    h_bcrec,d_bcrec,dt,geom);
+                                                    h_bcrec,d_bcrec,l_dt,geom);
             }
             else
 #endif
@@ -163,7 +152,7 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
                 Array4<Real const> const& vf_arr   = vel_forces.const_array(mfi);
                 hybrid::predict_vels_with_forces(bx,AMREX_D_DECL(ubx,vbx,wbx),
                                                  AMREX_D_DECL(u,v,w),vel_arr,vf_arr,dudt_arr,
-                                                 h_bcrec,d_bcrec,dt,geom);
+                                                 h_bcrec,d_bcrec,l_dt,geom);
             }
         } // MFIter
     }

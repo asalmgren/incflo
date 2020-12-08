@@ -120,7 +120,6 @@ public: // for cuda
                                   AMREX_D_DECL(amrex::Vector<amrex::MultiFab*> const& inv_rho_x,
                                                amrex::Vector<amrex::MultiFab*> const& inv_rho_y,
                                                amrex::Vector<amrex::MultiFab*> const& inv_rho_z),
-                                  amrex::Vector<amrex::MultiFab*> const& conv_u, // just used as temp space
                                   amrex::Vector<amrex::MultiFab*> const& vel_forces,
                                   amrex::Real time);
 
@@ -144,12 +143,13 @@ public: // for cuda
                                                   amrex::Vector<amrex::MultiFab const*> const& w_mac));
 
 #ifdef AMREX_USE_EB
-    void redistribute_eb (int lev, amrex::Box const& bx, int ncomp,
+    void redistribute_eb ( amrex::Box const& bx, int ncomp,
                           amrex::Array4<amrex::Real> const& dUdt,
                           amrex::Array4<amrex::Real const> const& dUdt_in,
                           amrex::Array4<amrex::Real> const& scratch,
                           amrex::Array4<amrex::EBCellFlag const> const& flag,
-                          amrex::Array4<amrex::Real const> const& vfrac);
+                          amrex::Array4<amrex::Real const> const& vfrac,
+                          amrex::Geometry& geom);
 #endif
 
     ///////////////////////////////////////////////////////////////////////////

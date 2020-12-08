@@ -454,8 +454,7 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
 
 #ifdef AMREX_USE_EB
 void 
-hybrid::predict_vels_on_faces_eb (Box const& bx,
-                                  AMREX_D_DECL(Box const& ubx, 
+hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx, 
                                                Box const& vbx, 
                                                Box const& wbx),
                                   AMREX_D_DECL(Array4<Real> const& fx, 
@@ -604,7 +603,6 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                             delta_y = yf  - ccc(i-1,j,k,1);,
                             delta_z = zf  - ccc(i-1,j,k,2););
 
-               // Compute slopes of component "0" of vel
                const auto& slopes_eb_lo_u = amrex_calc_slopes_extdir_eb(i-1,j,k,0,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -612,7 +610,6 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                                             AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
-               // Compute slopes of component "1" of vel
                const auto& slopes_eb_lo_v = amrex_calc_slopes_extdir_eb(i-1,j,k,1,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -621,7 +618,6 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                                             AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
 #if (AMREX_SPACEDIM == 3)
-               // Compute slopes of component "1" of vel
                const auto& slopes_eb_lo_w = amrex_calc_slopes_extdir_eb(i-1,j,k,2,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
@@ -756,16 +752,16 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                Real wpls = w_pls - delta_x * slopes_eb_hi_w[0]
                                  + delta_y * slopes_eb_hi_w[1]
                                  + delta_z * slopes_eb_hi_w[2];
+               upls = amrex::max(amrex::min(upls, cc_umax), cc_umin);
+               vpls = amrex::max(amrex::min(vpls, cc_vmax), cc_vmin);
+               wpls = amrex::max(amrex::min(wpls, cc_wmax), cc_wmin);
 #else
                Real upls = u_pls - delta_x * slopes_eb_hi_u[0]
                                  + delta_y * slopes_eb_hi_u[1];
                Real vpls = v_pls - delta_x * slopes_eb_hi_v[0]
                                  + delta_y * slopes_eb_hi_v[1];
-#endif
                upls = amrex::max(amrex::min(upls, cc_umax), cc_umin);
                vpls = amrex::max(amrex::min(vpls, cc_vmax), cc_vmin);
-#if (AMREX_SPACEDIM == 3)
-               wpls = amrex::max(amrex::min(wpls, cc_wmax), cc_wmin);
 #endif
 
                AMREX_D_TERM(delta_x = 0.5 - ccc(i-1,j,k,0);,
@@ -789,14 +785,17 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                Real wmns = w_mns + delta_x * slopes_eb_lo_w[0]
                                  + delta_y * slopes_eb_lo_w[1]
                                  + delta_z * slopes_eb_lo_w[2];
+               umns = amrex::max(amrex::min(umns, cc_umax), cc_umin);
+               vmns = amrex::max(amrex::min(vmns, cc_vmax), cc_vmin);
+               wmns = amrex::max(amrex::min(wmns, cc_wmax), cc_wmin);
 #else
                Real umns = u_mns + delta_x * slopes_eb_lo_u[0]
                                  + delta_y * slopes_eb_lo_u[1];
                Real vmns = v_mns + delta_x * slopes_eb_lo_v[0]
                                  + delta_y * slopes_eb_lo_v[1];
-#endif
                umns = amrex::max(amrex::min(umns, cc_umax), cc_umin);
                vmns = amrex::max(amrex::min(vmns, cc_vmax), cc_vmin);
+#endif
 
                Real u_val(0);
                Real v_val(0.5*(vpls+vmns));
@@ -939,8 +938,6 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                upls = amrex::max(amrex::min(upls, cc_umax), cc_umin);
                vpls = amrex::max(amrex::min(vpls, cc_vmax), cc_vmin);
 #endif
-
-
                AMREX_D_TERM(delta_x = xf  - ccc(i,j-1,k,0);,
                             delta_y = 0.5 - ccc(i,j-1,k,1);,
                             delta_z = zf  - ccc(i,j-1,k,2););
@@ -989,7 +986,6 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                umns = amrex::max(amrex::min(umns, cc_umax), cc_umin);
                vmns = amrex::max(amrex::min(vmns, cc_vmax), cc_vmin);
 #endif
-
 
                Real v_val(0);
                Real u_val(0.5*(upls+umns));
@@ -1138,7 +1134,6 @@ hybrid::predict_vels_on_faces_eb (Box const& bx,
                umns = amrex::max(amrex::min(umns, cc_umax), cc_umin);
                vmns = amrex::max(amrex::min(vmns, cc_vmax), cc_vmin);
 #endif
-                                          
 
                Real v_val(0);
                Real u_val(0.5*(upls+umns));
