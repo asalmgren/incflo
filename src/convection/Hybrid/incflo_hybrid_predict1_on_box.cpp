@@ -388,19 +388,19 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(Box const& ubx,
             Real umns = ucc_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,0,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
 
-                 extdir_or_ho_jlo = (d_bcrec[1].lo(1) == BCType::ext_dir) or
-                                    (d_bcrec[1].lo(1) == BCType::hoextrap);
-                 extdir_or_ho_jhi = (d_bcrec[1].hi(1) == BCType::ext_dir) or
-                                    (d_bcrec[1].hi(1) == BCType::hoextrap);
+                 extdir_or_ho_klo = (d_bcrec[1].lo(2) == BCType::ext_dir) or
+                                    (d_bcrec[1].lo(2) == BCType::hoextrap);
+                 extdir_or_ho_khi = (d_bcrec[1].hi(2) == BCType::ext_dir) or
+                                    (d_bcrec[1].hi(2) == BCType::hoextrap);
             Real vpls = vcc_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,1,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
             Real vmns = vcc_mns + 0.5 * amrex_calc_zslope_extdir(
                  i,j,k-1,1,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
 
-                 extdir_or_ho_jlo = (d_bcrec[2].lo(1) == BCType::ext_dir) or
-                                    (d_bcrec[2].lo(1) == BCType::hoextrap);
-                 extdir_or_ho_jhi = (d_bcrec[2].hi(1) == BCType::ext_dir) or
-                                    (d_bcrec[2].hi(1) == BCType::hoextrap);
+                 extdir_or_ho_klo = (d_bcrec[2].lo(2) == BCType::ext_dir) or
+                                    (d_bcrec[2].lo(2) == BCType::hoextrap);
+                 extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
+                                    (d_bcrec[2].hi(2) == BCType::hoextrap);
             Real wpls = wcc_pls - 0.5 * amrex_calc_zslope_extdir(
                  i,j,k  ,2,order,vcc,extdir_or_ho_klo,extdir_or_ho_khi,domain_klo,domain_khi);
             Real wmns = wcc_mns + 0.5 * amrex_calc_zslope_extdir(
