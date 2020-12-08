@@ -33,6 +33,8 @@ hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac,
 #endif
                                Real dt, Geometry& geom)
 {
+    Real l_dt = dt; 
+
 #ifdef AMREX_USE_EB
     auto const& flags = ebfact->getMultiEBCellFlagFab();
     auto const& fcent = ebfact->getFaceCent();

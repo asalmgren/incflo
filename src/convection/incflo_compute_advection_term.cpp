@@ -33,8 +33,6 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
 {
     int ngmac = nghost_mac();
 
-    Real l_dt = m_dt;
-
     // We first compute the velocity forcing terms to be used in predicting
     //    to faces before the MAC projection
     if (m_advection_type != "MOL") {
@@ -167,6 +165,8 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                  Array4<Real const> const& fvel,
                                  Array4<Real const> const& ftra)
 {
+    Real l_dt = m_dt;
+
 #ifdef AMREX_USE_EB
     auto const& fact = EBFactory(lev);
     EBCellFlagFab const& flagfab = fact.getMultiEBCellFlagFab()[mfi];
