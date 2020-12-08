@@ -1035,7 +1035,7 @@ hybrid::predict_vels_on_faces_eb (AMREX_D_DECL(Box const& ubx,
                                  extdir_or_ho_khi = (d_bcrec[2].hi(2) == BCType::ext_dir) or
                                                     (d_bcrec[2].hi(2) == BCType::hoextrap););
 
-               const auto& slopes_eb_hi_w = amrex_calc_slopes2extdir_eb(i,j,k,2,vel,ccc,
+               const auto& slopes_eb_hi_w = amrex_calc_slopes_extdir_eb(i,j,k,2,vel,ccc,
                                             AMREX_D_DECL(fcx,fcy,fcz), flag,
                                             AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                             AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
