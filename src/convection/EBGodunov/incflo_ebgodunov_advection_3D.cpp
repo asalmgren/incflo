@@ -14,10 +14,15 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                       Array4<Real const> const& vmac,
                                       Array4<Real const> const& wmac,
                                       Array4<Real const> const& fq,
+                                      Array4<Real const> const& divu,
                                       Real l_dt,
                                       BCRec const* pbc, int const* iconserv,
                                       Real* p, 
                                       Array4<EBCellFlag const> const& flag,
+                                      AMREX_D_DECL(Array4<Real const> const& apx,
+                                                   Array4<Real const> const& apy,
+                                                   Array4<Real const> const& apz),
+                                      Array4<Real const> const& vfrac,
                                       AMREX_D_DECL(Array4<Real const> const& fcx,
                                                    Array4<Real const> const& fcy,
                                                    Array4<Real const> const& fcz),
@@ -69,8 +74,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     p +=         zlo.size();
     Array4<Real> zhi = makeArray4(p, zebox, ncomp);
     p +=         zhi.size();
-    Array4<Real> divu = makeArray4(p, bxg1, 1);
-    p +=         divu.size();
     Array4<Real> xyzlo = makeArray4(p, bxg1, ncomp);
     p +=         xyzlo.size();
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
@@ -100,10 +103,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                 q, wmac(i,j,k), pbc[n], dlo.z, dhi.z, is_velocity);
         });
     }
-
-    amrex::ParallelFor(Box(divu), [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
-        divu(i,j,k) = 0.0;
-    });
 
     amrex::ParallelFor(
         xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept

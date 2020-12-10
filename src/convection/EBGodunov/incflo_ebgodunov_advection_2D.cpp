@@ -1,8 +1,12 @@
 #include <incflo_godunov_corner_couple.H>
 #include <incflo_godunov_trans_bc.H>
 #include <incflo_ebgodunov_plm.H>
+
 #include <Godunov.H>
 #include <EBGodunov.H>
+
+#include <AMReX_MultiCutFab.H>
+#include <AMReX_EBMultiFabUtil_2D_C.H>
 
 using namespace amrex;
 
@@ -13,10 +17,15 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                       Array4<Real const> const& umac,
                                       Array4<Real const> const& vmac,
                                       Array4<Real const> const& fq,
+                                      Array4<Real const> const& divu,
                                       Real l_dt,
                                       BCRec const* pbc, int const* iconserv,
                                       Real* p, 
                                       Array4<EBCellFlag const> const& flag,
+                                      AMREX_D_DECL(Array4<Real const> const& apx,
+                                                   Array4<Real const> const& apy,
+                                                   Array4<Real const> const& apz),
+                                      Array4<Real const> const& vfrac,
                                       AMREX_D_DECL(Array4<Real const> const& fcx,
                                                    Array4<Real const> const& fcy,
                                                    Array4<Real const> const& fcz),
@@ -56,33 +65,26 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     p +=         ylo.size();
     Array4<Real> yhi = makeArray4(p, yebox, ncomp);
     p +=         yhi.size();
-    Array4<Real> divu = makeArray4(p, bxg1, 1);
-    p +=         divu.size();
     Array4<Real> xyzlo = makeArray4(p, bxg1, ncomp);
     p +=         xyzlo.size();
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
     p +=         xyzhi.size();
 
-    {   
-    // Use PLM to generate Im and Ip */
+    // 
+    // Use PLM to generate Im and Ip 
+    // 
+    amrex::ParallelFor(xebox, ncomp,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+    {
+        EBGodunov_plm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i-1,j,k,n),
+                             q, umac(i,j,k), pbc[n], dlo.x, dhi.x, is_velocity);
+    });
 
-        amrex::ParallelFor(xebox, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            EBGodunov_plm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i-1,j,k,n),
-                                 q, umac(i,j,k), pbc[n], dlo.x, dhi.x, is_velocity);
-        });
-
-        amrex::ParallelFor(yebox, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            EBGodunov_plm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j-1,k,n),
-                                  q, vmac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
-        });
-    }
-
-    amrex::ParallelFor(Box(divu), [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
-        divu(i,j,k) = 0.0;
+    amrex::ParallelFor(yebox, ncomp,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+    {
+        EBGodunov_plm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j-1,k,n),
+                              q, vmac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
     });
 
     amrex::ParallelFor(

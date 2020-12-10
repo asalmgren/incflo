@@ -12,11 +12,12 @@ godunov::compute_godunov_advection (Box const& bx, int ncomp,
                                     Array4<Real const> const& umac,
                                     Array4<Real const> const& vmac,
                                     Array4<Real const> const& fq,
-                                    Geometry& geom,
+                                    Array4<Real const> const& divu,
                                     Real l_dt,
                                     BCRec const* pbc, int const* iconserv,
                                     Real* p, bool use_ppm, 
                                     bool l_use_forces_in_trans,
+                                    Geometry& geom,
                                     bool is_velocity )
 {
     Box const& xbx = amrex::surroundingNodes(bx,0);
@@ -51,8 +52,6 @@ godunov::compute_godunov_advection (Box const& bx, int ncomp,
     p +=         ylo.size();
     Array4<Real> yhi = makeArray4(p, yebox, ncomp);
     p +=         yhi.size();
-    Array4<Real> divu = makeArray4(p, bxg1, 1);
-    p +=         divu.size();
     Array4<Real> xyzlo = makeArray4(p, bxg1, ncomp);
     p +=         xyzlo.size();
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
@@ -86,10 +85,6 @@ godunov::compute_godunov_advection (Box const& bx, int ncomp,
                               q, vmac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
         });
     }
-
-    amrex::ParallelFor(Box(divu), [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
-        divu(i,j,k) = 0.0;
-    });
 
     amrex::ParallelFor(
         xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept

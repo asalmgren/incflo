@@ -125,12 +125,14 @@ namespace godunov {
                                                  amrex::Array4<amrex::Real const> const& vmac,
                                                  amrex::Array4<amrex::Real const> const& wmac),
                                     amrex::Array4<amrex::Real const> const& fq,
-                                    amrex::Geometry& geom,
+                                    amrex::Array4<amrex::Real const> const& divu,
                                     amrex::Real dt,
                                     amrex::BCRec const* d_bcrec, 
                                     int const* iconserv,
-                                    amrex::Real* p, bool use_ppm, 
+                                    amrex::Real* p, 
+                                    bool use_ppm, 
                                     bool use_forces_in_trans,
+                                    amrex::Geometry& geom,
                                     bool is_velocity = false);
 
 } // namespace godunov

@@ -130,6 +130,7 @@ public: // for cuda
                                   amrex::Array4<amrex::Real const> const& vel,
                                   amrex::Array4<amrex::Real const> const& rho,
                                   amrex::Array4<amrex::Real const> const& tra,
+                                  amrex::Array4<amrex::Real const> const& divu,
                                   AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
                                                amrex::Array4<amrex::Real const> const& vmac,
                                                amrex::Array4<amrex::Real const> const& wmac),
