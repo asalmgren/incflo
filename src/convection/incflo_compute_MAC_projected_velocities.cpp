@@ -86,11 +86,11 @@ incflo::compute_MAC_projected_velocities (
 
 #ifdef AMREX_USE_EB
 #else
-            godunov::predict_godunov(lev, time, 
+            godunov::predict_godunov(time, 
                                      AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), 
                                      *mac_phi[lev], *vel[lev], *vel_forces[lev], 
                                      get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
-                                     geom, l_dt, m_godunov_ppm, m_godunov_use_forces_in_trans,
+                                     geom[lev], l_dt, m_godunov_ppm, m_godunov_use_forces_in_trans,
                                      AMREX_D_DECL(m_fluxes[lev][0], m_fluxes[lev][1], m_fluxes[lev][2]), 
                                      m_use_mac_phi_in_godunov);
 #endif

@@ -6,18 +6,18 @@
 
 using namespace amrex;
 
-void ebgodunov::predict_godunov (int lev, Real time, MultiFab& u_mac, MultiFab& v_mac,
+void ebgodunov::predict_godunov (Real time, MultiFab& u_mac, MultiFab& v_mac,
                                  MultiFab& w_mac, MultiFab const& mac_phi, 
                                  MultiFab const& vel, MultiFab const& vel_forces,
                                  Vector<BCRec> const& h_bcrec,
                                         BCRec  const* d_bcrec,
-                                 Vector<Geometry> geom, Real l_dt, 
+                                 Geometry& geom, Real l_dt, 
                                  MultiFab const& gmacphi_x, MultiFab const& gmacphi_y,
                                  MultiFab const& gmacphi_z,
                                  bool use_mac_phi_in_godunov)
 {
-    Box const& domain = geom[lev].Domain();
-    const Real* dx    = geom[lev].CellSize();
+    Box const& domain = geom.Domain();
+    const Real* dx    = geom.CellSize();
 
     const int ncomp = AMREX_SPACEDIM;
 #ifdef _OPENMP
@@ -70,20 +70,20 @@ void ebgodunov::predict_godunov (int lev, Real time, MultiFab& u_mac, MultiFab& 
             p +=         w_ad.size();
 
             {
-                ebgodunov::predict_plm_x (lev, bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
-                                        geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_y (lev, bx, AMREX_SPACEDIM, Imy, Ipy, a_vel, a_vel,
-                                        geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_z (lev, bx, AMREX_SPACEDIM, Imz, Ipz, a_vel, a_vel,
-                                        geom, l_dt, h_bcrec, d_bcrec);
+                ebgodunov::predict_plm_x (bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
+                                          geom, l_dt, h_bcrec, d_bcrec);
+                ebgodunov::predict_plm_y (bx, AMREX_SPACEDIM, Imy, Ipy, a_vel, a_vel,
+                                          geom, l_dt, h_bcrec, d_bcrec);
+                ebgodunov::predict_plm_z (bx, AMREX_SPACEDIM, Imz, Ipz, a_vel, a_vel,
+                                          geom, l_dt, h_bcrec, d_bcrec);
             }
 
-            make_trans_velocities(lev, Box(u_ad), Box(v_ad), Box(w_ad),
+            make_trans_velocities(Box(u_ad), Box(v_ad), Box(w_ad),
                                   u_ad, v_ad, w_ad,
                                   Imx, Imy, Imz, Ipx, Ipy, Ipz, a_vel, a_f, 
                                   domain, l_dt, d_bcrec);
 
-            predict_godunov_on_box(lev, bx, ncomp, xbx, ybx, zbx, a_umac, a_vmac, a_wmac,
+            predict_godunov_on_box(bx, ncomp, xbx, ybx, zbx, a_umac, a_vmac, a_wmac,
                                    a_vel, u_ad, v_ad, w_ad, mac_phi_arr, 
                                    Imx, Imy, Imz, Ipx, Ipy, Ipz, a_f, 
                                    domain, dx, l_dt, d_bcrec,
@@ -95,7 +95,7 @@ void ebgodunov::predict_godunov (int lev, Real time, MultiFab& u_mac, MultiFab& 
     }
 }
 
-void ebgodunov::make_trans_velocities (int lev, Box const& xbx, Box const& ybx, Box const& zbx,
+void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx, Box const& zbx,
                                        Array4<Real> const& u_ad,
                                        Array4<Real> const& v_ad,
                                        Array4<Real> const& w_ad,
@@ -164,7 +164,7 @@ void ebgodunov::make_trans_velocities (int lev, Box const& xbx, Box const& ybx, 
     });
 }
 
-void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
+void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                                         Box const& xbx, Box const& ybx, Box const& zbx,
                                         Array4<Real> const& qx,
                                         Array4<Real> const& qy,
@@ -191,7 +191,6 @@ void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
                                         bool l_use_mac_phi_in_godunov,
                                         Real* p)
 {
-    // const Box& domain = Geom(lev).Domain();
     const Dim3 dlo = amrex::lbound(domain);
     const Dim3 dhi = amrex::ubound(domain);
     Real dx = dx_arr[0];
