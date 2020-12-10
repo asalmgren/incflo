@@ -232,10 +232,18 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
 
     if (m_advection_type == "Godunov")
     {
+#ifdef AMREX_USE_EB
+#if (AMREX_SPACEDIM == 3)
+        FArrayBox tmpfab(amrex::grow(bx,4), nmaxcomp*14+1);
+#else
+        FArrayBox tmpfab(amrex::grow(bx,4), nmaxcomp*10+1);
+#endif
+#else
 #if (AMREX_SPACEDIM == 3)
         FArrayBox tmpfab(amrex::grow(bx,1), nmaxcomp*14+1);
 #else
         FArrayBox tmpfab(amrex::grow(bx,1), nmaxcomp*10+1);
+#endif
 #endif
 
 #ifdef AMREX_USE_EB 
@@ -248,7 +256,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                  get_velocity_iconserv_device_ptr(),
                                                  tmpfab.dataPtr(),
                                                  flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev],
-                                                 m_godunov_use_forces_in_trans, true);
+                                                 true); // is_velocity
             if (!m_constant_density) {
                 ebgodunov::compute_godunov_advection(bx, 1,
                                                      drdt, rho,
@@ -256,8 +264,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      get_density_bcrec_device_ptr(),
                                                      get_density_iconserv_device_ptr(),
                                                      tmpfab.dataPtr(),
-                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev],
-                                                     m_godunov_use_forces_in_trans, true);
+                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
             if (m_advect_tracer) {
                 ebgodunov::compute_godunov_advection(bx, m_ntrac,
@@ -266,8 +273,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      get_tracer_bcrec_device_ptr(),
                                                      get_tracer_iconserv_device_ptr(),
                                                      tmpfab.dataPtr(),
-                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev],
-                                                     m_godunov_use_forces_in_trans, true);
+                                                     flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
             Gpu::streamSynchronize();
         }

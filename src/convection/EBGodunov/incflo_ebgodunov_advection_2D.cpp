@@ -22,7 +22,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                                    Array4<Real const> const& fcz),
                                       Array4<Real const> const& ccc,
                                       Geometry& geom,
-                                      bool l_use_forces_in_trans,
                                       bool is_velocity )
 {
     Box const& xbx = amrex::surroundingNodes(bx,0);
@@ -64,19 +63,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
     p +=         xyzhi.size();
 
-#ifndef AMREX_USE_EB
-    // Use PPM to generate Im and Ip */
-    if (use_ppm) {
-        amrex::ParallelFor(bxg1, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            Godunov_ppm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i,j,k,n),
-                              q, umac, pbc[n], dlo.x, dhi.x);
-            Godunov_ppm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j,k,n),
-                              q, vmac, pbc[n], dlo.y, dhi.y);
-        });
-    } else 
-#endif
     {   
     // Use PLM to generate Im and Ip */
 
@@ -105,15 +91,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real lo = Ipx(i-1,j,k,n);
             Real hi = Imx(i  ,j,k,n);
 
-            if (l_use_forces_in_trans) {
-                lo += (iconserv[n]) ? -0.5*l_dt*q(i-1,j,k,n)*divu(i-1,j,k) : 0.;
-                hi += (iconserv[n]) ? -0.5*l_dt*q(i  ,j,k,n)*divu(i  ,j,k) : 0.;
-                if (fq) {
-                    lo += 0.5*l_dt*fq(i-1,j,k,n);
-                    hi += 0.5*l_dt*fq(i  ,j,k,n);
-                }
-            }
-
             Real uad = umac(i,j,k);
 
             auto bc = pbc[n];  
@@ -132,15 +109,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         {
             Real lo = Ipy(i,j-1,k,n);
             Real hi = Imy(i,j  ,k,n);
-
-            if (l_use_forces_in_trans) {
-                lo += (iconserv[n]) ? -0.5*l_dt*q(i,j-1,k,n)*divu(i,j-1,k) : 0.;
-                hi += (iconserv[n]) ? -0.5*l_dt*q(i,j  ,k,n)*divu(i,j  ,k) : 0.;
-                if (fq) {
-                    lo += 0.5*l_dt*fq(i,j-1,k,n);
-                    hi += 0.5*l_dt*fq(i,j  ,k,n);
-                }
-            }
 
             Real vad = vmac(i,j,k);
 
@@ -205,13 +173,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                              (yzlo(i,j+1,k,n) - yzlo(i,j,k,n));
         }
 
-        if (!l_use_forces_in_trans) {
-            stl += (iconserv[n]) ? -0.5*l_dt*q(i-1,j,k,n)*divu(i-1,j,k) : 0.;
-            sth += (iconserv[n]) ? -0.5*l_dt*q(i  ,j,k,n)*divu(i  ,j,k) : 0.;
-            if (fq) {
-                stl += 0.5*l_dt*fq(i-1,j,k,n);
-                sth += 0.5*l_dt*fq(i  ,j,k,n);
-            }
+        stl += (iconserv[n]) ? -0.5*l_dt*q(i-1,j,k,n)*divu(i-1,j,k) : 0.;
+        sth += (iconserv[n]) ? -0.5*l_dt*q(i  ,j,k,n)*divu(i  ,j,k) : 0.;
+        if (fq) {
+            stl += 0.5*l_dt*fq(i-1,j,k,n);
+            sth += 0.5*l_dt*fq(i  ,j,k,n);
         }
 
         auto bc = pbc[n]; 
@@ -269,13 +235,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                              (xzlo(i+1,j,k,n) - xzlo(i,j,k,n));
         }
 
-        if (!l_use_forces_in_trans) {
-            stl += (iconserv[n]) ? -0.5*l_dt*q(i,j-1,k,n)*divu(i,j-1,k) : 0.;
-            sth += (iconserv[n]) ? -0.5*l_dt*q(i,j  ,k,n)*divu(i,j  ,k) : 0.;
-            if (fq) {
-                stl += 0.5*l_dt*fq(i,j-1,k,n);
-                sth += 0.5*l_dt*fq(i,j  ,k,n);
-            }
+        stl += (iconserv[n]) ? -0.5*l_dt*q(i,j-1,k,n)*divu(i,j-1,k) : 0.;
+        sth += (iconserv[n]) ? -0.5*l_dt*q(i,j  ,k,n)*divu(i,j  ,k) : 0.;
+        if (fq) {
+            stl += 0.5*l_dt*fq(i,j-1,k,n);
+            sth += 0.5*l_dt*fq(i,j  ,k,n);
         }
 
         auto bc = pbc[n];

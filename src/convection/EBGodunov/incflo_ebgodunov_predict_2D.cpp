@@ -13,7 +13,6 @@ void ebgodunov::predict_godunov (int lev, Real time,
                                  Vector<BCRec> const& h_bcrec,
                                         BCRec  const* d_bcrec,
                                  Vector<Geometry> geom, Real l_dt, 
-                                 bool use_ppm, bool use_forces_in_trans,
                                  MultiFab const& gmacphi_x, MultiFab const& gmacphi_y,
                                  bool use_mac_phi_in_godunov)
 {
@@ -60,13 +59,6 @@ void ebgodunov::predict_godunov (int lev, Real time,
             Array4<Real> v_ad = makeArray4(p,Box(bx).grow(0,1).surroundingNodes(1),1);
             p +=         v_ad.size();
 
-#ifndef AMREX_USE_EB
-            if (use_ppm){
-                godunov::predict_ppm (lev, bxg1, AMREX_SPACEDIM, Imx, Imy, Ipx, Ipy, a_vel, a_vel,
-                                      geom, l_dt, d_bcrec);
-            }
-            else
-#endif
             {
                 ebgodunov::predict_plm_x (lev, bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
@@ -77,14 +69,13 @@ void ebgodunov::predict_godunov (int lev, Real time,
             make_trans_velocities(lev, Box(u_ad), Box(v_ad),
                                   u_ad, v_ad,
                                   Imx, Imy, Ipx, Ipy, a_vel, a_f, 
-                                  domain, l_dt, d_bcrec, use_forces_in_trans);
+                                  domain, l_dt, d_bcrec);
 
             predict_godunov_on_box(lev, bx, ncomp, xbx, ybx, 
                                    a_umac, a_vmac,
                                    a_vel, u_ad, v_ad, mac_phi_arr,
                                    Imx, Imy, Ipx, Ipy, a_f, 
                                    domain, dx, l_dt, d_bcrec, 
-                                   use_forces_in_trans, 
                                    gmacphi_x_arr, gmacphi_y_arr, 
                                    use_mac_phi_in_godunov, p);
 
@@ -104,8 +95,7 @@ void ebgodunov::make_trans_velocities (int lev, Box const& xbx, Box const& ybx,
                                        Array4<Real const> const& f,
                                        const Box& domain,
                                        Real l_dt, 
-                                       BCRec  const* pbc,
-                                       bool l_use_forces_in_trans)
+                                       BCRec  const* pbc)
   {
     const Dim3 dlo = amrex::lbound(domain);
     const Dim3 dhi = amrex::ubound(domain);
@@ -121,11 +111,6 @@ void ebgodunov::make_trans_velocities (int lev, Box const& xbx, Box const& ybx,
         Real lo = Ipx(i-1,j,k,n);
         Real hi = Imx(i  ,j,k,n);
 
-        if (l_use_forces_in_trans) {
-            lo += 0.5*l_dt*f(i-1,j,k,n);
-            hi += 0.5*l_dt*f(i  ,j,k,n);
-        }
-
         auto bc = pbc[n];
         Godunov_trans_xbc(i, j, k, n, vel, lo, hi, lo, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
@@ -140,11 +125,6 @@ void ebgodunov::make_trans_velocities (int lev, Box const& xbx, Box const& ybx,
 
         Real lo = Ipy(i,j-1,k,n);
         Real hi = Imy(i,j  ,k,n);
-
-        if (l_use_forces_in_trans) {
-            lo += 0.5*l_dt*f(i,j-1,k,n);
-            hi += 0.5*l_dt*f(i,j  ,k,n);
-        }
 
         auto bc = pbc[n];
         Godunov_trans_ybc(i, j, k, n, vel, lo, hi, lo, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
@@ -172,7 +152,6 @@ void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
                                           const Real* dx_arr,
                                           Real l_dt,
                                           BCRec  const* pbc,
-                                          bool l_use_forces_in_trans,
                                           Array4<Real const> const& gmacphi_x,
                                           Array4<Real const> const& gmacphi_y,
                                           bool l_use_mac_phi_in_godunov,
@@ -201,11 +180,6 @@ void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
             Real lo = Ipx(i-1,j,k,n);
             Real hi = Imx(i  ,j,k,n);
 
-            if (l_use_forces_in_trans) {
-                lo += 0.5*l_dt*f(i-1,j,k,n);
-                hi += 0.5*l_dt*f(i  ,j,k,n);
-            }
-
             Real uad = u_ad(i,j,k);
             auto bc = pbc[n];
 
@@ -222,11 +196,6 @@ void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
         {
             Real lo = Ipy(i,j-1,k,n);
             Real hi = Imy(i,j  ,k,n);
-
-            if (l_use_forces_in_trans) {
-                lo += 0.5*l_dt*f(i,j-1,k,n);
-                hi += 0.5*l_dt*f(i,j  ,k,n);
-            }
 
             Real vad = v_ad(i,j,k);
             auto bc = pbc[n];
@@ -286,10 +255,8 @@ void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
                                                  (yzlo(i-1,j+1,k  )-yzlo(i-1,j,k));
         Real sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
                                                  (yzlo(i  ,j+1,k  )-yzlo(i  ,j,k));
-        if (!l_use_forces_in_trans) {
-            stl += 0.5 * l_dt * f(i-1,j,k,n);
-            sth += 0.5 * l_dt * f(i  ,j,k,n);
-        }
+        stl += 0.5 * l_dt * f(i-1,j,k,n);
+        sth += 0.5 * l_dt * f(i  ,j,k,n);
 
         Real gphi_x;
 
@@ -358,10 +325,8 @@ void ebgodunov::predict_godunov_on_box (int lev, Box const& bx, int ncomp,
                                                  (xzlo(i+1,j-1,k  )-xzlo(i,j-1,k));
         Real sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
                                                  (xzlo(i+1,j  ,k  )-xzlo(i,j  ,k));
-        if (!l_use_forces_in_trans) {
-           stl += 0.5 * l_dt * f(i,j-1,k,n);
-           sth += 0.5 * l_dt * f(i,j  ,k,n);
-        }
+       stl += 0.5 * l_dt * f(i,j-1,k,n);
+       sth += 0.5 * l_dt * f(i,j  ,k,n);
 
         Real gphi_y;
 

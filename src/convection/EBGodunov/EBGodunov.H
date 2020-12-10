@@ -22,7 +22,7 @@ namespace ebgodunov {
                           amrex::Vector<amrex::BCRec> const& h_bcrec,
                                         amrex::BCRec  const* d_bcrec,
                           amrex::Vector<amrex::Geometry> geom,
-                          amrex::Real dt, bool use_ppm, bool use_forces_in_trans,
+                          amrex::Real dt, 
                           AMREX_D_DECL(amrex::MultiFab const& gmacphi_x,
                                        amrex::MultiFab const& gmacphi_y,
                                        amrex::MultiFab const& gmacphi_z),
@@ -73,8 +73,7 @@ namespace ebgodunov {
                                 amrex::Array4<amrex::Real const> const& f,
                                 const amrex::Box& domain,
                                 amrex::Real dt,
-                                amrex::BCRec const* d_bcrec,
-                                bool use_forces_in_trans);
+                                amrex::BCRec const* d_bcrec);
 
     void predict_godunov_on_box (int lev, amrex::Box const& bx, int ncomp,
                                  AMREX_D_DECL(amrex::Box const& xbx, 
@@ -99,7 +98,6 @@ namespace ebgodunov {
                                  const amrex::Real* dx,
                                  amrex::Real dt,
                                  amrex::BCRec const* d_bcrec,
-                                 bool use_forces_in_trans,
                                  AMREX_D_DECL(amrex::Array4<amrex::Real const> const& gmacphi_x,
                                               amrex::Array4<amrex::Real const> const& gmacphi_y,
                                               amrex::Array4<amrex::Real const> const& gmacphi_z),
@@ -123,7 +121,6 @@ namespace ebgodunov {
                                                  amrex::Array4<amrex::Real const> const& fcz),
                                     amrex::Array4<amrex::Real const> const& ccc,
                                     amrex::Geometry& geom,
-                                    bool use_forces_in_trans,
                                     bool is_velocity = false);
 
 } // namespace ebgodunov
