@@ -7,14 +7,14 @@
 using namespace amrex;
 
 void
-godunov::compute_godunov_advection (int lev, Box const& bx, int ncomp,
+godunov::compute_godunov_advection (Box const& bx, int ncomp,
                                     Array4<Real> const& dqdt,
                                     Array4<Real const> const& q,
                                     Array4<Real const> const& umac,
                                     Array4<Real const> const& vmac,
                                     Array4<Real const> const& wmac,
                                     Array4<Real const> const& fq,
-                                    Vector<amrex::Geometry> geom,
+                                    Geometry& geom,
                                     Real l_dt,
                                     BCRec const* pbc, int const* iconserv,
                                     Real* p, bool use_ppm,
@@ -29,17 +29,17 @@ godunov::compute_godunov_advection (int lev, Box const& bx, int ncomp,
     Box yebox = Box(ybx).grow(0,1).grow(2,1);
     Box zebox = Box(zbx).grow(0,1).grow(1,1);
 
-    const Real dx = geom[lev].CellSize(0);
-    const Real dy = geom[lev].CellSize(1);
-    const Real dz = geom[lev].CellSize(2);
+    const Real dx = geom.CellSize(0);
+    const Real dy = geom.CellSize(1);
+    const Real dz = geom.CellSize(2);
     Real dtdx = l_dt/dx;
     Real dtdy = l_dt/dy;
     Real dtdz = l_dt/dz;
 
-    Box const& domain = geom[lev].Domain();
+    Box const& domain = geom.Domain();
     const auto dlo = amrex::lbound(domain);
     const auto dhi = amrex::ubound(domain);
-    const auto dxinv = geom[lev].InvCellSizeArray();
+    const auto dxinv = geom.InvCellSizeArray();
 
     Array4<Real> Imx = makeArray4(p, bxg1, ncomp);
     p +=         Imx.size();

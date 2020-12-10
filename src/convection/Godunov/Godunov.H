@@ -119,14 +119,14 @@ namespace godunov {
                                  bool use_mac_phi_in_godunov,
                                  amrex::Real* p);
 
-    void compute_godunov_advection (int lev, amrex::Box const& bx, int ncomp,
+    void compute_godunov_advection (amrex::Box const& bx, int ncomp,
                                     amrex::Array4<amrex::Real> const& dqdt,
                                     amrex::Array4<amrex::Real const> const& q,
                                     AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
                                                  amrex::Array4<amrex::Real const> const& vmac,
                                                  amrex::Array4<amrex::Real const> const& wmac),
                                     amrex::Array4<amrex::Real const> const& fq,
-                                    amrex::Vector<amrex::Geometry> geom,
+                                    amrex::Geometry& geom,
                                     amrex::Real dt,
                                     amrex::BCRec const* d_bcrec, 
                                     int const* iconserv,
