@@ -1,25 +1,25 @@
-#include <incflo_godunov_plm.H>
-#include <incflo_godunov_ppm.H>
 #include <incflo_godunov_corner_couple.H>
 #include <incflo_godunov_trans_bc.H>
+#include <incflo_ebgodunov_plm.H>
 #include <Godunov.H>
+#include <EBGodunov.H>
 
 using namespace amrex;
 
 void
-godunov::compute_godunov_advection (int lev, Box const& bx, int ncomp,
-                                    Array4<Real> const& dqdt,
-                                    Array4<Real const> const& q,
-                                    Array4<Real const> const& umac,
-                                    Array4<Real const> const& vmac,
-                                    Array4<Real const> const& wmac,
-                                    Array4<Real const> const& fq,
-                                    Vector<amrex::Geometry> geom,
-                                    Real l_dt,
-                                    BCRec const* pbc, int const* iconserv,
-                                    Real* p, bool use_ppm,
-                                    bool l_use_forces_in_trans,
-                                    bool is_velocity )
+ebgodunov::compute_godunov_advection (int lev, Box const& bx, int ncomp,
+                                      Array4<Real> const& dqdt,
+                                      Array4<Real const> const& q,
+                                      Array4<Real const> const& umac,
+                                      Array4<Real const> const& vmac,
+                                      Array4<Real const> const& wmac,
+                                      Array4<Real const> const& fq,
+                                      Vector<amrex::Geometry> geom,
+                                      Real l_dt,
+                                      BCRec const* pbc, int const* iconserv,
+                                      Real* p, bool use_ppm,
+                                      bool l_use_forces_in_trans,
+                                      bool is_velocity )
 {
     Box const& xbx = amrex::surroundingNodes(bx,0);
     Box const& ybx = amrex::surroundingNodes(bx,1);
@@ -72,6 +72,7 @@ godunov::compute_godunov_advection (int lev, Box const& bx, int ncomp,
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
     p +=         xyzhi.size();
 
+#ifndef AMREX_USE_EB
     // Use PPM to generate Im and Ip */
     if (use_ppm) {
         amrex::ParallelFor(bxg1, ncomp,
@@ -84,29 +85,30 @@ godunov::compute_godunov_advection (int lev, Box const& bx, int ncomp,
             Godunov_ppm_fpu_z(i, j, k, n, l_dt, dz, Imz(i,j,k,n), Ipz(i,j,k,n),
                               q, wmac, pbc[n], dlo.z, dhi.z);
         });
-
+    } else 
+#endif
+    {
     // Use PLM to generate Im and Ip */
-    } else {
 
         amrex::ParallelFor(xebox, ncomp,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
-            Godunov_plm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i-1,j,k,n),
-                              q, umac(i,j,k), pbc[n], dlo.x, dhi.x, is_velocity);
+            EBGodunov_plm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i-1,j,k,n),
+                                q, umac(i,j,k), pbc[n], dlo.x, dhi.x, is_velocity);
         });
 
         amrex::ParallelFor(yebox, ncomp,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
-            Godunov_plm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j-1,k,n),
-                              q, vmac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
+            EBGodunov_plm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j-1,k,n),
+                                q, vmac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
         });
 
         amrex::ParallelFor(zebox, ncomp,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
-            Godunov_plm_fpu_z(i, j, k, n, l_dt, dz, Imz(i,j,k,n), Ipz(i,j,k-1,n),
-                              q, wmac(i,j,k), pbc[n], dlo.z, dhi.z, is_velocity);
+            EBGodunov_plm_fpu_z(i, j, k, n, l_dt, dz, Imz(i,j,k,n), Ipz(i,j,k-1,n),
+                                q, wmac(i,j,k), pbc[n], dlo.z, dhi.z, is_velocity);
         });
     }
 

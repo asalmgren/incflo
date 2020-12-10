@@ -7,4 +7,6 @@ CEXE_sources += incflo_godunov_ppm.cpp
 
 CEXE_headers += incflo_godunov_plm.H
 CEXE_headers += incflo_godunov_ppm.H
+CEXE_headers += incflo_godunov_corner_couple.H
+CEXE_headers += incflo_godunov_trans.H
 
