@@ -203,8 +203,8 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                 }  // end of making qmns
             }
 
-            Ipx(i-1,j,k,0) = qmns;
-            Imx(i  ,j,k,0) = qpls;
+            Ipx(i-1,j,k,n) = qmns;
+            Imx(i  ,j,k,n) = qpls;
         });
     }
     else // The cases below are not near any domain boundary
@@ -321,8 +321,8 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                 }  // end of making qmns
             }
 
-            Ipx(i-1,j,k,0) = qmns;
-            Imx(i  ,j,k,0) = qpls;
+            Ipx(i-1,j,k,n) = qmns;
+            Imx(i  ,j,k,n) = qpls;
         });
     }
 }
@@ -508,8 +508,8 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                 }  // end of making qmns
             }
 
-            Ipy(i,j-1,k,1) = qmns;
-            Imy(i,j  ,k,1) = qpls;
+            Ipy(i,j-1,k,n) = qmns;
+            Imy(i,j  ,k,n) = qpls;
         });
     }
     else // The cases below are not near any domain boundary
@@ -626,8 +626,8 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                 }  // end of making qmns
             }
 
-            Ipy(i-1,j,k,1) = qmns;
-            Imy(i  ,j,k,1) = qpls;
+            Ipy(i,j-1,k,n) = qmns;
+            Imy(i,j  ,k,n) = qpls;
         });
     }
 }
