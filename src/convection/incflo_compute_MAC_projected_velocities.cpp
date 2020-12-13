@@ -3,6 +3,10 @@
 #include <MOL.H>
 #include <incflo.H>
 
+#include <EBGodunov.H>
+#ifdef AMREX_USE_EB
+#endif
+
 #include <AMReX_MultiFabUtil.H>
 #include <AMReX_MacProjector.H>
 
@@ -82,9 +86,16 @@ incflo::compute_MAC_projected_velocities (
         // Predict normal velocity to faces -- note that the {u_mac, v_mac, w_mac}
         //    returned from this call are on face CENTROIDS
 
+        amrex::Print() << "ADVECTION TYPE " << m_advection_type << std::endl;
         if (m_advection_type == "Godunov") {
-
 #ifdef AMREX_USE_EB
+            ebgodunov::predict_godunov(time,
+                                       AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]),
+                                      *mac_phi[lev], *vel[lev], *vel_forces[lev], 
+                                       get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
+                                       ebfact, geom[lev], l_dt,
+                                       AMREX_D_DECL(m_fluxes[lev][0], m_fluxes[lev][1], m_fluxes[lev][2]), 
+                                       m_use_mac_phi_in_godunov);
 #else
             godunov::predict_godunov(time, 
                                      AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]), 

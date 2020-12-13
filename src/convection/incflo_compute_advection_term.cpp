@@ -10,8 +10,19 @@ using namespace amrex;
 
 void incflo::init_advection ()
 {
-    m_iconserv_velocity.resize(AMREX_SPACEDIM, 0);
-    m_iconserv_velocity_d.resize(AMREX_SPACEDIM, 0);
+#ifdef AMREX_USE_EB
+    if (m_advection_type == "Godunov")
+    {
+       m_iconserv_velocity.resize(AMREX_SPACEDIM, 1);
+       m_iconserv_velocity_d.resize(AMREX_SPACEDIM, 1);
+    } else {
+       m_iconserv_velocity.resize(AMREX_SPACEDIM, 0);
+       m_iconserv_velocity_d.resize(AMREX_SPACEDIM, 0);
+    }
+#else
+   m_iconserv_velocity.resize(AMREX_SPACEDIM, 0);
+   m_iconserv_velocity_d.resize(AMREX_SPACEDIM, 0);
+#endif
 
     m_iconserv_density.resize(1, 1);
     m_iconserv_density_d.resize(1, 1);
@@ -207,6 +218,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
     }
 
     bool regular = (flagfab.getType(amrex::grow(bx,2)) == FabType::regular);
+    bool covered = (flagfab.getType(            bx   ) == FabType::covered);
 
     Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz), ccc, vfrac, AMREX_D_DECL(apx, apy, apz);
     if (!regular) {
@@ -269,17 +281,20 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                  dvdt, vel,
                                                  AMREX_D_DECL(umac, vmac, wmac), 
                                                  fvel, divu, l_dt, 
+                                                 get_velocity_bcrec(),
                                                  get_velocity_bcrec_device_ptr(),
                                                  get_velocity_iconserv_device_ptr(),
                                                  tmpfab.dataPtr(), flag, 
                                                  AMREX_D_DECL(apx, apy, apz), vfrac,
                                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                  geom[lev], true); // is_velocity
+
             if (!m_constant_density) {
                 ebgodunov::compute_godunov_advection(bx, 1,
                                                      drdt, rho,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
                                                      {}, divu, l_dt, 
+                                                     get_density_bcrec(),
                                                      get_density_bcrec_device_ptr(),
                                                      get_density_iconserv_device_ptr(),
                                                      tmpfab.dataPtr(), flag,
@@ -292,6 +307,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      dtdt, rhotrac,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
                                                      ftra, divu, l_dt, 
+                                                     get_tracer_bcrec(),
                                                      get_tracer_bcrec_device_ptr(),
                                                      get_tracer_iconserv_device_ptr(),
                                                      tmpfab.dataPtr(), flag,

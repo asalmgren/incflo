@@ -1,7 +1,5 @@
-#if AMREX_USE_EB
+#include <AMReX_Slopes_K.H>
 #include <AMReX_EB_slopes_K.H>
-#endif
-
 #include <EBGodunov.H>
 
 using namespace amrex;
@@ -22,23 +20,24 @@ namespace {
     }
 }
 
-void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
-                               Array4<Real> const& Imx, Array4<Real> const& Ipx,
-                               Array4<Real const> const& q,
-                               Array4<Real const> const& ccvel,
-                               Array4<EBCellFlag const> const& flag,
-                               AMREX_D_DECL(Array4<Real const> const& apx,
-                                            Array4<Real const> const& apy,
-                                            Array4<Real const> const& apz),
-                               Array4<Real const> const& vfrac,
-                               AMREX_D_DECL(Array4<Real const> const& fcx,
-                                            Array4<Real const> const& fcy,
-                                            Array4<Real const> const& fcz),
-                               Array4<Real const> const& ccc,
-                               Geometry& geom,
-                               Real dt,
-                               Vector<BCRec> const& h_bcrec,
-                               BCRec const* pbc)
+// This version is called after the MAC projection
+void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
+                           Array4<Real> const& Imx, Array4<Real> const& Ipx,
+                           Array4<Real const> const& q,
+                           Array4<Real const> const& umac,
+                           Array4<EBCellFlag const> const& flag,
+                           AMREX_D_DECL(Array4<Real const> const& apx,
+                                        Array4<Real const> const& apy,
+                                        Array4<Real const> const& apz),
+                           Array4<Real const> const& vfrac,
+                           AMREX_D_DECL(Array4<Real const> const& fcx,
+                                        Array4<Real const> const& fcy,
+                                        Array4<Real const> const& fcz),
+                           Array4<Real const> const& ccc,
+                           Geometry& geom,
+                           Real dt,
+                           Vector<BCRec> const& h_bcrec,
+                           BCRec const* pbc, bool is_velocity)
 {
     const Real dx = geom.CellSize(0);
     const Real dtdx = dt/dx;
@@ -54,7 +53,7 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
 #endif
 
     // At an ext_dir boundary, the boundary value is on the face, not cell center.
-    auto extdir_lohi = has_extdir_or_ho(h_bcrec.data(), AMREX_SPACEDIM, static_cast<int>(Direction::x));
+    auto extdir_lohi = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::x));
     bool has_extdir_or_ho_lo = extdir_lohi.first;
     bool has_extdir_or_ho_hi = extdir_lohi.second;
 #if (AMREX_SPACEDIM == 3)
@@ -66,9 +65,9 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
     if ((has_extdir_or_ho_lo and domain_ilo >= xebox.smallEnd(0)-1) or
         (has_extdir_or_ho_hi and domain_ihi <= xebox.bigEnd(0)))
     {
-        amrex::ParallelFor(xebox, ncomp, [q,ccvel,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
-                                          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+        amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
+                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
+                                          Imx,Ipx,dt,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -102,15 +101,15 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                            vfrac(i+1,j,k) == 1. and vfrac(i+2,j,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i  ,j,k,n) + 0.5 * (-1.0 - ccvel(i,j,k,0) * dtdx) *
-                        amrex_calc_xslope_extdir(i,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
+                    qpls = q(i,j,k,n) + 0.5 * (-1.0 - umac(i,j,k,0) * dtdx) *
+                        amrex_calc_xslope_extdir(i  ,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i-1,j,k) == 1. and vfrac(i+1,j,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i  ,j,k,n) + 0.5 * (-1.0 - ccvel(i,j,k,0) * dtdx) *
-                        amrex_calc_xslope_extdir(i,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
+                    qpls = q(i,j,k,n) + 0.5 * (-1.0 - umac(i,j,k,0) * dtdx) *
+                        amrex_calc_xslope_extdir(i  ,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
 
                 // We need to use LS slopes
                 } else {
@@ -122,9 +121,6 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_x = 0.5 + ccc(i,j,k,0);,
                                 Real delta_y = yf  - ccc(i,j,k,1);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
-    
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
                    const auto& slopes_eb_hi = amrex_calc_slopes_extdir_eb(i,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
@@ -141,9 +137,7 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
                                      + delta_y * slopes_eb_hi[1];
 #endif
-                   qpls = amrex::max(amrex::min(qpls, qcc_max), qcc_min);
-
-                   qpls -= 0.5 * dtdx * ccvel(i,j,k,0) * slopes_eb_hi[0];
+                   qpls -= 0.5 * dt * umac(i,j,k) * slopes_eb_hi[0];
 
                 }  // end of making qpls
 
@@ -156,14 +150,14 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                              vfrac(i  ,j,k) == 1. and vfrac(i+1,j,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i,j,k) * dtdx) *
                         amrex_calc_xslope_extdir(i-1,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i-1,j,k) == 1. and vfrac(i-2,j,k) == 1. and vfrac(i  ,j,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i,j,k) * dtdx) *
                         amrex_calc_xslope_extdir(i-1,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
 
                 // We need to use LS slopes
@@ -176,9 +170,6 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_x = 0.5 - ccc(i-1,j,k,0);,
                                 Real delta_y = yf  - ccc(i-1,j,k,1);,
                                 Real delta_z = zf  - ccc(i-1,j,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
                    const auto& slopes_eb_lo = amrex_calc_slopes_extdir_eb(i-1,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
@@ -195,23 +186,22 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
 #else
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
+
+                   qmns -= 0.5 * dt * umac(i,j,k) * slopes_eb_lo[0];
 #endif
-                   qmns = amrex::max(amrex::min(qmns, qcc_max), qcc_min);
-
-                   qmns -= 0.5 * dtdx * ccvel(i-1,j,k,0) * slopes_eb_lo[0];
-
                 }  // end of making qmns
+
             }
 
-            Ipx(i-1,j,k,0) = qmns;
-            Imx(i  ,j,k,0) = qpls;
+            Ipx(i-1,j,k,n) = qmns;
+            Imx(i  ,j,k,n) = qpls;
         });
     }
     else // The cases below are not near any domain boundary
     {
-        amrex::ParallelFor(xebox, ncomp, [q,ccvel,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
-                                          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+        amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
+                                                AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
+                                          Imx,Ipx,dt,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -231,15 +221,15 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                            vfrac(i+1,j,k) == 1. and vfrac(i+2,j,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i  ,j,k,0) + 0.5 * (-1.0 - ccvel(i  ,j,k,0) * dtdx) *
-                        amrex_calc_xslope(i,j,k,n,order,q);
+                    qpls = q(i  ,j,k,n) + 0.5 * (-1.0 - umac(i,j,k,0) * dtdx) *
+                        amrex_calc_xslope(i  ,j,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i-1,j,k) == 1. and vfrac(i+1,j,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i  ,j,k,0) + 0.5 * (-1.0 - ccvel(i  ,j,k,0) * dtdx) *
-                        amrex_calc_xslope(i,j,k,n,order,q);
+                    qpls = q(i  ,j,k,n) + 0.5 * (-1.0 - umac(i,j,k,0) * dtdx) *
+                        amrex_calc_xslope(i  ,j,k,n,order,q);
 
                 // We need to use LS slopes
                 } else {
@@ -251,24 +241,19 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_x = 0.5 + ccc(i,j,k,0);,
                                 Real delta_y = yf  - ccc(i,j,k,1);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
                    const auto& slopes_eb_hi = amrex_calc_slopes_eb(i,j,k,n,q,ccc,flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
-                                      + delta_y * slopes_eb_hi[1]
-                                      + delta_z * slopes_eb_hi[2];
+                                     + delta_y * slopes_eb_hi[1]
+                                     + delta_z * slopes_eb_hi[2];
 #else
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
-                                      + delta_y * slopes_eb_hi[1];
+                                     + delta_y * slopes_eb_hi[1];
+
+                   qpls -= 0.5 * dt * umac(i,j,k) * slopes_eb_hi[0];
 #endif
-                   qpls = amrex::max(amrex::min(qpls, qcc_max), qcc_min);
-
-                   qpls -= 0.5 * dtdx * ccvel(i,j,k,0) * slopes_eb_hi[0];
-
                 }  // end of making qpls
 
                 // *************************************************
@@ -280,14 +265,14 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                              vfrac(i  ,j,k) == 1. and vfrac(i+1,j,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i-1,j,k) * dtdx) *
                         amrex_calc_xslope(i-1,j,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i-1,j,k) == 1. and vfrac(i-2,j,k) == 1. and vfrac(i  ,j,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i-1,j,k) * dtdx) *
                         amrex_calc_xslope(i-1,j,k,n,order,q);
 
                 // We need to use LS slopes
@@ -300,9 +285,6 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_x = 0.5 - ccc(i-1,j,k,0);,
                                 Real delta_y = yf  - ccc(i-1,j,k,1);,
                                 Real delta_z = zf  - ccc(i-1,j,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
                    const auto& slopes_eb_lo = amrex_calc_slopes_eb(i-1,j,k,n,q,ccc,flag);
 
@@ -314,36 +296,35 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
-                   qmns = amrex::max(amrex::min(qmns, qcc_max), qcc_min);
-
-                   qmns -= 0.5 * dtdx * ccvel(i-1,j,k,0) * slopes_eb_lo[0];
+                   qmns -= 0.5 * dt * umac(i,j,k) * slopes_eb_lo[0];
 
                 }  // end of making qmns
             }
 
-            Ipx(i-1,j,k,0) = qmns;
-            Imx(i  ,j,k,0) = qpls;
+            Ipx(i-1,j,k,n) = qmns;
+            Imx(i  ,j,k,n) = qpls;
         });
     }
 }
 
-void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
-                               Array4<Real> const& Imy, Array4<Real> const& Ipy,
-                               Array4<Real const> const& q,
-                               Array4<Real const> const& ccvel,
-                               Array4<EBCellFlag const> const& flag,
-                               AMREX_D_DECL(Array4<Real const> const& apx,
-                                            Array4<Real const> const& apy,
-                                            Array4<Real const> const& apz),
-                               Array4<Real const> const& vfrac,
-                               AMREX_D_DECL(Array4<Real const> const& fcx,
-                                            Array4<Real const> const& fcy,
-                                            Array4<Real const> const& fcz),
-                               Array4<Real const> const& ccc,
-                               Geometry& geom,
-                               Real dt,
-                               Vector<BCRec> const& h_bcrec,
-                               BCRec const* pbc)
+// This version is called after the MAC projection
+void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
+                           Array4<Real> const& Imy, Array4<Real> const& Ipy,
+                           Array4<Real const> const& q,
+                           Array4<Real const> const& vmac,
+                           Array4<EBCellFlag const> const& flag,
+                           AMREX_D_DECL(Array4<Real const> const& apx,
+                                        Array4<Real const> const& apy,
+                                        Array4<Real const> const& apz),
+                           Array4<Real const> const& vfrac,
+                           AMREX_D_DECL(Array4<Real const> const& fcx,
+                                        Array4<Real const> const& fcy,
+                                        Array4<Real const> const& fcz),
+                           Array4<Real const> const& ccc,
+                           Geometry& geom,
+                           Real dt,
+                           Vector<BCRec> const& h_bcrec,
+                           BCRec const* pbc, bool is_velocity)
 {
     const Real dy = geom.CellSize(1);
     const Real dtdy = dt/dy;
@@ -371,9 +352,9 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
     if ((has_extdir_or_ho_lo and domain_jlo >= yebox.smallEnd(1)-1) or
         (has_extdir_or_ho_hi and domain_jhi <= yebox.bigEnd(1)))
     {
-        amrex::ParallelFor(yebox, ncomp, [q,ccvel,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
-                                          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imy,Ipy,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+        amrex::ParallelFor(yebox, ncomp, [q,vmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
+                                                AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
+                                          Imy,Ipy,dt,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -382,7 +363,7 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
             // This means apy(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(0,-1,0))
             {
-                const auto& bc = pbc[1];
+                const auto& bc = pbc[n];
                 bool extdir_or_ho_ilo = (bc.lo(0) == BCType::ext_dir) or
                                         (bc.lo(0) == BCType::hoextrap);
                 bool extdir_or_ho_ihi = (bc.hi(0) == BCType::ext_dir) or
@@ -407,14 +388,14 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                                            vfrac(i,j+1,k) == 1. and vfrac(i,j+2,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i,j  ,k,1) + 0.5 * (-1.0 - ccvel(i  ,j,k,1) * dtdy) *
+                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - vmac(i,j+1,k) * dtdy) *
                         amrex_calc_yslope_extdir(i,j,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i,j-1,k) == 1. and vfrac(i,j+1,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i,j  ,k,1) + 0.5 * (-1.0 - ccvel(i  ,j,k,1) * dtdy) *
+                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - vmac(i,j+1,k) * dtdy) *
                         amrex_calc_yslope_extdir(i,j,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We need to use LS slopes
@@ -427,9 +408,6 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_y = 0.5 + ccc(i,j,k,1);,
                                 Real delta_x = xf  - ccc(i,j,k,0);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
                    const auto& slopes_eb_hi = amrex_calc_slopes_extdir_eb(i,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
@@ -446,9 +424,8 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_y * slopes_eb_hi[1]
                                      + delta_x * slopes_eb_hi[0];
 #endif
-                   qpls = amrex::max(amrex::min(qpls, qcc_max), qcc_min);
 
-                   qpls -= 0.5 * dtdy * ccvel(i,j,k,1) * slopes_eb_hi[1];
+                   qpls -= 0.5 * dt * vmac(i,j,k) * slopes_eb_hi[1];
 
                 }  // end of making qpls
 
@@ -461,14 +438,14 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                                              vfrac(i,j  ,k) == 1. and vfrac(i,j+1,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i,j-1,k,n) + 0.5 * ( 1.0 - ccvel(i,j-1,k,1) * dtdy) *
+                    qmns = q(i,j-1,k,n) + 0.5 * ( 1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope_extdir(i,j-1,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j-1,k) == 1. and vfrac(i,j-2,k) == 1. and vfrac(i,j  ,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i,j-1,k,n) + 0.5 * ( 1.0 - ccvel(i,j-1,k,1) * dtdy) *
+                    qmns = q(i,j-1,k,n) + 0.5 * ( 1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope_extdir(i,j-1,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We need to use LS slopes
@@ -481,9 +458,6 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_y = 0.5 - ccc(i,j-1,k,1);,
                                 Real delta_x = xf  - ccc(i,j-1,k,0);,
                                 Real delta_z = zf  - ccc(i,j-1,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
                    const auto& slopes_eb_lo = amrex_calc_slopes_extdir_eb(i,j-1,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
@@ -501,22 +475,20 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
-                   qmns = amrex::max(amrex::min(qmns, qcc_max), qcc_min);
-
-                   qmns -= 0.5 * dtdy * ccvel(i,j-1,k,1) * slopes_eb_lo[1];
+                   qmns -= 0.5 * dt * vmac(i,j,k) * slopes_eb_lo[1];
 
                 }  // end of making qmns
             }
 
-            Ipy(i,j-1,k,1) = qmns;
-            Imy(i,j  ,k,1) = qpls;
+            Ipy(i,j-1,k,n) = qmns;
+            Imy(i,j  ,k,n) = qpls;
         });
     }
     else // The cases below are not near any domain boundary
     {
-        amrex::ParallelFor(yebox, ncomp, [q,ccvel,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
-                                          AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imy,Ipy,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+        amrex::ParallelFor(yebox, ncomp, [q,vmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
+                                                AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
+                                          Imy,Ipy,dt,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -525,7 +497,7 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
             // This means apx(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(0,-1,0))
             {
-                const auto& bc = pbc[1];
+                const auto& bc = pbc[n];
 
                 // *************************************************
                 // Making qpls
@@ -536,14 +508,14 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                                            vfrac(i,j+1,k) == 1. and vfrac(i,j+2,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i,j,k,1) + 0.5 * (-1.0 - ccvel(i,j,k,1) * dtdy) *
+                    qpls = q(i,j,k,n) + 0.5 * (-1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope(i,j,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i,j-1,k) == 1. and vfrac(i,j+1,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i,j,k,1) + 0.5 * (-1.0 - ccvel(i,j,k,1) * dtdy) *
+                    qpls = q(i,j,k,n) + 0.5 * (-1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope(i,j,k,n,order,q);
 
                 // We need to use LS slopes
@@ -556,9 +528,6 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_y = 0.5 + ccc(i,j,k,1);,
                                 Real delta_x = xf  - ccc(i,j,k,0);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
                    const auto& slopes_eb_hi = amrex_calc_slopes_eb(i,j,k,n,q,ccc,flag);
 
@@ -570,10 +539,7 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_y * slopes_eb_hi[1]
                                      + delta_x * slopes_eb_hi[0];
 #endif
-                   qpls = amrex::max(amrex::min(qpls, qcc_max), qcc_min);
-
-                   qpls -= 0.5 * dtdy * ccvel(i,j,k,1) * slopes_eb_hi[1];
-
+                   qpls -= 0.5 * dt * vmac(i,j,k) * slopes_eb_hi[1];
                 }  // end of making qpls
 
                 // *************************************************
@@ -585,14 +551,14 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                                              vfrac(i,j  ,k) == 1. and vfrac(i,j+1,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i,j-1,k,1) + 0.5 * ( 1.0 - ccvel(i,j-1,k,1) * dtdy) *
+                    qmns = q(i,j-1,k,n) + 0.5 * ( 1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope(i,j-1,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j-1,k) == 1. and vfrac(i,j-2,k) == 1. and vfrac(i,j  ,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i,j-1,k,1) + 0.5 * ( 1.0 - ccvel(i,j-1,k,1) * dtdy) *
+                    qmns = q(i,j-1,k,n) + 0.5 * ( 1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope(i,j-1,k,n,order,q);
 
                 // We need to use LS slopes
@@ -605,29 +571,24 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    AMREX_D_TERM(Real delta_y = 0.5 - ccc(i,j-1,k,1);,
                                 Real delta_x = xf  - ccc(i,j-1,k,0);,
                                 Real delta_z = zf  - ccc(i,j-1,k,2););
-
-                   Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
-                   Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
                    const auto& slopes_eb_lo = amrex_calc_slopes_eb(i,j-1,k,n,q,ccc,flag);
 
 #if (AMREX_SPACEDIM == 3)
-                   qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
+                   qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1]
                                        + delta_z * slopes_eb_lo[2];
 #else
-                   qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
+                   qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
-                   qmns = amrex::max(amrex::min(qmns, qcc_max), qcc_min);
-
-                   qmns -= 0.5 * dtdy * ccvel(i,j-1,k,1) * slopes_eb_lo[1];
+                   qmns -= 0.5 * dt * vmac(i,j,k) * slopes_eb_lo[1];
 
                 }  // end of making qmns
             }
 
-            Ipy(i-1,j,k,1) = qmns;
-            Imy(i  ,j,k,1) = qpls;
+            Ipy(i-1,j,k,n) = qmns;
+            Imy(i  ,j,k,n) = qpls;
         });
     }
 }
