@@ -102,8 +102,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                           AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                           geom, l_dt, h_bcrec, pbc, is_velocity);
 
-    amrex::Print() << "GOING INTO UPDWINGING " << std::endl;
-
     amrex::ParallelFor(
         xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
@@ -164,7 +162,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     //
     Box const& xbxtmp = amrex::grow(bx,0,1);
     Array4<Real> yzlo = makeArray4(xyzlo.dataPtr(), amrex::surroundingNodes(xbxtmp,1), ncomp);
-    amrex::Print() << " HERE XYZLO " << Box(yzlo) << std::endl;
     amrex::ParallelFor(
     Box(yzlo), ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -196,14 +193,14 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         if (apx(i,j,k) > 0.)
         {
             Real uxl = (apx(i,j,k)*u_mac(i,j,k) - apx(i-1,j,k)*u_mac(i-1,j,k));
-            stl = xlo(i,j,k,n) - ( (0.5*dtdx) * q(i-1,j,k,n) * uxl
+            stl = xlo(i,j,k,n) - ( (0.5*dtdx) * q(i-1,j,k,n) * uxl 
                                   +(0.5*dtdy)*(apy(i-1,j+1,k)*yzlo(i-1,j+1,k  ,n)*v_mac(i-1,j+1,k  )
                                              - apy(i-1,j  ,k)*yzlo(i-1,j  ,k  ,n)*v_mac(i-1,j  ,k  )) ) / vfrac_arr(i-1,j,k);
 
             Real uxh = (apx(i+1,j,k)*u_mac(i+1,j,k) - apx(i,j,k)*u_mac(i,j,k));
             sth = xhi(i,j,k,n) - ( (0.5*dtdx) * q(i  ,j,k,n) * uxh
-                                  +(0.5*dtdy)*(apy(i,j+1,k)*yzlo(i,j+1,k,n)*v_mac(i,j+1,k)
-                                              -apy(i,j  ,k)*yzlo(i,j  ,k,n)*v_mac(i,j  ,k)) ) / vfrac_arr(i,j,k);
+                                     +(0.5*dtdy)*(apy(i,j+1,k)*yzlo(i,j+1,k,n)*v_mac(i,j+1,k)
+                                                 -apy(i,j  ,k)*yzlo(i,j  ,k,n)*v_mac(i,j  ,k)) ) / vfrac_arr(i,j,k);
 
             if (fq) {
                 stl += 0.5*l_dt*fq(i-1,j,k,n);
@@ -217,10 +214,9 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real temp = (u_mac(i,j,k) >= 0.) ? stl : sth; 
             temp = (amrex::Math::abs(u_mac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
             qx(i,j,k,n) = temp;
-            if (i == 13 and (j == 12 or j == 20)) amrex::Print () << "QX J " << j << " " << qx(i,j,k,n) << std::endl;
+            
         } else {
             qx(i,j,k,n) = 0.;
-            if (i == 13 and (j == 12 or j == 20)) amrex::Print () << "QX J " << j << " " << qx(i,j,k,n) << std::endl;
         }
     }); 
 
@@ -261,15 +257,17 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
 
         if (apy(i,j,k) > 0.)
         {
+            if (i == 12 and (j == 20 or j == 12)) amrex::Print() << "Y_FACE YLO YHI " << ylo(i,j,k,n) << " " << yhi(i,j,k,n) << std::endl;
+
             Real vyl = (apy(i,j,k)*v_mac(i,j,k) - apy(i,j-1,k)*v_mac(i,j-1,k));
-            stl = ylo(i,j,k,n) - ( (0.5*dtdy)*q(i,j-1,k,n)*vyl
+            stl = ylo(i,j,k,n) - ( (0.5*dtdy)*q(i,j-1,k,n)*vyl  
                                   +(0.5*dtdx)*(apx(i+1,j-1,k)*xzlo(i+1,j-1,k  ,n)*u_mac(i+1,j-1,k  )
                                              - apx(i  ,j-1,k)*xzlo(i  ,j-1,k  ,n)*u_mac(i  ,j-1,k  )) ) / vfrac_arr(i,j-1,k);
 
             Real vyh = (apy(i,j+1,k)*v_mac(i,j+1,k) - apy(i,j,k)*v_mac(i,j,k));
             sth = yhi(i,j,k,n) - ( (0.5*dtdy)*q(i,j  ,k,n)* vyh
                                   +(0.5*dtdx)*(apx(i+1,j,k)*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
-                                             - apx(i  ,j,k)*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  )) ) / vfrac_arr(i,j-1,k);
+                                             - apx(i  ,j,k)*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  )) ) / vfrac_arr(i,j  ,k);
 
             if (fq) {
                 stl += 0.5*l_dt*fq(i,j-1,k,n);
