@@ -156,14 +156,14 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                              vfrac(i  ,j,k) == 1. and vfrac(i+1,j,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
                         amrex_calc_xslope_extdir(i-1,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i-1,j,k) == 1. and vfrac(i-2,j,k) == 1. and vfrac(i  ,j,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
                         amrex_calc_xslope_extdir(i-1,j,k,n,order,q,extdir_or_ho_ilo,extdir_or_ho_ihi,domain_ilo,domain_ihi);
 
                 // We need to use LS slopes
@@ -231,14 +231,14 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                            vfrac(i+1,j,k) == 1. and vfrac(i+2,j,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i  ,j,k,0) + 0.5 * (-1.0 - ccvel(i  ,j,k,0) * dtdx) *
+                    qpls = q(i  ,j,k,n) + 0.5 * (-1.0 - ccvel(i  ,j,k,0) * dtdx) *
                         amrex_calc_xslope(i,j,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i-1,j,k) == 1. and vfrac(i+1,j,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i  ,j,k,0) + 0.5 * (-1.0 - ccvel(i  ,j,k,0) * dtdx) *
+                    qpls = q(i  ,j,k,n) + 0.5 * (-1.0 - ccvel(i  ,j,k,0) * dtdx) *
                         amrex_calc_xslope(i,j,k,n,order,q);
 
                 // We need to use LS slopes
@@ -280,14 +280,14 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                                              vfrac(i  ,j,k) == 1. and vfrac(i+1,j,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
                         amrex_calc_xslope(i-1,j,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i-1,j,k) == 1. and vfrac(i-2,j,k) == 1. and vfrac(i  ,j,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i-1,j,k,0) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - ccvel(i-1,j,k,0) * dtdx) *
                         amrex_calc_xslope(i-1,j,k,n,order,q);
 
                 // We need to use LS slopes
@@ -407,14 +407,14 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                                            vfrac(i,j+1,k) == 1. and vfrac(i,j+2,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i,j  ,k,1) + 0.5 * (-1.0 - ccvel(i  ,j,k,1) * dtdy) *
+                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - ccvel(i  ,j,k,1) * dtdy) *
                         amrex_calc_yslope_extdir(i,j,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i,j-1,k) == 1. and vfrac(i,j+1,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i,j  ,k,1) + 0.5 * (-1.0 - ccvel(i  ,j,k,1) * dtdy) *
+                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - ccvel(i  ,j,k,1) * dtdy) *
                         amrex_calc_yslope_extdir(i,j,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We need to use LS slopes
