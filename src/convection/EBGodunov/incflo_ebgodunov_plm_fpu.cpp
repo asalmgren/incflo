@@ -67,7 +67,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                  AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imx,Ipx,dt,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -137,7 +137,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
                                      + delta_y * slopes_eb_hi[1];
 #endif
-                   qpls -= 0.5 * dt * umac(i,j,k) * slopes_eb_hi[0];
+                   qpls -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_hi[0];
 
                 }  // end of making qpls
 
@@ -187,7 +187,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 
-                   qmns -= 0.5 * dt * umac(i,j,k) * slopes_eb_lo[0];
+                   qmns -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_lo[0];
 #endif
                 }  // end of making qmns
 
@@ -195,13 +195,15 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 
             Ipx(i-1,j,k,n) = qmns;
             Imx(i  ,j,k,n) = qpls;
+            if (i == 13 and (j == 12 or j == 19))  
+                amrex::Print() << "X-FACES IM IP " << j << " " << qmns << " " << qpls << " " << q(i-1,j,k,n) << " " << q(i,j,k,n) << std::endl;
         });
     }
     else // The cases below are not near any domain boundary
     {
         amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imx,Ipx,dt,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -252,7 +254,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
                                      + delta_y * slopes_eb_hi[1];
 
-                   qpls -= 0.5 * dt * umac(i,j,k) * slopes_eb_hi[0];
+                   qpls -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_hi[0];
 #endif
                 }  // end of making qpls
 
@@ -296,7 +298,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
-                   qmns -= 0.5 * dt * umac(i,j,k) * slopes_eb_lo[0];
+                   qmns -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_lo[0];
 
                 }  // end of making qmns
             }
@@ -354,7 +356,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(yebox, ncomp, [q,vmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imy,Ipy,dt,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imy,Ipy,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -425,7 +427,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                      + delta_x * slopes_eb_hi[0];
 #endif
 
-                   qpls -= 0.5 * dt * vmac(i,j,k) * slopes_eb_hi[1];
+                   qpls -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_hi[1];
 
                 }  // end of making qpls
 
@@ -475,13 +477,15 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                    qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
-                   qmns -= 0.5 * dt * vmac(i,j,k) * slopes_eb_lo[1];
+                   qmns -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_lo[1];
 
                 }  // end of making qmns
             }
 
             Ipy(i,j-1,k,n) = qmns;
             Imy(i,j  ,k,n) = qpls;
+            if (i == 12 and (j == 12 or j == 20))  
+                amrex::Print() << "Y-FACES IM IP " << j << " " << qmns << " " << qpls << std::endl;
         });
     }
     else // The cases below are not near any domain boundary
@@ -539,7 +543,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_y * slopes_eb_hi[1]
                                      + delta_x * slopes_eb_hi[0];
 #endif
-                   qpls -= 0.5 * dt * vmac(i,j,k) * slopes_eb_hi[1];
+                   qpls -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_hi[1];
                 }  // end of making qpls
 
                 // *************************************************
@@ -582,7 +586,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
-                   qmns -= 0.5 * dt * vmac(i,j,k) * slopes_eb_lo[1];
+                   qmns -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_lo[1];
 
                 }  // end of making qmns
             }
