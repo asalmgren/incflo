@@ -71,8 +71,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
     p +=         xyzhi.size();
 
-    amrex::Print() << "DOING EBGODNOV ADVECTION " << xebox << std::endl; 
-
     for (int n = 0; n < ncomp; n++) 
        if (!iconserv[n]) amrex::Abort("Trying to update in non-conservative in ebgodunov");
 
@@ -193,7 +191,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         if (apx(i,j,k) > 0.)
         {
             Real uxl = (apx(i,j,k)*u_mac(i,j,k) - apx(i-1,j,k)*u_mac(i-1,j,k));
-            stl = xlo(i,j,k,n) - ( (0.5*dtdx) * q(i-1,j,k,n) * uxl 
+            stl = xlo(i,j,k,n) - ( (0.5*dtdx) * q(i-1,j,k,n) * uxl
                                   +(0.5*dtdy)*(apy(i-1,j+1,k)*yzlo(i-1,j+1,k  ,n)*v_mac(i-1,j+1,k  )
                                              - apy(i-1,j  ,k)*yzlo(i-1,j  ,k  ,n)*v_mac(i-1,j  ,k  )) ) / vfrac_arr(i-1,j,k);
 
@@ -257,8 +255,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
 
         if (apy(i,j,k) > 0.)
         {
-            if (i == 12 and (j == 20 or j == 12)) amrex::Print() << "Y_FACE YLO YHI " << ylo(i,j,k,n) << " " << yhi(i,j,k,n) << std::endl;
-
             Real vyl = (apy(i,j,k)*v_mac(i,j,k) - apy(i,j-1,k)*v_mac(i,j-1,k));
             stl = ylo(i,j,k,n) - ( (0.5*dtdy)*q(i,j-1,k,n)*vyl  
                                   +(0.5*dtdx)*(apx(i+1,j-1,k)*xzlo(i+1,j-1,k  ,n)*u_mac(i+1,j-1,k  )
@@ -295,17 +291,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                         apx(i+1,j,k)*u_mac(i+1,j,k)*qx(i+1,j,k,n) )
                 +            dxinv[1]*( apy(i  ,j,k)*v_mac(i,j  ,k)*qy(i,j  ,k,n) -
                                         apy(i,j+1,k)*v_mac(i,j+1,k)*qy(i,j+1,k,n))) / vfrac_arr(i,j,k);
-            if (i == 12 and (j == 19 or j == 12))
-            {
-               amrex::Print() << "DVDT " << IntVect(i,j) << " " << n << " " << dqdt(i,j,k,n) << std::endl;
-               amrex::Print() << "APX  " << apx(i,j,k)  << " " << apx(i+1,j,k)  << std::endl;
-               amrex::Print() << " QX  " <<   qx(i,j,k,n)  << " " << qx(i+1,j,k,n)  << std::endl;
-               amrex::Print() << "UMAC " << u_mac(i,j,k) << " " << u_mac(i+1,j,k)  << std::endl;
-               amrex::Print() << "APY  " << apy(i,j,k)  << " " << apy(i,j+1,k)  << std::endl;
-               amrex::Print() << " QY  " <<   qy(i,j,k,n)  << " " << qy(i,j+1,k,n)  << std::endl;
-               amrex::Print() << "VMAC " << v_mac(i,j,k) << " " << v_mac(i,j+1,k)  << std::endl;
-               amrex::Print() << "VFRAC " << vfrac_arr(i,j,k) << std::endl;
-            }
         } else {
             dqdt(i,j,k,n) = 0.0;
         }
