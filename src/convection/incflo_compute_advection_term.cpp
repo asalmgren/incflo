@@ -85,7 +85,6 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
            inv_rho_z[lev].define(w_mac[lev]->boxArray(),dmap[lev],1,0,MFInfo(),Factory(lev)););
 
 #ifdef AMREX_USE_EB
-        const EBFArrayBoxFactory* ebfact = &EBFactory(lev);
         EB_interp_CellCentroid_to_FaceCentroid (*density[lev], inv_rho[lev],
                                                 0, 0, 1, geom[lev], get_density_bcrec());
 #else
@@ -218,7 +217,6 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
     }
 
     bool regular = (flagfab.getType(amrex::grow(bx,2)) == FabType::regular);
-    bool covered = (flagfab.getType(            bx   ) == FabType::covered);
 
     Array4<Real const> AMREX_D_DECL(fcx, fcy, fcz), ccc, vfrac, AMREX_D_DECL(apx, apy, apz);
     if (!regular) {
@@ -260,25 +258,42 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
 
     if (m_advection_type == "Godunov")
     {
-#ifdef AMREX_USE_EB
+        int n_tmp_fac;
+        int n_tmp_grow;
 #if (AMREX_SPACEDIM == 3)
-        FArrayBox tmpfab(amrex::grow(bx,4), nmaxcomp*14+1);
+        n_tmp_fac = 14;
 #else
-        FArrayBox tmpfab(amrex::grow(bx,4), nmaxcomp*10+1);
-#endif
-#else
-#if (AMREX_SPACEDIM == 3)
-        FArrayBox tmpfab(amrex::grow(bx,1), nmaxcomp*14+1);
-#else
-        FArrayBox tmpfab(amrex::grow(bx,1), nmaxcomp*10+1);
-#endif
+        n_tmp_fac = 10;
 #endif
 
-#ifdef AMREX_USE_EB 
+#ifdef AMREX_USE_EB
+        n_tmp_grow = 4;
+#else
+        n_tmp_grow = 1;
+#endif
+
+        FArrayBox tmpfab(amrex::grow(bx,n_tmp_grow), nmaxcomp*n_tmp_fac+1);
+        Elixir eli = tmpfab.elixir();
+
+#ifdef AMREX_USE_EB
+        Box gbx = bx;
+        if (!regular)  
+            gbx.grow(2);
+
+        // This one holds the convective term on a grown region so we can redistribute
+        amrex::Print() << "NCOMPS FOR DUDT AND SCRATCH " << nmaxcomp << std::endl;
+        FArrayBox dUdt_tmpfab(gbx,nmaxcomp);
+        Array4<Real> dUdt_tmp = dUdt_tmpfab.array();
+        Elixir eli_du = dUdt_tmpfab.elixir();
+
+        FArrayBox scratch_fab(gbx,3*nmaxcomp);
+        Array4<Real> scratch = scratch_fab.array();
+        Elixir eli_scratch = scratch_fab.elixir();
+
         if (!regular)
         {
-            ebgodunov::compute_godunov_advection(bx, AMREX_SPACEDIM,
-                                                 dvdt, vel,
+            ebgodunov::compute_godunov_advection(gbx, AMREX_SPACEDIM,
+                                                 dUdt_tmp, vel,
                                                  AMREX_D_DECL(umac, vmac, wmac), 
                                                  fvel, divu, l_dt, 
                                                  get_velocity_bcrec(),
@@ -288,10 +303,11 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                  AMREX_D_DECL(apx, apy, apz), vfrac,
                                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                  geom[lev], true); // is_velocity
+            redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag, vfrac, geom[lev]);
 
             if (!m_constant_density) {
-                ebgodunov::compute_godunov_advection(bx, 1,
-                                                     drdt, rho,
+                ebgodunov::compute_godunov_advection(gbx, 1,
+                                                     dUdt_tmp, rho,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
                                                      {}, divu, l_dt, 
                                                      get_density_bcrec(),
@@ -301,10 +317,11 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      AMREX_D_DECL(apx, apy, apz), vfrac,
                                                      AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                      geom[lev]);
+                redistribute_eb(bx, 1, drdt, dUdt_tmp, scratch, flag, vfrac, geom[lev]);
             }
             if (m_advect_tracer) {
                 ebgodunov::compute_godunov_advection(bx, m_ntrac,
-                                                     dtdt, rhotrac,
+                                                     dUdt_tmp, rhotrac,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
                                                      ftra, divu, l_dt, 
                                                      get_tracer_bcrec(),
@@ -314,6 +331,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      AMREX_D_DECL(apx, apy, apz), vfrac,
                                                      AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                      geom[lev]);
+                redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag, vfrac, geom[lev]);
             }
             Gpu::streamSynchronize();
         }
@@ -419,7 +437,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         else
 #endif
         {
-            const auto dxinv = geom[lev].InvCellSizeArray();
+            // const auto dxinv = geom[lev].InvCellSizeArray();
 
             // velocity
             mol::compute_convective_fluxes(bx, AMREX_SPACEDIM, AMREX_D_DECL(fx, fy, fz), vel,
@@ -427,7 +445,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                            get_velocity_bcrec().data(),
                                            get_velocity_bcrec_device_ptr(),geom[lev]);
 
-            amrex_compute_divergence(bx,dvdt,AMREX_D_DECL(fx,fy,fz),dxinv);
+            // amrex_compute_divergence(bx,dvdt,AMREX_D_DECL(fx,fy,fz),dxinv);
             mol::compute_convective_rate(bx, AMREX_SPACEDIM, dvdt, AMREX_D_DECL(fx, fy, fz), geom[lev]);
 
             // density
