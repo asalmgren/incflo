@@ -195,8 +195,6 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 
             Ipx(i-1,j,k,n) = qmns;
             Imx(i  ,j,k,n) = qpls;
-            if (i == 13 and (j == 12 or j == 19))  
-                amrex::Print() << "X-FACES IM IP " << j << " " << qmns << " " << qpls << " " << q(i-1,j,k,n) << " " << q(i,j,k,n) << std::endl;
         });
     }
     else // The cases below are not near any domain boundary
@@ -390,14 +388,14 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                            vfrac(i,j+1,k) == 1. and vfrac(i,j+2,k) == 1.) 
                 {
                     int order = 4;
-                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - vmac(i,j+1,k) * dtdy) *
+                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope_extdir(i,j,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i,j,k) == 1. and vfrac(i,j-1,k) == 1. and vfrac(i,j+1,k) == 1.) {
 
                     int order = 2;
-                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - vmac(i,j+1,k) * dtdy) *
+                    qpls = q(i,j  ,k,n) + 0.5 * (-1.0 - vmac(i,j,k) * dtdy) *
                         amrex_calc_yslope_extdir(i,j,k,n,order,q,extdir_or_ho_jlo,extdir_or_ho_jhi,domain_jlo,domain_jhi);
 
                 // We need to use LS slopes
@@ -484,8 +482,6 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
 
             Ipy(i,j-1,k,n) = qmns;
             Imy(i,j  ,k,n) = qpls;
-            if (i == 12 and (j == 12 or j == 20))  
-                amrex::Print() << "Y-FACES IM IP " << j << " " << qmns << " " << qpls << std::endl;
         });
     }
     else // The cases below are not near any domain boundary
