@@ -122,7 +122,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                                 Real delta_y = yf  - ccc(i,j,k,1);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_extdir_eb(i,j,k,n,q,ccc,
+                   const auto& slopes_eb_hi = amrex_lim_slopes_extdir_eb(i,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -171,7 +171,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                                 Real delta_y = yf  - ccc(i-1,j,k,1);,
                                 Real delta_z = zf  - ccc(i-1,j,k,2););
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_extdir_eb(i-1,j,k,n,q,ccc,
+                   const auto& slopes_eb_lo = amrex_lim_slopes_extdir_eb(i-1,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -242,7 +242,8 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                                 Real delta_y = yf  - ccc(i,j,k,1);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_eb(i,j,k,n,q,ccc,flag);
+                   const auto& slopes_eb_hi = amrex_lim_slopes_eb(i,j,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
@@ -286,7 +287,8 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                                 Real delta_y = yf  - ccc(i-1,j,k,1);,
                                 Real delta_z = zf  - ccc(i-1,j,k,2););
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_eb(i-1,j,k,n,q,ccc,flag);
+                   const auto& slopes_eb_lo = amrex_lim_slopes_eb(i-1,j,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
@@ -409,7 +411,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                 Real delta_x = xf  - ccc(i,j,k,0);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_extdir_eb(i,j,k,n,q,ccc,
+                   const auto& slopes_eb_hi = amrex_lim_slopes_extdir_eb(i,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -459,7 +461,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                 Real delta_x = xf  - ccc(i,j-1,k,0);,
                                 Real delta_z = zf  - ccc(i,j-1,k,2););
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_extdir_eb(i,j-1,k,n,q,ccc,
+                   const auto& slopes_eb_lo = amrex_lim_slopes_extdir_eb(i,j-1,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -529,7 +531,8 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                 Real delta_x = xf  - ccc(i,j,k,0);,
                                 Real delta_z = zf  - ccc(i,j,k,2););
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_eb(i,j,k,n,q,ccc,flag);
+                   const auto& slopes_eb_hi = amrex_lim_slopes_eb(i,j,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qpls = q(i,j,k,n) - delta_y * slopes_eb_hi[1]
@@ -573,14 +576,15 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                 Real delta_x = xf  - ccc(i,j-1,k,0);,
                                 Real delta_z = zf  - ccc(i,j-1,k,2););
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_eb(i,j-1,k,n,q,ccc,flag);
+                   const auto& slopes_eb_lo = amrex_lim_slopes_eb(i,j-1,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
-                   qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
+                   qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1]
                                        + delta_z * slopes_eb_lo[2];
 #else
-                   qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
+                   qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
 #endif
                    qmns -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_lo[1];

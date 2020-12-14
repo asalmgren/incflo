@@ -1,7 +1,4 @@
-#if AMREX_USE_EB
 #include <AMReX_EB_slopes_K.H>
-#endif
-
 #include <EBGodunov.H>
 
 using namespace amrex;
@@ -126,7 +123,7 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_extdir_eb(i,j,k,n,q,ccc,
+                   const auto& slopes_eb_hi = amrex_lim_slopes_extdir_eb(i,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -180,7 +177,7 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_extdir_eb(i-1,j,k,n,q,ccc,
+                   const auto& slopes_eb_lo = amrex_lim_slopes_extdir_eb(i-1,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -255,12 +252,13 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_eb(i,j,k,n,q,ccc,flag);
+                   const auto& slopes_eb_hi = amrex_lim_slopes_eb(i,j,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
-                                      + delta_y * slopes_eb_hi[1]
-                                      + delta_z * slopes_eb_hi[2];
+                                     + delta_y * slopes_eb_hi[1]
+                                     + delta_z * slopes_eb_hi[2];
 #else
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
                                       + delta_y * slopes_eb_hi[1];
@@ -304,7 +302,8 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i-1,j,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i-1,j,k,n));
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_eb(i-1,j,k,n,q,ccc,flag);
+                   const auto& slopes_eb_lo = amrex_lim_slopes_eb(i-1,j,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
@@ -431,7 +430,7 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_extdir_eb(i,j,k,n,q,ccc,
+                   const auto& slopes_eb_hi = amrex_lim_slopes_extdir_eb(i,j,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -485,7 +484,7 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_extdir_eb(i,j-1,k,n,q,ccc,
+                   const auto& slopes_eb_lo = amrex_lim_slopes_extdir_eb(i,j-1,k,n,q,ccc,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
@@ -560,7 +559,8 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
-                   const auto& slopes_eb_hi = amrex_calc_slopes_eb(i,j,k,n,q,ccc,flag);
+                   const auto& slopes_eb_hi = amrex_lim_slopes_eb(i,j,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qpls = q(i,j,k,n) - delta_y * slopes_eb_hi[1]
@@ -609,7 +609,8 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
                    Real qcc_max = amrex::max(q(i,j,k,n), q(i,j-1,k,n));
                    Real qcc_min = amrex::min(q(i,j,k,n), q(i,j-1,k,n));
     
-                   const auto& slopes_eb_lo = amrex_calc_slopes_eb(i,j-1,k,n,q,ccc,flag);
+                   const auto& slopes_eb_lo = amrex_lim_slopes_eb(i,j-1,k,n,q,ccc,
+                                                                  AMREX_D_DECL(fcx,fcy,fcz), flag);
 
 #if (AMREX_SPACEDIM == 3)
                    qmns = q(i,j-1,k,n) + delta_x * slopes_eb_lo[0]

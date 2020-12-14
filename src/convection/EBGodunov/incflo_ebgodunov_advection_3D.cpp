@@ -30,6 +30,9 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                       Geometry& geom,
                                       bool is_velocity )
 {
+    for (int n = 0; n < ncomp; n++)
+       if (!iconserv[n]) amrex::Abort("Trying to update in non-conservative in ebgodunov");
+
     Box const& xbx = amrex::surroundingNodes(bx,0);
     Box const& ybx = amrex::surroundingNodes(bx,1);
     Box const& zbx = amrex::surroundingNodes(bx,2);
@@ -180,7 +183,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zylo, l_zyhi;
         Godunov_corner_couple_zy(l_zylo, l_zyhi,
-                                 i, j, k, n, l_dt, dy, iconserv[n],
+                                 i, j, k, n, l_dt, dy, 
                                  zlo(i,j,k,n), zhi(i,j,k,n),
                                  q, divu, vmac, yedge);
 
@@ -197,7 +200,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yzlo, l_yzhi;
         Godunov_corner_couple_yz(l_yzlo, l_yzhi,
-                                 i, j, k, n, l_dt, dz, iconserv[n],
+                                 i, j, k, n, l_dt, dz, 
                                  ylo(i,j,k,n), yhi(i,j,k,n),
                                  q, divu, wmac, zedge);
 
@@ -215,34 +218,23 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     {
         Real stl, sth;
 
-        if (iconserv[n]) {
-            stl = xlo(i,j,k,n) - (0.5*dtdy)*(yzlo(i-1,j+1,k  ,n)*vmac(i-1,j+1,k  )
-                                           - yzlo(i-1,j  ,k  ,n)*vmac(i-1,j  ,k  ))
-                               - (0.5*dtdz)*(zylo(i-1,j  ,k+1,n)*wmac(i-1,j  ,k+1)
-                                           - zylo(i-1,j  ,k  ,n)*wmac(i-1,j  ,k  ))
-                + (0.5*dtdy)*q(i-1,j,k,n)*(vmac(i-1,j+1,k  ) - vmac(i-1,j,k))
-                + (0.5*dtdz)*q(i-1,j,k,n)*(wmac(i-1,j  ,k+1) - wmac(i-1,j,k));
+        stl = xlo(i,j,k,n) - (0.5*dtdy)*(yzlo(i-1,j+1,k  ,n)*vmac(i-1,j+1,k  )
+                                       - yzlo(i-1,j  ,k  ,n)*vmac(i-1,j  ,k  ))
+                           - (0.5*dtdz)*(zylo(i-1,j  ,k+1,n)*wmac(i-1,j  ,k+1)
+                                       - zylo(i-1,j  ,k  ,n)*wmac(i-1,j  ,k  ))
+            + (0.5*dtdy)*q(i-1,j,k,n)*(vmac(i-1,j+1,k  ) - vmac(i-1,j,k))
+            + (0.5*dtdz)*q(i-1,j,k,n)*(wmac(i-1,j  ,k+1) - wmac(i-1,j,k));
 
-            sth = xhi(i,j,k,n) - (0.5*dtdy)*(yzlo(i,j+1,k  ,n)*vmac(i,j+1,k  )
-                                           - yzlo(i,j  ,k  ,n)*vmac(i,j  ,k  ))
-                               - (0.5*dtdz)*(zylo(i,j  ,k+1,n)*wmac(i,j  ,k+1)
-                                           - zylo(i,j  ,k  ,n)*wmac(i,j  ,k  ))
-                + (0.5*dtdy)*q(i,j,k,n)*(vmac(i,j+1,k  ) - vmac(i,j,k))
-                + (0.5*dtdz)*q(i,j,k,n)*(wmac(i,j  ,k+1) - wmac(i,j,k));
-        } else {
-            stl = xlo(i,j,k,n) - (0.25*dtdy)*(vmac(i-1,j+1,k  ) + vmac(i-1,j,k)) *
-                                             (yzlo(i-1,j+1,k,n) - yzlo(i-1,j,k,n))
-                               - (0.25*dtdz)*(wmac(i-1,j,k+1  ) + wmac(i-1,j,k))*
-                                             (zylo(i-1,j,k+1,n) - zylo(i-1,j,k,n));
+        sth = xhi(i,j,k,n) - (0.5*dtdy)*(yzlo(i,j+1,k  ,n)*vmac(i,j+1,k  )
+                                       - yzlo(i,j  ,k  ,n)*vmac(i,j  ,k  ))
+                           - (0.5*dtdz)*(zylo(i,j  ,k+1,n)*wmac(i,j  ,k+1)
+                                       - zylo(i,j  ,k  ,n)*wmac(i,j  ,k  ))
+            + (0.5*dtdy)*q(i,j,k,n)*(vmac(i,j+1,k  ) - vmac(i,j,k))
+        + (0.5*dtdz)*q(i,j,k,n)*(wmac(i,j  ,k+1) - wmac(i,j,k));
 
-            sth = xhi(i,j,k,n) - (0.25*dtdy)*(vmac(i,j+1,k  ) + vmac(i,j,k))*
-                                             (yzlo(i,j+1,k,n) - yzlo(i,j,k,n))
-                               - (0.25*dtdz)*(wmac(i,j,k+1  ) + wmac(i,j,k))*
-                                             (zylo(i,j,k+1,n) - zylo(i,j,k,n));
-        }
+        stl += -0.5*l_dt*q(i-1,j,k,n)*divu(i-1,j,k);
+        sth += -0.5*l_dt*q(i  ,j,k,n)*divu(i  ,j,k);
 
-        stl += (iconserv[n]) ? -0.5*l_dt*q(i-1,j,k,n)*divu(i-1,j,k) : 0.;
-        sth += (iconserv[n]) ? -0.5*l_dt*q(i  ,j,k,n)*divu(i  ,j,k) : 0.;
         if (fq) {
             stl += 0.5 * l_dt * fq(i-1,j,k,n);
             sth += 0.5 * l_dt * fq(i  ,j,k,n);
@@ -270,7 +262,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xzlo, l_xzhi;
         Godunov_corner_couple_xz(l_xzlo, l_xzhi,
-                                 i, j, k, n, l_dt, dz, iconserv[n],
+                                 i, j, k, n, l_dt, dz, 
                                  xlo(i,j,k,n),  xhi(i,j,k,n),
                                  q, divu, wmac, zedge);
 
@@ -287,7 +279,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zxlo, l_zxhi;
         Godunov_corner_couple_zx(l_zxlo, l_zxhi,
-                                 i, j, k, n, l_dt, dx, iconserv[n],
+                                 i, j, k, n, l_dt, dx, 
                                  zlo(i,j,k,n), zhi(i,j,k,n),
                                  q, divu, umac, xedge);
 
@@ -306,34 +298,23 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     {
         Real stl, sth;
 
-        if (iconserv[n]){
-            stl = ylo(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j-1,k  ,n)*umac(i+1,j-1,k  )
-                                           - xzlo(i  ,j-1,k  ,n)*umac(i  ,j-1,k  ))
-                               - (0.5*dtdz)*(zxlo(i  ,j-1,k+1,n)*wmac(i  ,j-1,k+1)
-                                           - zxlo(i  ,j-1,k  ,n)*wmac(i  ,j-1,k  ))
-                + (0.5*dtdx)*q(i,j-1,k,n)*(umac(i+1,j-1,k  ) - umac(i,j-1,k))
-                + (0.5*dtdz)*q(i,j-1,k,n)*(wmac(i  ,j-1,k+1) - wmac(i,j-1,k));
+        stl = ylo(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j-1,k  ,n)*umac(i+1,j-1,k  )
+                                       - xzlo(i  ,j-1,k  ,n)*umac(i  ,j-1,k  ))
+                           - (0.5*dtdz)*(zxlo(i  ,j-1,k+1,n)*wmac(i  ,j-1,k+1)
+                                       - zxlo(i  ,j-1,k  ,n)*wmac(i  ,j-1,k  ))
+            + (0.5*dtdx)*q(i,j-1,k,n)*(umac(i+1,j-1,k  ) - umac(i,j-1,k))
+            + (0.5*dtdz)*q(i,j-1,k,n)*(wmac(i  ,j-1,k+1) - wmac(i,j-1,k));
 
-            sth = yhi(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j,k  ,n)*umac(i+1,j,k  )
-                                           - xzlo(i  ,j,k  ,n)*umac(i  ,j,k  ))
-                               - (0.5*dtdz)*(zxlo(i  ,j,k+1,n)*wmac(i  ,j,k+1)
-                                           - zxlo(i  ,j,k  ,n)*wmac(i  ,j,k  ))
-                + (0.5*dtdx)*q(i,j,k,n)*(umac(i+1,j,k  ) - umac(i,j,k))
-                + (0.5*dtdz)*q(i,j,k,n)*(wmac(i  ,j,k+1) - wmac(i,j,k));
-        } else {
-            stl = ylo(i,j,k,n) - (0.25*dtdx)*(umac(i+1,j-1,k    ) + umac(i,j-1,k))*
-                                             (xzlo(i+1,j-1,k  ,n) - xzlo(i,j-1,k,n))
-                               - (0.25*dtdz)*(wmac(i  ,j-1,k+1  ) + wmac(i,j-1,k))*
-                                             (zxlo(i  ,j-1,k+1,n) - zxlo(i,j-1,k,n));
+        sth = yhi(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j,k  ,n)*umac(i+1,j,k  )
+                                       - xzlo(i  ,j,k  ,n)*umac(i  ,j,k  ))
+                           - (0.5*dtdz)*(zxlo(i  ,j,k+1,n)*wmac(i  ,j,k+1)
+                                       - zxlo(i  ,j,k  ,n)*wmac(i  ,j,k  ))
+            + (0.5*dtdx)*q(i,j,k,n)*(umac(i+1,j,k  ) - umac(i,j,k))
+            + (0.5*dtdz)*q(i,j,k,n)*(wmac(i  ,j,k+1) - wmac(i,j,k));
 
-            sth = yhi(i,j,k,n) - (0.25*dtdx)*(umac(i+1,j,k  ) + umac(i,j,k))*
-                                             (xzlo(i+1,j,k,n) - xzlo(i,j,k,n))
-                               - (0.25*dtdz)*(wmac(i,j,k+1  ) + wmac(i,j,k))*
-                                             (zxlo(i,j,k+1,n) - zxlo(i,j,k,n));
-        }
+        stl += -0.5*l_dt*q(i,j-1,k,n)*divu(i,j-1,k);
+        sth += -0.5*l_dt*q(i,j  ,k,n)*divu(i,j  ,k);
 
-        stl += (iconserv[n]) ? -0.5*l_dt*q(i,j-1,k,n)*divu(i,j-1,k) : 0.;
-        sth += (iconserv[n]) ? -0.5*l_dt*q(i,j  ,k,n)*divu(i,j  ,k) : 0.;
         if (fq) {
             stl += 0.5 * l_dt * fq(i,j-1,k,n);
             sth += 0.5 * l_dt * fq(i,j  ,k,n);
@@ -361,7 +342,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xylo, l_xyhi;
         Godunov_corner_couple_xy(l_xylo, l_xyhi,
-                                 i, j, k, n, l_dt, dy, iconserv[n],
+                                 i, j, k, n, l_dt, dy, 
                                  xlo(i,j,k,n), xhi(i,j,k,n),
                                  q, divu, vmac, yedge);
 
@@ -378,7 +359,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yxlo, l_yxhi;
         Godunov_corner_couple_yx(l_yxlo, l_yxhi,
-                                 i, j, k, n, l_dt, dx, iconserv[n],
+                                 i, j, k, n, l_dt, dx, 
                                  ylo(i,j,k,n), yhi(i,j,k,n),
                                  q, divu, umac, xedge);
 
@@ -396,34 +377,22 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     {
         Real stl, sth;
 
-        if (iconserv[n]) {
-            stl = zlo(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k-1,n)*umac(i+1,j  ,k-1)
-                                           - xylo(i  ,j  ,k-1,n)*umac(i  ,j  ,k-1))
-                               - (0.5*dtdy)*(yxlo(i  ,j+1,k-1,n)*vmac(i  ,j+1,k-1)
-                                           - yxlo(i  ,j  ,k-1,n)*vmac(i  ,j  ,k-1))
-                + (0.5*dtdx)*q(i,j,k-1,n)*(umac(i+1,j,k-1) -umac(i,j,k-1))
-                + (0.5*dtdy)*q(i,j,k-1,n)*(vmac(i,j+1,k-1) -vmac(i,j,k-1));
+        stl = zlo(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k-1,n)*umac(i+1,j  ,k-1)
+                                       - xylo(i  ,j  ,k-1,n)*umac(i  ,j  ,k-1))
+                           - (0.5*dtdy)*(yxlo(i  ,j+1,k-1,n)*vmac(i  ,j+1,k-1)
+                                       - yxlo(i  ,j  ,k-1,n)*vmac(i  ,j  ,k-1))
+            + (0.5*dtdx)*q(i,j,k-1,n)*(umac(i+1,j,k-1) -umac(i,j,k-1))
+            + (0.5*dtdy)*q(i,j,k-1,n)*(vmac(i,j+1,k-1) -vmac(i,j,k-1));
 
-            sth = zhi(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k,n)*umac(i+1,j  ,k)
-                                           - xylo(i  ,j  ,k,n)*umac(i  ,j  ,k))
-                               - (0.5*dtdy)*(yxlo(i  ,j+1,k,n)*vmac(i  ,j+1,k)
-                                           - yxlo(i  ,j  ,k,n)*vmac(i  ,j  ,k))
-                + (0.5*dtdx)*q(i,j,k,n)*(umac(i+1,j,k) -umac(i,j,k))
-                + (0.5*dtdy)*q(i,j,k,n)*(vmac(i,j+1,k) -vmac(i,j,k));
-        } else {
-            stl = zlo(i,j,k,n) - (0.25*dtdx)*(umac(i+1,j  ,k-1  ) + umac(i,j,k-1))*
-                                             (xylo(i+1,j  ,k-1,n) - xylo(i,j,k-1,n))
-                               - (0.25*dtdy)*(vmac(i  ,j+1,k-1  ) + vmac(i,j,k-1))*
-                                             (yxlo(i  ,j+1,k-1,n) - yxlo(i,j,k-1,n));
+        sth = zhi(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k,n)*umac(i+1,j  ,k)
+                                       - xylo(i  ,j  ,k,n)*umac(i  ,j  ,k))
+                           - (0.5*dtdy)*(yxlo(i  ,j+1,k,n)*vmac(i  ,j+1,k)
+                                       - yxlo(i  ,j  ,k,n)*vmac(i  ,j  ,k))
+            + (0.5*dtdx)*q(i,j,k,n)*(umac(i+1,j,k) -umac(i,j,k))
+            + (0.5*dtdy)*q(i,j,k,n)*(vmac(i,j+1,k) -vmac(i,j,k));
 
-            sth = zhi(i,j,k,n) - (0.25*dtdx)*(umac(i+1,j  ,k  ) + umac(i,j,k))*
-                                             (xylo(i+1,j  ,k,n) - xylo(i,j,k,n))
-                               - (0.25*dtdy)*(vmac(i  ,j+1,k  ) + vmac(i,j,k))*
-                                             (yxlo(i  ,j+1,k,n) - yxlo(i,j,k,n));
-        }
-
-        stl += (iconserv[n]) ? -0.5*l_dt*q(i,j,k-1,n)*divu(i,j,k-1) : 0.;
-        sth += (iconserv[n]) ? -0.5*l_dt*q(i,j,k  ,n)*divu(i,j,k  ) : 0.;
+        stl += -0.5*l_dt*q(i,j,k-1,n)*divu(i,j,k-1);
+        sth += -0.5*l_dt*q(i,j,k  ,n)*divu(i,j,k  );
         if (fq) {
             stl += 0.5 * l_dt * fq(i,j,k-1,n);
             sth += 0.5 * l_dt * fq(i,j,k  ,n);
@@ -441,21 +410,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
-        if (iconserv[n])
-        {
-            dqdt(i,j,k,n) = dxinv[0]*( umac(i  ,j,k)*qx(i  ,j,k,n) -
-                                       umac(i+1,j,k)*qx(i+1,j,k,n) )
-                +           dxinv[1]*( vmac(i,j  ,k)*qy(i,j  ,k,n) -
-                                       vmac(i,j+1,k)*qy(i,j+1,k,n))
-                +           dxinv[2]*( wmac(i,j,k  )*qz(i,j,k  ,n) -
-                                       wmac(i,j,k+1)*qz(i,j,k+1,n) );
-        } else {
-            dqdt(i,j,k,n) = 0.5*dxinv[0]*(umac(i,j,k  ) + umac(i+1,j  ,k  ))
-                *                        (qx  (i,j,k,n) - qx  (i+1,j  ,k  ,n))
-                +           0.5*dxinv[1]*(vmac(i,j,k  ) + vmac(i  ,j+1,k  ))
-                *                        (qy  (i,j,k,n) - qy  (i  ,j+1,k  ,n))
-                +           0.5*dxinv[2]*(wmac(i,j,k  ) + wmac(i  ,j  ,k+1))
-                *                        (qz  (i,j,k,n) - qz  (i  ,j  ,k+1,n));
-       }
+        dqdt(i,j,k,n) = dxinv[0]*( umac(i  ,j,k)*qx(i  ,j,k,n) -
+                                   umac(i+1,j,k)*qx(i+1,j,k,n) )
+            +           dxinv[1]*( vmac(i,j  ,k)*qy(i,j  ,k,n) -
+                                   vmac(i,j+1,k)*qy(i,j+1,k,n))
+            +           dxinv[2]*( wmac(i,j,k  )*qz(i,j,k  ,n) -
+                                   wmac(i,j,k+1)*qz(i,j,k+1,n) );
     });
 }
