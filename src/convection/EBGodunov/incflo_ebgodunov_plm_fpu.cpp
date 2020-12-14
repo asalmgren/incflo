@@ -494,7 +494,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
             Real qpls(0.);
             Real qmns(0.);
 
-            // This means apx(i,j,k) > 0 and we have un-covered cells on both sides
+            // This means apy(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(0,-1,0))
             {
                 const auto& bc = pbc[n];
@@ -540,6 +540,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                      + delta_x * slopes_eb_hi[0];
 #endif
                    qpls -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_hi[1];
+
                 }  // end of making qpls
 
                 // *************************************************
@@ -587,8 +588,8 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                 }  // end of making qmns
             }
 
-            Ipy(i-1,j,k,n) = qmns;
-            Imy(i  ,j,k,n) = qpls;
+            Ipy(i,j-1,k,n) = qmns;
+            Imy(i,j  ,k,n) = qpls;
         });
     }
 }
