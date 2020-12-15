@@ -53,17 +53,24 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 #endif
 
     // At an ext_dir boundary, the boundary value is on the face, not cell center.
-    auto extdir_lohi = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::x));
-    bool has_extdir_or_ho_lo = extdir_lohi.first;
-    bool has_extdir_or_ho_hi = extdir_lohi.second;
+    auto extdir_lohi_x = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::x));
+    auto extdir_lohi_y = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::y));
+
+    bool has_extdir_or_ho_lo_x = extdir_lohi_x.first;
+    bool has_extdir_or_ho_hi_x = extdir_lohi_x.second;
+    bool has_extdir_or_ho_lo_y = extdir_lohi_y.first;
+    bool has_extdir_or_ho_hi_y = extdir_lohi_y.second;
+
 #if (AMREX_SPACEDIM == 3)
     Box xebox = Box(bx_in).grow(1,1).grow(2,1).surroundingNodes(0);
 #else
     Box xebox = Box(bx_in).grow(1,1).surroundingNodes(0);
 #endif
 
-    if ((has_extdir_or_ho_lo and domain_ilo >= xebox.smallEnd(0)-1) or
-        (has_extdir_or_ho_hi and domain_ihi <= xebox.bigEnd(0)))
+    if ( (has_extdir_or_ho_lo_x and domain_ilo >= xebox.smallEnd(0)-1) or
+         (has_extdir_or_ho_hi_x and domain_ihi <= xebox.bigEnd(0)    ) or
+         (has_extdir_or_ho_lo_y and domain_jlo >= xebox.smallEnd(1)-1) or
+         (has_extdir_or_ho_hi_y and domain_jhi <= xebox.bigEnd(1)    )  )
     {
         amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                  AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
@@ -342,17 +349,24 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
 #endif
 
     // At an ext_dir boundary, the boundary value is on the face, not cell center.
-    auto extdir_lohi = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::y));
-    bool has_extdir_or_ho_lo = extdir_lohi.first;
-    bool has_extdir_or_ho_hi = extdir_lohi.second;
+    auto extdir_lohi_x = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::x));
+    auto extdir_lohi_y = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::y));
+
+    bool has_extdir_or_ho_lo_x = extdir_lohi_x.first;
+    bool has_extdir_or_ho_hi_x = extdir_lohi_x.second;
+    bool has_extdir_or_ho_lo_y = extdir_lohi_y.first;
+    bool has_extdir_or_ho_hi_y = extdir_lohi_y.second;
+
 #if (AMREX_SPACEDIM == 3)
     Box yebox = Box(bx_in).grow(0,1).grow(2,1).surroundingNodes(1);
 #else
     Box yebox = Box(bx_in).grow(0,1).surroundingNodes(1);
 #endif
 
-    if ((has_extdir_or_ho_lo and domain_jlo >= yebox.smallEnd(1)-1) or
-        (has_extdir_or_ho_hi and domain_jhi <= yebox.bigEnd(1)))
+    if ( (has_extdir_or_ho_lo_x and domain_ilo >= yebox.smallEnd(0)-1) or
+         (has_extdir_or_ho_hi_x and domain_ihi <= yebox.bigEnd(0)    ) or
+         (has_extdir_or_ho_lo_y and domain_jlo >= yebox.smallEnd(1)-1) or
+         (has_extdir_or_ho_hi_y and domain_jhi <= yebox.bigEnd(1)    )  )
     {
         amrex::ParallelFor(yebox, ncomp, [q,vmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
