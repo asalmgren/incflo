@@ -1,6 +1,5 @@
 #include <incflo_godunov_corner_couple.H>
 #include <incflo_godunov_trans_bc.H>
-#include <incflo_ebgodunov_plm.H>
 #include <Godunov.H>
 #include <EBGodunov.H>
 
@@ -10,23 +9,25 @@ void
 ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                       Array4<Real> const& dqdt,
                                       Array4<Real const> const& q,
-                                      Array4<Real const> const& umac,
-                                      Array4<Real const> const& vmac,
-                                      Array4<Real const> const& wmac,
+                                      Array4<Real const> const& u_mac,
+                                      Array4<Real const> const& v_mac,
+                                      Array4<Real const> const& w_mac,
                                       Array4<Real const> const& fq,
                                       Array4<Real const> const& divu,
                                       Real l_dt,
-                                      BCRec const* pbc, int const* iconserv,
-                                      Real* p, 
-                                      Array4<EBCellFlag const> const& flag,
+                                      Vector<BCRec> const& h_bcrec,
+                                             BCRec const*  pbc,
+                                      int const* iconserv,
+                                      Real* p,
+                                      Array4<EBCellFlag const> const& flag_arr,
                                       AMREX_D_DECL(Array4<Real const> const& apx,
                                                    Array4<Real const> const& apy,
                                                    Array4<Real const> const& apz),
-                                      Array4<Real const> const& vfrac,
+                                      Array4<Real const> const& vfrac_arr,
                                       AMREX_D_DECL(Array4<Real const> const& fcx,
                                                    Array4<Real const> const& fcy,
                                                    Array4<Real const> const& fcz),
-                                      Array4<Real const> const& ccc,
+                                      Array4<Real const> const& ccent_arr,
                                       Geometry& geom,
                                       bool is_velocity )
 {
@@ -82,30 +83,21 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
     p +=         xyzhi.size();
 
-    {
-    // Use PLM to generate Im and Ip */
+    for (int n = 0; n < ncomp; n++)
+       if (!iconserv[n]) amrex::Abort("Trying to update in non-conservative in ebgodunov");
 
-        amrex::ParallelFor(xebox, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            EBGodunov_plm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i-1,j,k,n),
-                                q, umac(i,j,k), pbc[n], dlo.x, dhi.x, is_velocity);
-        });
-
-        amrex::ParallelFor(yebox, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            EBGodunov_plm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j-1,k,n),
-                                q, vmac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
-        });
-
-        amrex::ParallelFor(zebox, ncomp,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-        {
-            EBGodunov_plm_fpu_z(i, j, k, n, l_dt, dz, Imz(i,j,k,n), Ipz(i,j,k-1,n),
-                                q, wmac(i,j,k), pbc[n], dlo.z, dhi.z, is_velocity);
-        });
-    }
+    ebgodunov::plm_fpu_x (bx, ncomp, Imx, Ipx, q, u_mac,
+                          flag_arr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
+                          geom, l_dt, h_bcrec, pbc, is_velocity);
+    ebgodunov::plm_fpu_y (bx, ncomp, Imy, Ipy, q, v_mac,
+                          flag_arr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
+                          geom, l_dt, h_bcrec, pbc, is_velocity);
+    ebgodunov::plm_fpu_z (bx, ncomp, Imz, Ipz, q, w_mac,
+                          flag_arr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
+                          geom, l_dt, h_bcrec, pbc, is_velocity);
 
     amrex::ParallelFor(
         xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -113,7 +105,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real lo = Ipx(i-1,j,k,n);
             Real hi = Imx(i  ,j,k,n);
 
-            Real uad = umac(i,j,k);
+            Real uad = u_mac(i,j,k);
 
             auto bc = pbc[n];
 
@@ -132,7 +124,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real lo = Ipy(i,j-1,k,n);
             Real hi = Imy(i,j  ,k,n);
 
-            Real vad = vmac(i,j,k);
+            Real vad = v_mac(i,j,k);
 
             auto bc = pbc[n];
 
@@ -150,7 +142,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real lo = Ipz(i,j,k-1,n);
             Real hi = Imz(i,j,k  ,n);
 
-            Real wad = wmac(i,j,k);
+            Real wad = w_mac(i,j,k);
 
             auto bc = pbc[n];
 
@@ -183,11 +175,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zylo, l_zyhi;
         Godunov_corner_couple_zy(l_zylo, l_zyhi,
-                                 i, j, k, n, l_dt, dy, 
+                                 i, j, k, n, l_dt, dy, true, 
                                  zlo(i,j,k,n), zhi(i,j,k,n),
-                                 q, divu, vmac, yedge);
+                                 q, divu, v_mac, yedge);
 
-        Real wad = wmac(i,j,k);
+        Real wad = w_mac(i,j,k);
         Godunov_trans_zbc(i, j, k, n, q, l_zylo, l_zyhi, wad, bc.lo(2), bc.hi(2), dlo.z, dhi.z, is_velocity);
 
         Real st = (wad >= 0.) ? l_zylo : l_zyhi;
@@ -200,11 +192,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yzlo, l_yzhi;
         Godunov_corner_couple_yz(l_yzlo, l_yzhi,
-                                 i, j, k, n, l_dt, dz, 
+                                 i, j, k, n, l_dt, dz, true, 
                                  ylo(i,j,k,n), yhi(i,j,k,n),
-                                 q, divu, wmac, zedge);
+                                 q, divu, w_mac, zedge);
 
-        Real vad = vmac(i,j,k);
+        Real vad = v_mac(i,j,k);
         Godunov_trans_ybc(i, j, k, n, q, l_yzlo, l_yzhi, vad, bc.lo(1), bc.hi(1), dlo.y, dhi.y, is_velocity);
 
         Real st = (vad >= 0.) ? l_yzlo : l_yzhi;
@@ -218,19 +210,19 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     {
         Real stl, sth;
 
-        stl = xlo(i,j,k,n) - (0.5*dtdy)*(yzlo(i-1,j+1,k  ,n)*vmac(i-1,j+1,k  )
-                                       - yzlo(i-1,j  ,k  ,n)*vmac(i-1,j  ,k  ))
-                           - (0.5*dtdz)*(zylo(i-1,j  ,k+1,n)*wmac(i-1,j  ,k+1)
-                                       - zylo(i-1,j  ,k  ,n)*wmac(i-1,j  ,k  ))
-            + (0.5*dtdy)*q(i-1,j,k,n)*(vmac(i-1,j+1,k  ) - vmac(i-1,j,k))
-            + (0.5*dtdz)*q(i-1,j,k,n)*(wmac(i-1,j  ,k+1) - wmac(i-1,j,k));
+        stl = xlo(i,j,k,n) - (0.5*dtdy)*(yzlo(i-1,j+1,k  ,n)*v_mac(i-1,j+1,k  )
+                                       - yzlo(i-1,j  ,k  ,n)*v_mac(i-1,j  ,k  ))
+                           - (0.5*dtdz)*(zylo(i-1,j  ,k+1,n)*w_mac(i-1,j  ,k+1)
+                                       - zylo(i-1,j  ,k  ,n)*w_mac(i-1,j  ,k  ))
+            + (0.5*dtdy)*q(i-1,j,k,n)*(v_mac(i-1,j+1,k  ) - v_mac(i-1,j,k))
+            + (0.5*dtdz)*q(i-1,j,k,n)*(w_mac(i-1,j  ,k+1) - w_mac(i-1,j,k));
 
-        sth = xhi(i,j,k,n) - (0.5*dtdy)*(yzlo(i,j+1,k  ,n)*vmac(i,j+1,k  )
-                                       - yzlo(i,j  ,k  ,n)*vmac(i,j  ,k  ))
-                           - (0.5*dtdz)*(zylo(i,j  ,k+1,n)*wmac(i,j  ,k+1)
-                                       - zylo(i,j  ,k  ,n)*wmac(i,j  ,k  ))
-            + (0.5*dtdy)*q(i,j,k,n)*(vmac(i,j+1,k  ) - vmac(i,j,k))
-        + (0.5*dtdz)*q(i,j,k,n)*(wmac(i,j  ,k+1) - wmac(i,j,k));
+        sth = xhi(i,j,k,n) - (0.5*dtdy)*(yzlo(i,j+1,k  ,n)*v_mac(i,j+1,k  )
+                                       - yzlo(i,j  ,k  ,n)*v_mac(i,j  ,k  ))
+                           - (0.5*dtdz)*(zylo(i,j  ,k+1,n)*w_mac(i,j  ,k+1)
+                                       - zylo(i,j  ,k  ,n)*w_mac(i,j  ,k  ))
+            + (0.5*dtdy)*q(i,j,k,n)*(v_mac(i,j+1,k  ) - v_mac(i,j,k))
+        + (0.5*dtdz)*q(i,j,k,n)*(w_mac(i,j  ,k+1) - w_mac(i,j,k));
 
         stl += -0.5*l_dt*q(i-1,j,k,n)*divu(i-1,j,k);
         sth += -0.5*l_dt*q(i  ,j,k,n)*divu(i  ,j,k);
@@ -241,11 +233,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         }
 
         auto bc = pbc[n];
-        Godunov_cc_xbc_lo(i, j, k, n, q, stl, sth, umac, bc.lo(0), dlo.x, is_velocity);
-        Godunov_cc_xbc_hi(i, j, k, n, q, stl, sth, umac, bc.hi(0), dhi.x, is_velocity);
+        Godunov_cc_xbc_lo(i, j, k, n, q, stl, sth, u_mac, bc.lo(0), dlo.x, is_velocity);
+        Godunov_cc_xbc_hi(i, j, k, n, q, stl, sth, u_mac, bc.hi(0), dhi.x, is_velocity);
 
-        Real temp = (umac(i,j,k) >= 0.) ? stl : sth;
-        temp = (amrex::Math::abs(umac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
+        Real temp = (u_mac(i,j,k) >= 0.) ? stl : sth;
+        temp = (amrex::Math::abs(u_mac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
         qx(i,j,k,n) = temp;
     });
 
@@ -262,11 +254,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xzlo, l_xzhi;
         Godunov_corner_couple_xz(l_xzlo, l_xzhi,
-                                 i, j, k, n, l_dt, dz, 
+                                 i, j, k, n, l_dt, dz, true, 
                                  xlo(i,j,k,n),  xhi(i,j,k,n),
-                                 q, divu, wmac, zedge);
+                                 q, divu, w_mac, zedge);
 
-        Real uad = umac(i,j,k);
+        Real uad = u_mac(i,j,k);
         Godunov_trans_xbc(i, j, k, n, q, l_xzlo, l_xzhi, uad, bc.lo(0), bc.hi(0), dlo.x, dhi.x, is_velocity);
 
         Real st = (uad >= 0.) ? l_xzlo : l_xzhi;
@@ -279,11 +271,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zxlo, l_zxhi;
         Godunov_corner_couple_zx(l_zxlo, l_zxhi,
-                                 i, j, k, n, l_dt, dx, 
+                                 i, j, k, n, l_dt, dx, true, 
                                  zlo(i,j,k,n), zhi(i,j,k,n),
-                                 q, divu, umac, xedge);
+                                 q, divu, u_mac, xedge);
 
-        Real wad = wmac(i,j,k);
+        Real wad = w_mac(i,j,k);
         Godunov_trans_zbc(i, j, k, n, q, l_zxlo, l_zxhi, wad, bc.lo(2), bc.hi(2), dlo.z, dhi.z, is_velocity);
 
         Real st = (wad >= 0.) ? l_zxlo : l_zxhi;
@@ -298,19 +290,19 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     {
         Real stl, sth;
 
-        stl = ylo(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j-1,k  ,n)*umac(i+1,j-1,k  )
-                                       - xzlo(i  ,j-1,k  ,n)*umac(i  ,j-1,k  ))
-                           - (0.5*dtdz)*(zxlo(i  ,j-1,k+1,n)*wmac(i  ,j-1,k+1)
-                                       - zxlo(i  ,j-1,k  ,n)*wmac(i  ,j-1,k  ))
-            + (0.5*dtdx)*q(i,j-1,k,n)*(umac(i+1,j-1,k  ) - umac(i,j-1,k))
-            + (0.5*dtdz)*q(i,j-1,k,n)*(wmac(i  ,j-1,k+1) - wmac(i,j-1,k));
+        stl = ylo(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j-1,k  ,n)*u_mac(i+1,j-1,k  )
+                                       - xzlo(i  ,j-1,k  ,n)*u_mac(i  ,j-1,k  ))
+                           - (0.5*dtdz)*(zxlo(i  ,j-1,k+1,n)*w_mac(i  ,j-1,k+1)
+                                       - zxlo(i  ,j-1,k  ,n)*w_mac(i  ,j-1,k  ))
+            + (0.5*dtdx)*q(i,j-1,k,n)*(u_mac(i+1,j-1,k  ) - u_mac(i,j-1,k))
+            + (0.5*dtdz)*q(i,j-1,k,n)*(w_mac(i  ,j-1,k+1) - w_mac(i,j-1,k));
 
-        sth = yhi(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j,k  ,n)*umac(i+1,j,k  )
-                                       - xzlo(i  ,j,k  ,n)*umac(i  ,j,k  ))
-                           - (0.5*dtdz)*(zxlo(i  ,j,k+1,n)*wmac(i  ,j,k+1)
-                                       - zxlo(i  ,j,k  ,n)*wmac(i  ,j,k  ))
-            + (0.5*dtdx)*q(i,j,k,n)*(umac(i+1,j,k  ) - umac(i,j,k))
-            + (0.5*dtdz)*q(i,j,k,n)*(wmac(i  ,j,k+1) - wmac(i,j,k));
+        sth = yhi(i,j,k,n) - (0.5*dtdx)*(xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
+                                       - xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  ))
+                           - (0.5*dtdz)*(zxlo(i  ,j,k+1,n)*w_mac(i  ,j,k+1)
+                                       - zxlo(i  ,j,k  ,n)*w_mac(i  ,j,k  ))
+            + (0.5*dtdx)*q(i,j,k,n)*(u_mac(i+1,j,k  ) - u_mac(i,j,k))
+            + (0.5*dtdz)*q(i,j,k,n)*(w_mac(i  ,j,k+1) - w_mac(i,j,k));
 
         stl += -0.5*l_dt*q(i,j-1,k,n)*divu(i,j-1,k);
         sth += -0.5*l_dt*q(i,j  ,k,n)*divu(i,j  ,k);
@@ -321,11 +313,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         }
 
         auto bc = pbc[n];
-        Godunov_cc_ybc_lo(i, j, k, n, q, stl, sth, vmac, bc.lo(1), dlo.y, is_velocity);
-        Godunov_cc_ybc_hi(i, j, k, n, q, stl, sth, vmac, bc.hi(1), dhi.y, is_velocity);
+        Godunov_cc_ybc_lo(i, j, k, n, q, stl, sth, v_mac, bc.lo(1), dlo.y, is_velocity);
+        Godunov_cc_ybc_hi(i, j, k, n, q, stl, sth, v_mac, bc.hi(1), dhi.y, is_velocity);
 
-        Real temp = (vmac(i,j,k) >= 0.) ? stl : sth;
-        temp = (amrex::Math::abs(vmac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
+        Real temp = (v_mac(i,j,k) >= 0.) ? stl : sth;
+        temp = (amrex::Math::abs(v_mac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
         qy(i,j,k,n) = temp;
     });
 
@@ -342,11 +334,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xylo, l_xyhi;
         Godunov_corner_couple_xy(l_xylo, l_xyhi,
-                                 i, j, k, n, l_dt, dy, 
+                                 i, j, k, n, l_dt, dy, true, 
                                  xlo(i,j,k,n), xhi(i,j,k,n),
-                                 q, divu, vmac, yedge);
+                                 q, divu, v_mac, yedge);
 
-        Real uad = umac(i,j,k);
+        Real uad = u_mac(i,j,k);
         Godunov_trans_xbc(i, j, k, n, q, l_xylo, l_xyhi, uad, bc.lo(0), bc.hi(0), dlo.x, dhi.x, is_velocity);
 
         Real st = (uad >= 0.) ? l_xylo : l_xyhi;
@@ -359,11 +351,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yxlo, l_yxhi;
         Godunov_corner_couple_yx(l_yxlo, l_yxhi,
-                                 i, j, k, n, l_dt, dx, 
+                                 i, j, k, n, l_dt, dx, true, 
                                  ylo(i,j,k,n), yhi(i,j,k,n),
-                                 q, divu, umac, xedge);
+                                 q, divu, u_mac, xedge);
 
-        Real vad = vmac(i,j,k);
+        Real vad = v_mac(i,j,k);
         Godunov_trans_ybc(i, j, k, n, q, l_yxlo, l_yxhi, vad, bc.lo(1), bc.hi(1), dlo.y, dhi.y, is_velocity);
 
         Real st = (vad >= 0.) ? l_yxlo : l_yxhi;
@@ -377,19 +369,19 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     {
         Real stl, sth;
 
-        stl = zlo(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k-1,n)*umac(i+1,j  ,k-1)
-                                       - xylo(i  ,j  ,k-1,n)*umac(i  ,j  ,k-1))
-                           - (0.5*dtdy)*(yxlo(i  ,j+1,k-1,n)*vmac(i  ,j+1,k-1)
-                                       - yxlo(i  ,j  ,k-1,n)*vmac(i  ,j  ,k-1))
-            + (0.5*dtdx)*q(i,j,k-1,n)*(umac(i+1,j,k-1) -umac(i,j,k-1))
-            + (0.5*dtdy)*q(i,j,k-1,n)*(vmac(i,j+1,k-1) -vmac(i,j,k-1));
+        stl = zlo(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k-1,n)*u_mac(i+1,j  ,k-1)
+                                       - xylo(i  ,j  ,k-1,n)*u_mac(i  ,j  ,k-1))
+                           - (0.5*dtdy)*(yxlo(i  ,j+1,k-1,n)*v_mac(i  ,j+1,k-1)
+                                       - yxlo(i  ,j  ,k-1,n)*v_mac(i  ,j  ,k-1))
+            + (0.5*dtdx)*q(i,j,k-1,n)*(u_mac(i+1,j,k-1) -u_mac(i,j,k-1))
+            + (0.5*dtdy)*q(i,j,k-1,n)*(v_mac(i,j+1,k-1) -v_mac(i,j,k-1));
 
-        sth = zhi(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k,n)*umac(i+1,j  ,k)
-                                       - xylo(i  ,j  ,k,n)*umac(i  ,j  ,k))
-                           - (0.5*dtdy)*(yxlo(i  ,j+1,k,n)*vmac(i  ,j+1,k)
-                                       - yxlo(i  ,j  ,k,n)*vmac(i  ,j  ,k))
-            + (0.5*dtdx)*q(i,j,k,n)*(umac(i+1,j,k) -umac(i,j,k))
-            + (0.5*dtdy)*q(i,j,k,n)*(vmac(i,j+1,k) -vmac(i,j,k));
+        sth = zhi(i,j,k,n) - (0.5*dtdx)*(xylo(i+1,j  ,k,n)*u_mac(i+1,j  ,k)
+                                       - xylo(i  ,j  ,k,n)*u_mac(i  ,j  ,k))
+                           - (0.5*dtdy)*(yxlo(i  ,j+1,k,n)*v_mac(i  ,j+1,k)
+                                       - yxlo(i  ,j  ,k,n)*v_mac(i  ,j  ,k))
+            + (0.5*dtdx)*q(i,j,k,n)*(u_mac(i+1,j,k) -u_mac(i,j,k))
+            + (0.5*dtdy)*q(i,j,k,n)*(v_mac(i,j+1,k) -v_mac(i,j,k));
 
         stl += -0.5*l_dt*q(i,j,k-1,n)*divu(i,j,k-1);
         sth += -0.5*l_dt*q(i,j,k  ,n)*divu(i,j,k  );
@@ -399,22 +391,22 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         }
 
         auto bc = pbc[n];
-        Godunov_cc_zbc_lo(i, j, k, n, q, stl, sth, wmac, bc.lo(2),  dlo.z, is_velocity);
-        Godunov_cc_zbc_hi(i, j, k, n, q, stl, sth, wmac, bc.hi(2),  dhi.z, is_velocity);
+        Godunov_cc_zbc_lo(i, j, k, n, q, stl, sth, w_mac, bc.lo(2),  dlo.z, is_velocity);
+        Godunov_cc_zbc_hi(i, j, k, n, q, stl, sth, w_mac, bc.hi(2),  dhi.z, is_velocity);
 
-        Real temp = (wmac(i,j,k) >= 0.) ? stl : sth;
-        temp = (amrex::Math::abs(wmac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
+        Real temp = (w_mac(i,j,k) >= 0.) ? stl : sth;
+        temp = (amrex::Math::abs(w_mac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
         qz(i,j,k,n) = temp;
     });
 
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
-        dqdt(i,j,k,n) = dxinv[0]*( umac(i  ,j,k)*qx(i  ,j,k,n) -
-                                   umac(i+1,j,k)*qx(i+1,j,k,n) )
-            +           dxinv[1]*( vmac(i,j  ,k)*qy(i,j  ,k,n) -
-                                   vmac(i,j+1,k)*qy(i,j+1,k,n))
-            +           dxinv[2]*( wmac(i,j,k  )*qz(i,j,k  ,n) -
-                                   wmac(i,j,k+1)*qz(i,j,k+1,n) );
+        dqdt(i,j,k,n) = dxinv[0]*( u_mac(i  ,j,k)*qx(i  ,j,k,n) -
+                                   u_mac(i+1,j,k)*qx(i+1,j,k,n) )
+            +           dxinv[1]*( v_mac(i,j  ,k)*qy(i,j  ,k,n) -
+                                   v_mac(i,j+1,k)*qy(i,j+1,k,n) )
+            +           dxinv[2]*( w_mac(i,j,k  )*qz(i,j,k  ,n) -
+                                   w_mac(i,j,k+1)*qz(i,j,k+1,n) );
     });
 }

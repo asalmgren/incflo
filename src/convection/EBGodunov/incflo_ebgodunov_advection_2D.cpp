@@ -1,5 +1,4 @@
-#include <incflo_godunov_corner_couple.H>
-#include <incflo_godunov_trans_bc.H>
+
 
 #include <Godunov.H>
 #include <EBGodunov.H>
@@ -73,23 +72,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
 
     for (int n = 0; n < ncomp; n++) 
        if (!iconserv[n]) amrex::Abort("Trying to update in non-conservative in ebgodunov");
-
-    // 
-    // Use PLM to generate Im and Ip 
-    // 
-    // amrex::ParallelFor(xebox, ncomp,
-    // [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-    // {
-    //     EBGodunov_plm_fpu_x(i, j, k, n, l_dt, dx, Imx(i,j,k,n), Ipx(i-1,j,k,n),
-    //                          q, u_mac(i,j,k), pbc[n], dlo.x, dhi.x, is_velocity);
-    // });
-
-    // amrex::ParallelFor(yebox, ncomp,
-    // [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-    // {
-    //     EBGodunov_plm_fpu_y(i, j, k, n, l_dt, dy, Imy(i,j,k,n), Ipy(i,j-1,k,n),
-    //                           q, v_mac(i,j,k), pbc[n], dlo.y, dhi.y, is_velocity);
-    // });
 
     ebgodunov::plm_fpu_x (bx, ncomp, Imx, Ipx, q, u_mac,
                           flag_arr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,

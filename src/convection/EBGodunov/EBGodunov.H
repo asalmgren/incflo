@@ -120,6 +120,26 @@ namespace ebgodunov {
                     amrex::Vector<amrex::BCRec> const& h_bcrec,
                     amrex::BCRec const* d_bcrec, bool is_velocity);
 
+#if (AMREX_SPACEDIM == 3)
+    void plm_fpu_z (amrex::Box const& bx, int ncomp,
+                    amrex::Array4<amrex::Real> const& Imz, amrex::Array4<amrex::Real> const& Ipz,
+                    amrex::Array4<amrex::Real const> const& q,
+                    amrex::Array4<amrex::Real  const> const& wmac,
+                    amrex::Array4<amrex::EBCellFlag const> const& flag,
+                    AMREX_D_DECL(amrex::Array4<amrex::Real const> const& apx,
+                                 amrex::Array4<amrex::Real const> const& apy,
+                                 amrex::Array4<amrex::Real const> const& apz),
+                    amrex::Array4<amrex::Real const> const& vfrac,
+                    AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
+                                 amrex::Array4<amrex::Real const> const& fcy,
+                                 amrex::Array4<amrex::Real const> const& fcz),
+                    amrex::Array4<amrex::Real const> const& ccc,
+                    amrex::Geometry& geom,
+                    amrex::Real dt,
+                    amrex::Vector<amrex::BCRec> const& h_bcrec,
+                    amrex::BCRec const* d_bcrec, bool is_velocity);
+#endif
+
     void make_trans_velocities (AMREX_D_DECL(amrex::Box const& xbx,
                                              amrex::Box const& ybx, 
                                              amrex::Box const& zbx),

@@ -6,18 +6,28 @@
 
 using namespace amrex;
 
-void ebgodunov::predict_godunov (Real time, MultiFab& u_mac, MultiFab& v_mac,
-                                 MultiFab& w_mac, MultiFab const& mac_phi, 
-                                 MultiFab const& vel, MultiFab const& vel_forces,
+void ebgodunov::predict_godunov (Real time,
+                                 MultiFab& u_mac, MultiFab& v_mac,
+                                 MultiFab& w_mac,
+                                 MultiFab const& mac_phi,
+                                 MultiFab const& vel,
+                                 MultiFab const& vel_forces,
                                  Vector<BCRec> const& h_bcrec,
                                         BCRec  const* d_bcrec,
-                                 Geometry& geom, Real l_dt, 
+                                 EBFArrayBoxFactory const* ebfact,
+                                 Geometry& geom,
+                                 Real l_dt,
                                  MultiFab const& gmacphi_x, MultiFab const& gmacphi_y,
                                  MultiFab const& gmacphi_z,
                                  bool use_mac_phi_in_godunov)
 {
     Box const& domain = geom.Domain();
     const Real* dx    = geom.CellSize();
+
+    auto const& flags = ebfact->getMultiEBCellFlagFab();
+    auto const& fcent = ebfact->getFaceCent();
+    auto const& ccent = ebfact->getCentroid();
+    auto const& vfrac = ebfact->getVolFrac();
 
     const int ncomp = AMREX_SPACEDIM;
 #ifdef _OPENMP
@@ -32,6 +42,10 @@ void ebgodunov::predict_godunov (Real time, MultiFab& u_mac, MultiFab& v_mac,
             Box const& xbx = mfi.nodaltilebox(0);
             Box const& ybx = mfi.nodaltilebox(1);
             Box const& zbx = mfi.nodaltilebox(2);
+
+            EBCellFlagFab const& flagfab = flags[mfi];
+            Array4<EBCellFlag const> const& flagarr = flagfab.const_array();
+            auto const typ = flagfab.getType(amrex::grow(bx,2));
 
             Array4<Real      > const& a_umac      = u_mac.array(mfi);
             Array4<Real      > const& a_vmac      = v_mac.array(mfi);
@@ -69,13 +83,47 @@ void ebgodunov::predict_godunov (Real time, MultiFab& u_mac, MultiFab& v_mac,
             Array4<Real> w_ad = makeArray4(p,Box(bx).grow(0,1).grow(1,1).surroundingNodes(2),1);
             p +=         w_ad.size();
 
+
+            // This tests on covered cells just in the box itself
+            if (flagfab.getType(bx) == FabType::covered)
             {
+                // We shouldn't need to zero these ... I think?
+
+            // This tests on only regular cells including two rows of ghost cells
+            } else if (flagfab.getType(amrex::grow(bx,2)) == FabType::regular) {
+
+                godunov::predict_plm_x (bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
+                                        geom, l_dt, h_bcrec, d_bcrec);
+                godunov::predict_plm_y (bx, AMREX_SPACEDIM, Imy, Ipy, a_vel, a_vel,
+                                        geom, l_dt, h_bcrec, d_bcrec);
+                godunov::predict_plm_z (bx, AMREX_SPACEDIM, Imz, Ipz, a_vel, a_vel,
+                                        geom, l_dt, h_bcrec, d_bcrec);
+
+            } else {
+
+                AMREX_D_TERM(Array4<Real const> const& apx = ebfact->getAreaFrac()[0]->const_array(mfi);,
+                             Array4<Real const> const& apy = ebfact->getAreaFrac()[1]->const_array(mfi);,
+                             Array4<Real const> const& apz = ebfact->getAreaFrac()[2]->const_array(mfi););
+
+                AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
+                             Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
+                             Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
+
+                Array4<Real const> const& ccent_arr = ccent.const_array(mfi);
+                Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
+
                 ebgodunov::predict_plm_x (bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
-                                          geom, l_dt, h_bcrec, d_bcrec);
+                                         flagarr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                                         AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
+                                         geom, l_dt, h_bcrec, d_bcrec);
                 ebgodunov::predict_plm_y (bx, AMREX_SPACEDIM, Imy, Ipy, a_vel, a_vel,
-                                          geom, l_dt, h_bcrec, d_bcrec);
+                                         flagarr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                                         AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
+                                         geom, l_dt, h_bcrec, d_bcrec);
                 ebgodunov::predict_plm_z (bx, AMREX_SPACEDIM, Imz, Ipz, a_vel, a_vel,
-                                          geom, l_dt, h_bcrec, d_bcrec);
+                                         flagarr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                                         AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
+                                         geom, l_dt, h_bcrec, d_bcrec);
             }
 
             make_trans_velocities(Box(u_ad), Box(v_ad), Box(w_ad),
