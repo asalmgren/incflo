@@ -3,8 +3,8 @@
 #include <MOL.H>
 #include <incflo.H>
 
-#include <EBGodunov.H>
 #ifdef AMREX_USE_EB
+#include <EBGodunov.H>
 #endif
 
 #include <AMReX_MultiFabUtil.H>
