@@ -281,7 +281,6 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
             gbx.grow(2);
 
         // This one holds the convective term on a grown region so we can redistribute
-        amrex::Print() << "NCOMPS FOR DUDT AND SCRATCH " << nmaxcomp << std::endl;
         FArrayBox dUdt_tmpfab(gbx,nmaxcomp);
         Array4<Real> dUdt_tmp = dUdt_tmpfab.array();
         Elixir eli_du = dUdt_tmpfab.elixir();
@@ -320,7 +319,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                 redistribute_eb(bx, 1, drdt, dUdt_tmp, scratch, flag, vfrac, geom[lev]);
             }
             if (m_advect_tracer) {
-                ebgodunov::compute_godunov_advection(bx, m_ntrac,
+                ebgodunov::compute_godunov_advection(gbx, m_ntrac,
                                                      dUdt_tmp, rhotrac,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
                                                      ftra, divu, l_dt, 
