@@ -201,9 +201,8 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 #else
                    qmns = q(i-1,j,k,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1];
-
-                   qmns -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_lo[0];
 #endif
+                   qmns -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_lo[0];
                 }  // end of making qmns
 
             }
@@ -267,9 +266,8 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 #else
                    qpls = q(i,j,k,n) - delta_x * slopes_eb_hi[0]
                                      + delta_y * slopes_eb_hi[1];
-
-                   qpls -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_hi[0];
 #endif
+                   qpls -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_hi[0];
                 }  // end of making qpls
 
                 // *************************************************
@@ -456,7 +454,6 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                    qpls = q(i,j,k,n) - delta_y * slopes_eb_hi[1]
                                      + delta_x * slopes_eb_hi[0];
 #endif
-
                    qpls -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_hi[1];
 
                 }  // end of making qpls
@@ -675,10 +672,8 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
 
     if ( (has_extdir_or_ho_lo_x and domain_ilo >= zebox.smallEnd(0)-1) or
          (has_extdir_or_ho_hi_x and domain_ihi <= zebox.bigEnd(0)    ) or
-#if (AMREX_SPACEDIM == 3)
          (has_extdir_or_ho_lo_z and domain_klo >= zebox.smallEnd(2)-1) or
          (has_extdir_or_ho_hi_z and domain_khi <= zebox.bigEnd(2)    ) or
-#endif
          (has_extdir_or_ho_lo_y and domain_jlo >= zebox.smallEnd(1)-1) or
          (has_extdir_or_ho_hi_y and domain_jhi <= zebox.bigEnd(1)    )  )
     {
