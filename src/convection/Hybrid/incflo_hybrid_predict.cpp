@@ -4,22 +4,6 @@
 
 using namespace amrex;
 
-namespace {
-    std::pair<bool,bool> has_extdir_or_ho (BCRec const* bcrec, int ncomp, int dir)
-    {
-        std::pair<bool,bool> r{false,false};
-        for (int n = 0; n < ncomp; ++n) {
-            r.first = r.first 
-                 or (bcrec[n].lo(dir) == BCType::ext_dir)
-                 or (bcrec[n].lo(dir) == BCType::hoextrap);
-            r.second = r.second 
-                 or (bcrec[n].hi(dir) == BCType::ext_dir)
-                 or (bcrec[n].hi(dir) == BCType::hoextrap);
-        }
-        return r;
-    }
-}
-
 void 
 hybrid::predict_vels_on_faces ( AMREX_D_DECL(MultiFab& u_mac, 
                                              MultiFab& v_mac,

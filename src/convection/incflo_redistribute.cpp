@@ -87,7 +87,9 @@ void incflo::redistribute_eb (Box const& bx, int ncomp,
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
-        dUdt(i,j,k,n) = dUdt_in(i,j,k,n) + tmp(i,j,k,n);
+        // dUdt(i,j,k,n) = dUdt_in(i,j,k,n) + tmp(i,j,k,n);
+        // HACK HACK HACK 
+        dUdt(i,j,k,n) = dUdt_in(i,j,k,n);
     });
 }
 #endif

@@ -26,9 +26,6 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                            Array4<Real const> const& q,
                            Array4<Real const> const& umac,
                            Array4<EBCellFlag const> const& flag,
-                           AMREX_D_DECL(Array4<Real const> const& apx,
-                                        Array4<Real const> const& apy,
-                                        Array4<Real const> const& apz),
                            Array4<Real const> const& vfrac,
                            AMREX_D_DECL(Array4<Real const> const& fcx,
                                         Array4<Real const> const& fcy,
@@ -224,8 +221,6 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
             // This means apx(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(-1,0,0))
             {
-                const auto& bc = pbc[n];
-
                 // *************************************************
                 // Making qpls
                 // *************************************************
@@ -328,9 +323,6 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                            Array4<Real const> const& q,
                            Array4<Real const> const& vmac,
                            Array4<EBCellFlag const> const& flag,
-                           AMREX_D_DECL(Array4<Real const> const& apx,
-                                        Array4<Real const> const& apy,
-                                        Array4<Real const> const& apz),
                            Array4<Real const> const& vfrac,
                            AMREX_D_DECL(Array4<Real const> const& fcx,
                                         Array4<Real const> const& fcy,
@@ -526,8 +518,6 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
             // This means apy(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(0,-1,0))
             {
-                const auto& bc = pbc[n];
-
                 // *************************************************
                 // Making qpls
                 // *************************************************
@@ -632,9 +622,6 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
                            Array4<Real const> const& q,
                            Array4<Real const> const& wmac,
                            Array4<EBCellFlag const> const& flag,
-                           AMREX_D_DECL(Array4<Real const> const& apx,
-                                        Array4<Real const> const& apy,
-                                        Array4<Real const> const& apz),
                            Array4<Real const> const& vfrac,
                            AMREX_D_DECL(Array4<Real const> const& fcx,
                                         Array4<Real const> const& fcy,
@@ -809,8 +796,6 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
             // This means apz(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(0,-1,0))
             {
-                const auto& bc = pbc[n];
-
                 // *************************************************
                 // Making qpls
                 // *************************************************

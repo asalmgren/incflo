@@ -60,7 +60,6 @@ namespace mol {
 
 #ifdef AMREX_USE_EB
     void predict_vels_on_faces_eb (int lev,
-                                   amrex::Box const& ccbx,
                                    AMREX_D_DECL(amrex::Box const& ubx,
                                                 amrex::Box const& vbx,
                                                 amrex::Box const& wbx),
