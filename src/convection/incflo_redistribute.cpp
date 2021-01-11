@@ -9,9 +9,9 @@ void incflo::redistribute_eb (Box const& bx, int ncomp,
                               Array4<Real> const& scratch,
                               Array4<EBCellFlag const> const& flag,
                               Array4<Real const> const& vfrac,
-                              Geometry& geom )
+                              Geometry& lev_geom)
 {
-    const Box dbox = geom.growPeriodicDomain(2);
+    const Box dbox = lev_geom.growPeriodicDomain(2);
 
     Array4<Real> tmp(scratch, 0);
     Array4<Real> delm(scratch, ncomp);
