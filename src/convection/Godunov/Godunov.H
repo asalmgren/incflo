@@ -16,7 +16,6 @@ namespace godunov {
                           AMREX_D_DECL(amrex::MultiFab& u_mac,
                                        amrex::MultiFab& v_mac,
                                        amrex::MultiFab& w_mac),
-                          amrex::MultiFab const& mac_phi, 
                           amrex::MultiFab const& vel, 
                           amrex::MultiFab const& vel_forces,
                           amrex::Vector<amrex::BCRec> const& h_bcrec,
@@ -28,7 +27,7 @@ namespace godunov {
                                        amrex::MultiFab const& gmacphi_z),
                           bool use_mac_phi_in_godunov);
 
-    void predict_plm_x (amrex::Box const& bx, int ncomp,
+    void predict_plm_x (amrex::Box const& bx,
                         amrex::Array4<amrex::Real> const& Imx, amrex::Array4<amrex::Real> const& Ipx,
                         amrex::Array4<amrex::Real const> const& q,
                         amrex::Array4<amrex::Real  const> const& vcc,
@@ -37,7 +36,7 @@ namespace godunov {
                         amrex::Vector<amrex::BCRec> const& h_bcrec,
                         amrex::BCRec const* d_bcrec);
 
-    void predict_plm_y (amrex::Box const& bx, int ncomp,
+    void predict_plm_y (amrex::Box const& bx,
                         amrex::Array4<amrex::Real> const& Imy, amrex::Array4<amrex::Real> const& Ipy,
                         amrex::Array4<amrex::Real const> const& q,
                         amrex::Array4<amrex::Real  const> const& vcc,
@@ -46,7 +45,7 @@ namespace godunov {
                         amrex::Vector<amrex::BCRec> const& h_bcrec,
                         amrex::BCRec const* d_bcrec);
 #if (AMREX_SPACEDIM == 3)
-    void predict_plm_z (amrex::Box const& bx, int ncomp,
+    void predict_plm_z (amrex::Box const& bx,
                         amrex::Array4<amrex::Real> const& Imz, amrex::Array4<amrex::Real> const& Ipz,
                         amrex::Array4<amrex::Real const> const& q,
                         amrex::Array4<amrex::Real  const> const& vcc,
@@ -56,7 +55,7 @@ namespace godunov {
                         amrex::BCRec const* d_bcrec);
 #endif
 
-    void predict_ppm (amrex::Box const& bx, int ncomp,
+    void predict_ppm (amrex::Box const& bx,
                       AMREX_D_DECL(amrex::Array4<amrex::Real> const& Imx,
                                    amrex::Array4<amrex::Real> const& Imy,
                                    amrex::Array4<amrex::Real> const& Imz),
@@ -99,7 +98,6 @@ namespace godunov {
                                  AMREX_D_DECL(amrex::Array4<amrex::Real const> const& u_ad,
                                               amrex::Array4<amrex::Real const> const& v_ad,
                                               amrex::Array4<amrex::Real const> const& w_ad),
-                                 amrex::Array4<amrex::Real const> const& mac_phi,
                                  AMREX_D_DECL(amrex::Array4<amrex::Real> const& Imx,
                                               amrex::Array4<amrex::Real> const& Imy,
                                               amrex::Array4<amrex::Real> const& Imz),

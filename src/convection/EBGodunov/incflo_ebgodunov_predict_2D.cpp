@@ -7,7 +7,6 @@ using namespace amrex;
 
 void ebgodunov::predict_godunov (Real time, 
                                  MultiFab& u_mac, MultiFab& v_mac,
-                                 MultiFab const& mac_phi, 
                                  MultiFab const& vel, 
                                  MultiFab const& vel_forces,
                                  Vector<BCRec> const& h_bcrec,
@@ -46,8 +45,6 @@ void ebgodunov::predict_godunov (Real time,
             Array4<Real> const& a_umac = u_mac.array(mfi);
             Array4<Real> const& a_vmac = v_mac.array(mfi);
 
-            Array4<Real const> const& mac_phi_arr   = mac_phi.const_array(mfi);
-
             Array4<Real const> const& gmacphi_x_arr = gmacphi_x.const_array(mfi);
             Array4<Real const> const& gmacphi_y_arr = gmacphi_y.const_array(mfi);
 
@@ -78,16 +75,12 @@ void ebgodunov::predict_godunov (Real time,
             // This tests on only regular cells including two rows of ghost cells
             } else if (flagfab.getType(amrex::grow(bx,2)) == FabType::regular) {
 
-                godunov::predict_plm_x (bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
+                godunov::predict_plm_x (bx, Imx, Ipx, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
-                godunov::predict_plm_y (bx, AMREX_SPACEDIM, Imy, Ipy, a_vel, a_vel,
+                godunov::predict_plm_y (bx, Imy, Ipy, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
 
             } else {
-
-                AMREX_D_TERM(Array4<Real const> const& apx = ebfact->getAreaFrac()[0]->const_array(mfi);,
-                             Array4<Real const> const& apy = ebfact->getAreaFrac()[1]->const_array(mfi);,
-                             Array4<Real const> const& apz = ebfact->getAreaFrac()[2]->const_array(mfi););
  
                 AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
                              Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
@@ -96,12 +89,12 @@ void ebgodunov::predict_godunov (Real time,
                 Array4<Real const> const& ccent_arr = ccent.const_array(mfi);
                 Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
 
-                ebgodunov::predict_plm_x (bx, AMREX_SPACEDIM, Imx, Ipx, a_vel, a_vel,
-                                         flagarr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                ebgodunov::predict_plm_x (bx, Imx, Ipx, a_vel, a_vel,
+                                         flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_y (bx, AMREX_SPACEDIM, Imy, Ipy, a_vel, a_vel,
-                                         flagarr,AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                ebgodunov::predict_plm_y (bx, Imy, Ipy, a_vel, a_vel,
+                                         flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
             }
@@ -113,7 +106,7 @@ void ebgodunov::predict_godunov (Real time,
 
             predict_godunov_on_box(bx, ncomp, xbx, ybx, 
                                    a_umac, a_vmac,
-                                   a_vel, u_ad, v_ad, mac_phi_arr,
+                                   a_vel, u_ad, v_ad, 
                                    Imx, Imy, Ipx, Ipy, a_f, 
                                    domain, dx, l_dt, d_bcrec, 
                                    gmacphi_x_arr, gmacphi_y_arr, 
@@ -150,7 +143,7 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx,
         Real hi = Imx(i  ,j,k,n);
 
         auto bc = pbc[n];
-        Godunov_trans_xbc(i, j, k, n, vel, lo, hi, lo, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
+        Godunov_trans_xbc(i, j, k, n, vel, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
         Real st = ( (lo+hi) >= 0.) ? lo : hi;
         bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
@@ -165,7 +158,7 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx,
         Real hi = Imy(i,j  ,k,n);
 
         auto bc = pbc[n];
-        Godunov_trans_ybc(i, j, k, n, vel, lo, hi, lo, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
+        Godunov_trans_ybc(i, j, k, n, vel, lo, hi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
         Real st = ( (lo+hi) >= 0.) ? lo : hi;
         bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
@@ -180,7 +173,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                                         Array4<Real const> const& q,
                                         Array4<Real const> const& u_ad,
                                         Array4<Real const> const& v_ad,
-                                        Array4<Real const> const& mac_phi,
                                         Array4<Real> const& Imx,
                                         Array4<Real> const& Imy,
                                         Array4<Real> const& Ipx,
@@ -220,7 +212,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real uad = u_ad(i,j,k);
             auto bc = pbc[n];
 
-            Godunov_trans_xbc(i, j, k, n, q, lo, hi, uad, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
+            Godunov_trans_xbc(i, j, k, n, q, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
             xlo(i,j,k,n) = lo;
             xhi(i,j,k,n) = hi;
@@ -237,7 +229,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real vad = v_ad(i,j,k);
             auto bc = pbc[n];
 
-            Godunov_trans_ybc(i, j, k, n, q, lo, hi, vad, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
+            Godunov_trans_ybc(i, j, k, n, q, lo, hi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
             ylo(i,j,k,n) = lo;
             yhi(i,j,k,n) = hi;
@@ -247,9 +239,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
             Imy(i, j, k, n) = fu*st + (1.0 - fu)*0.5*(hi + lo); // store yedge
         });
-
-    Array4<Real> xedge = Imx;
-    Array4<Real> yedge = Imy;
 
     Array4<Real> divu = makeArray4(Ipx.dataPtr(), grow(bx,1), 1);
     amrex::ParallelFor(Box(divu), [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
@@ -277,7 +266,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         l_yzlo = ylo(i,j,k,n);
         l_yzhi = yhi(i,j,k,n);
         Real vad = v_ad(i,j,k);
-        Godunov_trans_ybc(i, j, k, n, q, l_yzlo, l_yzhi, vad, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
+        Godunov_trans_ybc(i, j, k, n, q, l_yzlo, l_yzhi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
         Real st = (vad >= 0.) ? l_yzlo : l_yzhi;
         Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
@@ -305,8 +294,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             sth -= 0.5 * l_dt * gphi_x;
         }
 
-        Godunov_cc_xbc_lo(i, j, k, n, q, stl, sth, u_ad, bc.lo(0), dlo.x, true);
-        Godunov_cc_xbc_hi(i, j, k, n, q, stl, sth, u_ad, bc.hi(0), dhi.x, true);
+        Godunov_cc_xbc_lo(i, j, k, n, q, stl, sth, bc.lo(0), dlo.x, true);
+        Godunov_cc_xbc_hi(i, j, k, n, q, stl, sth, bc.hi(0), dhi.x, true);
 
         // Prevent backflow
         if ( (i==dlo.x) and (bc.lo(0) == BCType::foextrap || bc.lo(0) == BCType::hoextrap) )
@@ -347,7 +336,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         l_xzhi = xhi(i,j,k,n);
 
         Real uad = u_ad(i,j,k);
-        Godunov_trans_xbc(i, j, k, n, q, l_xzlo, l_xzhi, uad, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
+        Godunov_trans_xbc(i, j, k, n, q, l_xzlo, l_xzhi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
         Real st = (uad >= 0.) ? l_xzlo : l_xzhi;
         Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
@@ -375,8 +364,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             sth -= 0.5 * l_dt * gphi_y;
         }
 
-        Godunov_cc_ybc_lo(i, j, k, n, q, stl, sth, v_ad, bc.lo(1), dlo.y, true);
-        Godunov_cc_ybc_hi(i, j, k, n, q, stl, sth, v_ad, bc.hi(1), dhi.y, true);
+        Godunov_cc_ybc_lo(i, j, k, n, q, stl, sth, bc.lo(1), dlo.y, true);
+        Godunov_cc_ybc_hi(i, j, k, n, q, stl, sth, bc.hi(1), dhi.y, true);
 
         // Prevent backflow
         if ( (j==dlo.y) and (bc.lo(1) == BCType::foextrap || bc.lo(1) == BCType::hoextrap) )

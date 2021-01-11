@@ -225,15 +225,12 @@ mol::compute_convective_fluxes_eb (Box const& bx, int ncomp,
                              bool extdir_or_ho_khi = (d_bcrec[n].hi(2) == BCType::ext_dir) or
                                                      (d_bcrec[n].hi(2) == BCType::hoextrap););
 
-                   Real yf = fcx(i,j,k,0); // local (y,z) of centroid of z-face we are extrapolating to
 
                 if (j <= domain_jlo && (d_bcrec[n].lo(1) == BCType::ext_dir)) {
                     qs = q(i,domain_jlo-1,k,n);
                 } else if (j >= domain_jhi+1 && (d_bcrec[n].hi(1) == BCType::ext_dir)) {
                     qs = q(i,domain_jhi+1,k,n);
                 } else {
-
-                   Real yf = fcx(i,j,k,0); // local (y,z) of centroid of z-face we are extrapolating to
 
                    Real xf = fcy(i,j,k,0); // local (x,z) of centroid of z-face we are extrapolating to
 #if (AMREX_SPACEDIM == 3)

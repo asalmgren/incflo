@@ -19,14 +19,11 @@ namespace {
     }
 }
 
-void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
+void ebgodunov::predict_plm_x (Box const& bx_in,
                                Array4<Real> const& Imx, Array4<Real> const& Ipx,
                                Array4<Real const> const& q,
                                Array4<Real const> const& ccvel,
                                Array4<EBCellFlag const> const& flag,
-                               AMREX_D_DECL(Array4<Real const> const& apx,
-                                            Array4<Real const> const& apy,
-                                            Array4<Real const> const& apz),
                                Array4<Real const> const& vfrac,
                                AMREX_D_DECL(Array4<Real const> const& fcx,
                                             Array4<Real const> const& fcy,
@@ -39,6 +36,8 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
 {
     const Real dx = geom.CellSize(0);
     const Real dtdx = dt/dx;
+
+    int ncomp = AMREX_SPACEDIM;
 
     const Box& domain_box = geom.Domain();
     const int domain_ilo = domain_box.smallEnd(0);
@@ -232,8 +231,6 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
             // This means apx(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(-1,0,0))
             {
-                const auto& bc = pbc[n];
-
                 // *************************************************
                 // Making qpls
                 // *************************************************
@@ -341,14 +338,11 @@ void ebgodunov::predict_plm_x (Box const& bx_in, int ncomp,
     }
 }
 
-void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
+void ebgodunov::predict_plm_y (Box const& bx_in,
                                Array4<Real> const& Imy, Array4<Real> const& Ipy,
                                Array4<Real const> const& q,
                                Array4<Real const> const& ccvel,
                                Array4<EBCellFlag const> const& flag,
-                               AMREX_D_DECL(Array4<Real const> const& apx,
-                                            Array4<Real const> const& apy,
-                                            Array4<Real const> const& apz),
                                Array4<Real const> const& vfrac,
                                AMREX_D_DECL(Array4<Real const> const& fcx,
                                             Array4<Real const> const& fcy,
@@ -361,6 +355,7 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
 {
     const Real dy = geom.CellSize(1);
     const Real dtdy = dt/dy;
+    int ncomp = AMREX_SPACEDIM;
 
     const Box& domain_box = geom.Domain();
     const int domain_ilo = domain_box.smallEnd(0);
@@ -554,8 +549,6 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
             // This means apx(i,j,k) > 0 and we have un-covered cells on both sides
             if (flag(i,j,k).isConnected(0,-1,0))
             {
-                const auto& bc = pbc[n];
-
                 // *************************************************
                 // Making qpls
                 // *************************************************
@@ -664,14 +657,11 @@ void ebgodunov::predict_plm_y (Box const& bx_in, int ncomp,
 }
 
 #if (AMREX_SPACEDIM == 3)
-void ebgodunov::predict_plm_z (Box const& bx_in, int ncomp,
+void ebgodunov::predict_plm_z (Box const& bx_in,
                                Array4<Real> const& Imz, Array4<Real> const& Ipz,
                                Array4<Real const> const& q,
                                Array4<Real const> const& ccvel,
                                Array4<EBCellFlag const> const& flag,
-                               AMREX_D_DECL(Array4<Real const> const& apx,
-                                            Array4<Real const> const& apy,
-                                            Array4<Real const> const& apz),
                                Array4<Real const> const& vfrac,
                                AMREX_D_DECL(Array4<Real const> const& fcx,
                                             Array4<Real const> const& fcy,
@@ -684,6 +674,8 @@ void ebgodunov::predict_plm_z (Box const& bx_in, int ncomp,
 {
     const Real dz = geom.CellSize(2);
     const Real dtdz = dt/dz;
+
+    int ncomp = AMREX_SPACEDIM;
 
     const Box& domain_box = geom.Domain();
     const int domain_ilo = domain_box.smallEnd(0);

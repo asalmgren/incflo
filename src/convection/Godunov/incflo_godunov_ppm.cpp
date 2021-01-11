@@ -3,7 +3,7 @@
 
 using namespace amrex;
 
-void godunov::predict_ppm (Box const& bx, int ncomp,
+void godunov::predict_ppm (Box const& bx,
                            AMREX_D_DECL(amrex::Array4<amrex::Real> const& Imx,
                                         amrex::Array4<amrex::Real> const& Imy,
                                         amrex::Array4<amrex::Real> const& Imz),

@@ -472,11 +472,11 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         // AMREX for flux in each direction, +1 for cell-centered dqdt
         int tmpcomp = nmaxcomp*(AMREX_SPACEDIM+1);
         Box gbx1 = bx;
-        Box gbx2 = bx;
-        Box gbx3 = bx;
 
 #ifdef AMREX_USE_EB
         // We have to grow for non-EB domains as well to compute dqdt on a grown region
+        Box gbx2 = bx;
+        Box gbx3 = bx;
         if (regular) {
             gbx1.grow(1);
             tmpbox.grow(2);
@@ -580,8 +580,6 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         else
 #endif
         {
-            const auto dxinv = geom[lev].InvCellSizeArray();
-
             // velocity
             hybrid::compute_convective_fluxes1(gbx1, AMREX_SPACEDIM, AMREX_D_DECL(fx, fy, fz), 
                                               vel,
