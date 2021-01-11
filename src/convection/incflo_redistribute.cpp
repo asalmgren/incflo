@@ -33,7 +33,7 @@ void incflo::redistribute_eb (Box const& bx, int ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         if (flag(i,j,k).isSingleValued()) {
-#if 0
+#if 1
             Real vtot = 0.0;
             Real divnc = 0.0;
             for (int kk = -1; kk <= 1; ++kk) {
