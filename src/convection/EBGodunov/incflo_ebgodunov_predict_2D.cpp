@@ -489,8 +489,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             qx(i,j,k) += 0.5 * l_dt * gphi_x;
         }
 
-        // if (j >= i+48 and j <= i+80)
-        // amrex::Print() << "PRE_MAC V_X " << IntVect(i,j) << " " << qx(i,j,k) << std::endl;
         } else {
             qx(i,j,k) = 0.;
         } 
@@ -544,7 +542,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         // Bottom side of interface
         if (flag(i,j-1,k).isRegular())
         {
-            stl = xlo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
+            stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
                                                 (xhat(i+1,j-1,k  )-xhat(i,j-1,k));
 
         } else { // should be single-valued since it is connected across this face
@@ -598,13 +596,13 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 trans_stl = u_tmp_l * dvdx_l;
             }
 
-            stl = xlo(i,j,k,n) - (0.5 * l_dt/dx) * trans_stl;
+            stl = ylo(i,j,k,n) - (0.5 * l_dt/dx) * trans_stl;
         }
 
         // Top side of interface
         if (flag(i,j,k).isRegular())
         {
-            sth = xhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
+            sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
                                                 (xhat(i+1,j  ,k  )-xhat(i,j  ,k));
 
         } else { // should be single-valued since it is connected across this face
@@ -658,7 +656,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 trans_sth = u_tmp_h * dvdx_h;
             }
 
-            sth = xhi(i,j,k,n) - (0.5 * l_dt/dx) * trans_sth;
+            sth = yhi(i,j,k,n) - (0.5 * l_dt/dx) * trans_sth;
         }
 
         if (vfrac_arr(i,j-1,k) > 0.)
