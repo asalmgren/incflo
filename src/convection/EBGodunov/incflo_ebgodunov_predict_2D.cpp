@@ -25,6 +25,8 @@ void ebgodunov::predict_godunov (Real time,
     auto const& ccent = ebfact->getCentroid();
     auto const& vfrac = ebfact->getVolFrac();
 
+    auto const& areafrac = ebfact->getAreaFrac();
+
     const int ncomp = AMREX_SPACEDIM;
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -102,13 +104,29 @@ void ebgodunov::predict_godunov (Real time,
             make_trans_velocities(Box(u_ad), Box(v_ad),
                                   u_ad, v_ad,
                                   Imx, Imy, Ipx, Ipy, a_vel, a_f, 
-                                  domain, l_dt, d_bcrec);
+                                  flagarr, domain, l_dt, d_bcrec);
+
+            // Array4<Real const> apx_arr = apx->const_array(mfi);
+            // Array4<Real const> apy_arr = apy->const_array(mfi);
+
+            AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
+                         Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
+                         Array4<Real const> const& apz = areafrac[2]->const_array(mfi););
+
+            AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
+                         Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
+                         Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
+
+            Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
 
             predict_godunov_on_box(bx, ncomp, xbx, ybx, 
                                    a_umac, a_vmac,
                                    a_vel, u_ad, v_ad, 
                                    Imx, Imy, Ipx, Ipy, a_f, 
                                    domain, dx, l_dt, d_bcrec, 
+                                   flagarr,
+                                   AMREX_D_DECL(apx,apy,apz),vfrac_arr,
+                                   AMREX_D_DECL(fcx,fcy,fcz),
                                    gmacphi_x_arr, gmacphi_y_arr, 
                                    use_mac_phi_in_godunov, p);
 
@@ -126,6 +144,7 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx,
                                        Array4<Real const> const& Ipy,
                                        Array4<Real const> const& vel,
                                        Array4<Real const> const& f,
+                                       Array4<EBCellFlag const> const& flag,
                                        const Box& domain,
                                        Real l_dt, 
                                        BCRec  const* pbc)
@@ -137,32 +156,42 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         // We only care about x-velocity on x-faces here
-        constexpr int n = 0;
+        if (flag(i,j,k).isConnected(-1,0,0))  
+        {
+            constexpr int n = 0;
 
-        Real lo = Ipx(i-1,j,k,n);
-        Real hi = Imx(i  ,j,k,n);
+            Real lo = Ipx(i-1,j,k,n);
+            Real hi = Imx(i  ,j,k,n);
 
-        auto bc = pbc[n];
-        Godunov_trans_xbc(i, j, k, n, vel, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
+            auto bc = pbc[n];
+            Godunov_trans_xbc(i, j, k, n, vel, lo, hi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
-        Real st = ( (lo+hi) >= 0.) ? lo : hi;
-        bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
-        u_ad(i,j,k) = ltm ? 0. : st;
+            Real st = ( (lo+hi) >= 0.) ? lo : hi;
+            bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
+            u_ad(i,j,k) = ltm ? 0. : st;
+        } else {
+            u_ad(i,j,k) = 0.;
+        } 
     },
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         // We only care about y-velocity on y-faces here
-        constexpr int n = 1;
+        if (flag(i,j,k).isConnected(0,-1,0))  
+        {
+            constexpr int n = 1;
 
-        Real lo = Ipy(i,j-1,k,n);
-        Real hi = Imy(i,j  ,k,n);
+            Real lo = Ipy(i,j-1,k,n);
+            Real hi = Imy(i,j  ,k,n);
 
-        auto bc = pbc[n];
-        Godunov_trans_ybc(i, j, k, n, vel, lo, hi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
+            auto bc = pbc[n];
+            Godunov_trans_ybc(i, j, k, n, vel, lo, hi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
-        Real st = ( (lo+hi) >= 0.) ? lo : hi;
-        bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
-        v_ad(i,j,k) = ltm ? 0. : st;
+            Real st = ( (lo+hi) >= 0.) ? lo : hi;
+            bool ltm = ( (lo <= 0. && hi >= 0.) || (amrex::Math::abs(lo+hi) < small_vel) );
+            v_ad(i,j,k) = ltm ? 0. : st;
+        } else {
+            v_ad(i,j,k) = 0.;
+        }
     });
 }
 
@@ -178,10 +207,14 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                                         Array4<Real> const& Ipx,
                                         Array4<Real> const& Ipy,
                                         Array4<Real const> const& f,
-                                        const Box& domain,
-                                        const Real* dx_arr,
-                                        Real l_dt,
-                                        BCRec  const* pbc,
+                                        const Box& domain, const Real* dx_arr,
+                                        Real l_dt, BCRec  const* pbc,
+                                        Array4<EBCellFlag const> const& flag,
+                                        Array4<Real const> const& apx,
+                                        Array4<Real const> const& apy,
+                                        Array4<Real const> const& vfrac_arr,
+                                        Array4<Real const> const& fcx,
+                                        Array4<Real const> const& fcy,
                                         Array4<Real const> const& gmacphi_x,
                                         Array4<Real const> const& gmacphi_y,
                                         bool l_use_mac_phi_in_godunov,
@@ -203,6 +236,9 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     Array4<Real> yhi = makeArray4(p, yebox, ncomp);
     p += yhi.size();
 
+    //
+    // Upwind the states that result from plm_x and plm_y
+    //
     amrex::ParallelFor(
         xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
@@ -234,7 +270,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             ylo(i,j,k,n) = lo;
             yhi(i,j,k,n) = hi;
 
-
             Real st = (vad >= 0.) ? lo : hi;
             Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
             Imy(i, j, k, n) = fu*st + (1.0 - fu)*0.5*(hi + lo); // store yedge
@@ -245,51 +280,186 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         divu(i,j,k) = 0.0;
     });
 
-    // We can reuse the space in Ipy and Ipz.
+    // We can reuse the space in Ipy
 
     //
     // X-Flux
     //
     Box const xbxtmp = Box(xbx).enclosedCells().grow(0,1);
-    Array4<Real> yzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(xbxtmp,1), 1);
-    // Add d/dy term to z-faces
-    // Start with {zlo,zhi} --> {zylo, zyhi} and upwind using w_ad to {zylo}
-    // Add d/dz to y-faces
-    // Start with {ylo,yhi} --> {yzlo, yzhi} and upwind using v_ad to {yzlo}
-    amrex::ParallelFor(Box(yzlo),
+    Array4<Real> yhat = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(xbxtmp,1), 1);
+    // Add du/dy term to u on x-faces
+    // Start with {ylo,yhi} --> upwind using vad to {yhat}
+
+    amrex::ParallelFor(Box(yhat),
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        constexpr int n = 0;
-        const auto bc = pbc[n];
-        Real l_yzlo, l_yzhi;
+        if (flag(i,j,k).isConnected(0,-1,0))  
+        {
+            constexpr int n = 0;
+            const auto bc = pbc[n];
+            Real l_yzlo, l_yzhi;
 
-        l_yzlo = ylo(i,j,k,n);
-        l_yzhi = yhi(i,j,k,n);
-        Real vad = v_ad(i,j,k);
-        Godunov_trans_ybc(i, j, k, n, q, l_yzlo, l_yzhi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
+            l_yzlo = ylo(i,j,k,n);
+            l_yzhi = yhi(i,j,k,n);
+            Real vad = v_ad(i,j,k);
+            Godunov_trans_ybc(i, j, k, n, q, l_yzlo, l_yzhi, bc.lo(1), bc.hi(1), dlo.y, dhi.y, true);
 
-        Real st = (vad >= 0.) ? l_yzlo : l_yzhi;
-        Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
-        yzlo(i,j,k) = fu*st + (1.0 - fu) * 0.5 * (l_yzhi + l_yzlo);
+            Real st = (vad >= 0.) ? l_yzlo : l_yzhi;
+            Real fu = (amrex::Math::abs(vad) < small_vel) ? 0.0 : 1.0;
+            yhat(i,j,k) = fu*st + (1.0 - fu) * 0.5 * (l_yzhi + l_yzlo);
+        } else {
+            yhat(i,j,k) = 0.0;
+        } 
     });
+
+    //
+    // Define du/dy and add (v du/dy) to u on x-faces
     //
     amrex::ParallelFor(xbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
+        if (flag(i,j,k).isConnected(-1,0,0))  
+        {
         constexpr int n = 0;
         auto bc = pbc[n];
-        Real stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
-                                                 (yzlo(i-1,j+1,k  )-yzlo(i-1,j,k));
-        Real sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
-                                                 (yzlo(i  ,j+1,k  )-yzlo(i  ,j,k));
-        stl += 0.5 * l_dt * f(i-1,j,k,n);
-        sth += 0.5 * l_dt * f(i  ,j,k,n);
 
-        Real gphi_x;
+        // stl is on the left  side of the lo-x side of cell (i,j)
+        // sth is on the right side of the lo-x side of cell (i,j)
+        Real stl, sth;
+        Real v_tmp_j, v_tmp_jp1;
+        Real y_hat_j, y_hat_jp1;
+
+        // Left side of interface
+        if (flag(i-1,j,k).isRegular())
+        {
+            // For full cells this is the transverse term
+            stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
+                                                (yhat(i-1,j+1,k  )-yhat(i-1,j,k));
+
+        } else { // should be single-valued since it is connected across this face
+
+            Real dudy_l;  //  (yhat(i-1,j+1,k)-yhat(i-1,j,k)) if regular
+            Real v_tmp_l; //  0.5 * (v_ad(i-1,j+1,k)+v_ad(i-1,j,k)) if regular
+
+            Real trans_stl;
+
+            // If either y-face is covered, set the tranxverse term to zero
+            if (apy(i-1,j,k) == 0.0 or apy(i-1,j+1,k) == 0.0) {
+                trans_stl = 0.0;
+            } else {
+                // Tangential extrapolation in the x-direction at j-1/2
+                if (apy(i-1,j,k) == 1.0)
+                {
+                    v_tmp_j = v_ad(i-1,j,k);
+                    y_hat_j = yhat(i-1,j,k);
+                }
+                else if (fcy(i-1,j,k) <= 0.0) 
+                {
+                    v_tmp_j = v_ad(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i-1,j,k) - fcy(i-2,j,k)) * (v_ad(i-1,j,k) - v_ad(i-2,j,k));
+                    y_hat_j = yhat(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i-1,j,k) - fcy(i-2,j,k)) * (yhat(i-1,j,k) - yhat(i-2,j,k));
+                }
+                else if (fcy(i-1,j,k) > 0.0) 
+                {
+                    v_tmp_j = v_ad(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i  ,j,k) - fcy(i-1,j,k)) * (v_ad(i  ,j,k) - v_ad(i-1,j,k));
+                    y_hat_j = yhat(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i  ,j,k) - fcy(i-1,j,k)) * (yhat(i  ,j,k) - yhat(i-1,j,k));
+                }
+
+                // Tangential extrapolation in the x-direction at j+1/2
+                if (apy(i-1,j+1,k) == 1.0)
+                {
+                    v_tmp_jp1 = v_ad(i-1,j+1,k);
+                    y_hat_jp1 = yhat(i-1,j+1,k);
+                }
+                else if (fcy(i-1,j+1,k) <= 0.0) 
+                {
+                    v_tmp_jp1 = v_ad(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i-1,j+1,k) - fcy(i-2,j+1,k)) * (v_ad(i-1,j+1,k) - v_ad(i-2,j+1,k));
+                    y_hat_jp1 = yhat(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i-1,j+1,k) - fcy(i-2,j+1,k)) * (yhat(i-1,j+1,k) - yhat(i-2,j+1,k));
+                }
+                else if (fcy(i-1,j+1,k) > 0.0) 
+                {
+                    v_tmp_jp1 = v_ad(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i  ,j+1,k) - fcy(i-1,j+1,k)) * (v_ad(i  ,j+1,k) - v_ad(i-1,j+1,k));
+                    y_hat_jp1 = yhat(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i  ,j+1,k) - fcy(i-1,j+1,k)) * (yhat(i  ,j+1,k) - yhat(i-1,j+1,k));
+                }
+
+                v_tmp_l = 0.5 * (v_tmp_jp1 + v_tmp_j);
+                 dudy_l =       (y_hat_jp1 - y_hat_j);
+
+                trans_stl = v_tmp_l * dudy_l;
+            }
+
+            stl = xlo(i,j,k,n) - (0.5 * l_dt/dy) * trans_stl;
+        }
+
+        // Right side of interface
+        if (flag(i,j,k).isRegular())
+        {
+            // For full cells this is the transverse term
+            sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
+                                                (yhat(i  ,j+1,k  )-yhat(i  ,j,k));
+
+        } else { // should be single-valued since it is connected across this face
+
+            Real dudy_h;  //       (yhat(i,j+1,k)-yhat(i,j,k)) if regular
+            Real v_tmp_h; // 0.5 * (v_ad(i,j+1,k)+v_ad(i,j,k)) if regular
+
+            Real trans_sth;
+
+            // If either face is covered, use the cell-centered y-velocity
+            if (apy(i,j,k) == 0.0 or apy(i,j+1,k) == 0.0) 
+            {
+                trans_sth = 0.0;
+            } else {
+                // Tangential extrapolation in the x-direction at j-1/2
+                if (apy(i,j,k) == 1.0)
+                {
+                    v_tmp_j = v_ad(i,j,k);
+                    y_hat_j = yhat(i,j,k);
+                }
+                else if (fcy(i,j,k) <= 0.0) 
+                {
+                    v_tmp_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i,j,k) - fcy(i-1,j,k)) * (v_ad(i,j,k) - v_ad(i-1,j,k));
+                    y_hat_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i,j,k) - fcy(i-1,j,k)) * (v_ad(i,j,k) - v_ad(i-1,j,k));
+                }
+                else if (fcy(i,j,k) > 0.0) 
+                {
+                    v_tmp_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i+1,j,k) - fcy(i,j,k)) * (v_ad(i+1,j,k) - v_ad(i  ,j,k));
+                    y_hat_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i+1,j,k) - fcy(i,j,k)) * (v_ad(i+1,j,k) - v_ad(i  ,j,k));
+                }
+
+                // Tangential extrapolation in the x-direction at j+1/2
+                if (apy(i,j+1,k) == 1.0)
+                {
+                    v_tmp_jp1 = v_ad(i-1,j+1,k);
+                    y_hat_jp1 = yhat(i-1,j+1,k);
+                }
+                else if (fcy(i,j+1,k) <= 0.0) 
+                {
+                    v_tmp_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i,j+1,k) - fcy(i-1,j+1,k)) * (v_ad(i,j+1,k) - v_ad(i-1,j+1,k));
+                    y_hat_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i,j+1,k) - fcy(i-1,j+1,k)) * (v_ad(i,j+1,k) - v_ad(i-1,j+1,k));
+                }
+                else if (fcy(i,j+1,k) > 0.0) 
+                {
+                    v_tmp_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i+1,j+1,k) - fcy(i,j+1,k)) * (v_ad(i+1,j+1,k) - v_ad(i  ,j+1,k));
+                    y_hat_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i+1,j+1,k) - fcy(i,j+1,k)) * (v_ad(i+1,j+1,k) - v_ad(i  ,j+1,k));
+                }
+
+                v_tmp_h = 0.5 * (v_tmp_jp1 + v_tmp_j);
+                 dudy_h =       (y_hat_jp1 - y_hat_j);
+
+                trans_sth = v_tmp_h * dudy_h;
+            }
+
+            sth = xhi(i,j,k,n) - trans_sth;
+        }
+
+        if (vfrac_arr(i-1,j,k) > 0.)
+            stl += 0.5 * l_dt * f(i-1,j,k,n);
+        if (vfrac_arr(i,j,k) > 0.)
+            sth += 0.5 * l_dt * f(i  ,j,k,n);
 
         if (l_use_mac_phi_in_godunov)
         {
             // Note that the getFluxes call returns (-1/rho G^Mac phi) so we use the negative here
-            gphi_x = -gmacphi_x(i,j,k);
+            Real gphi_x = -gmacphi_x(i,j,k);
             stl -= 0.5 * l_dt * gphi_x;
             sth -= 0.5 * l_dt * gphi_x;
         }
@@ -313,53 +483,193 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         qx(i,j,k) = ltm ? 0. : st;
 
         if (l_use_mac_phi_in_godunov)
+        {
+            // Note that the getFluxes call returns (-1/rho G^Mac phi) so we use the negative here
+            Real gphi_x = -gmacphi_x(i,j,k);
             qx(i,j,k) += 0.5 * l_dt * gphi_x;
+        }
+
+        // if (j >= i+48 and j <= i+80)
+        // amrex::Print() << "PRE_MAC V_X " << IntVect(i,j) << " " << qx(i,j,k) << std::endl;
+        } else {
+            qx(i,j,k) = 0.;
+        } 
     });
     //
     // Y-Flux
     //
     Box const ybxtmp = Box(ybx).enclosedCells().grow(1,1);
-    Array4<Real> xzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(ybxtmp,0), 1);
+    Array4<Real> xhat = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(ybxtmp,0), 1);
 
-    // Add d/dz to x-faces
-    // Start with {xlo,xhi} --> {xzlo, xzhi} and upwind using u_ad to {xzlo}
-    // Add d/dx term to z-faces
-    // Start with {zlo,zhi} --> {zxlo, zxhi} and upwind using w_ad to {zxlo}
-    amrex::ParallelFor(Box(xzlo),
+    // Start with {xlo,xhi} --> upwind using uad to {xhat}
+    amrex::ParallelFor(Box(xhat),
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        constexpr int n = 1;
-        const auto bc = pbc[n];
-        Real l_xzlo, l_xzhi;
+        if (flag(i,j,k).isConnected(-1,0,0))  
+        {
+            constexpr int n = 1;
+            const auto bc = pbc[n];
+            Real l_xzlo, l_xzhi;
 
-        l_xzlo = xlo(i,j,k,n);
-        l_xzhi = xhi(i,j,k,n);
+            l_xzlo = xlo(i,j,k,n);
+            l_xzhi = xhi(i,j,k,n);
 
-        Real uad = u_ad(i,j,k);
-        Godunov_trans_xbc(i, j, k, n, q, l_xzlo, l_xzhi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
+            Real uad = u_ad(i,j,k);
+            Godunov_trans_xbc(i, j, k, n, q, l_xzlo, l_xzhi, bc.lo(0), bc.hi(0), dlo.x, dhi.x, true);
 
-        Real st = (uad >= 0.) ? l_xzlo : l_xzhi;
-        Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
-        xzlo(i,j,k) = fu*st + (1.0 - fu) * 0.5 * (l_xzhi + l_xzlo);
+            Real st = (uad >= 0.) ? l_xzlo : l_xzhi;
+            Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
+            xhat(i,j,k) = fu*st + (1.0 - fu) * 0.5 * (l_xzhi + l_xzlo);
+        } else {
+            xhat(i,j,k) = 0.0;
+        } 
     });
+
+    //
+    // Define dv/dx and add (u dv/dx) to v on y-faces
     //
     amrex::ParallelFor(ybx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
+        if (flag(i,j,k).isConnected(0,-1,0))  
+        {
         constexpr int n = 1;
         auto bc = pbc[n];
-        Real stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
-                                                 (xzlo(i+1,j-1,k  )-xzlo(i,j-1,k));
-        Real sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
-                                                 (xzlo(i+1,j  ,k  )-xzlo(i,j  ,k));
-       stl += 0.5 * l_dt * f(i,j-1,k,n);
-       sth += 0.5 * l_dt * f(i,j  ,k,n);
 
-        Real gphi_y;
+        // stl is on the low  side of the lo-y side of cell (i,j)
+        // sth is on the high side of the lo-y side of cell (i,j)
+        Real stl, sth;
+        Real u_tmp_i, u_tmp_ip1;
+        Real x_hat_i, x_hat_ip1;
+
+        // Bottom side of interface
+        if (flag(i,j-1,k).isRegular())
+        {
+            stl = xlo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
+                                                (xhat(i+1,j-1,k  )-xhat(i,j-1,k));
+
+        } else { // should be single-valued since it is connected across this face
+
+            Real dvdx_l;  //  (xhat(i+1,j-1,k  )-xhat(i,j-1,k)) if regular
+            Real u_tmp_l; //  0.5 * (u_ad(i+1,j-1,k  )+u_ad(i,j-1,k)) if regular
+
+            Real trans_stl; 
+
+            // If either x-face is covered, set the tranxverse term to zero
+            if (apx(i,j-1,k) == 0.0 or apx(i+1,j-1,k) == 0.0) {
+                trans_stl = 0.0;
+            } else {
+                // Tangential extrapolation in the y-direction at i-1/2
+                if (apx(i,j-1,k) == 1.0)
+                {
+                    u_tmp_i = u_ad(i,j-1,k);
+                    x_hat_i = xhat(i,j-1,k);
+                }
+                else if (fcx(i,j-1,k) <= 0.0) 
+                {
+                    u_tmp_i = u_ad(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j-1,k) - fcx(i,j-2,k)) * (u_ad(i,j-1,k) - u_ad(i,j-2,k));
+                    x_hat_i = xhat(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j-1,k) - fcx(i,j-2,k)) * (xhat(i,j-1,k) - xhat(i,j-2,k));
+                }
+                else if (fcx(i,j-1,k) > 0.0) 
+                {
+                    u_tmp_i = u_ad(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j  ,k) - fcx(i,j-1,k)) * (u_ad(i,j  ,k) - u_ad(i,j-1,k));
+                    x_hat_i = xhat(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j  ,k) - fcx(i,j-1,k)) * (xhat(i,j,  k) - xhat(i,j-1,k));
+                }
+
+                // Tangential extrapolation in the y-direction at i+1/2
+                if (apx(i+1,j-1,k) == 1.0)
+                {
+                    u_tmp_ip1 = u_ad(i+1,j-1,k);
+                    x_hat_ip1 = xhat(i+1,j-1,k);
+                }
+                else if (fcx(i+1,j-1,k) <= 0.0) 
+                {
+                    u_tmp_ip1 = u_ad(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j-1,k) - fcx(i+1,j-2,k)) * (u_ad(i+1,j-1,k) - u_ad(i+1,j-2,k));
+                    x_hat_ip1 = xhat(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j-1,k) - fcx(i+1,j-2,k)) * (xhat(i+1,j-1,k) - xhat(i+1,j-2,k));
+                }
+                else if (fcx(i+1,j-1,k) > 0.0) 
+                {
+                    u_tmp_ip1 = u_ad(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j  ,k) - fcx(i+1,j-1,k)) * (u_ad(i+1,j  ,k) - v_ad(i+1,j-1,k));
+                    x_hat_ip1 = xhat(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j  ,k) - fcx(i+1,j-1,k)) * (xhat(i+1,j  ,k) - xhat(i+1,j-1,k));
+                }
+
+                u_tmp_l = 0.5 * (u_tmp_ip1 + u_tmp_i);
+                 dvdx_l =       (x_hat_ip1 - x_hat_i);
+
+                trans_stl = u_tmp_l * dvdx_l;
+            }
+
+            stl = xlo(i,j,k,n) - (0.5 * l_dt/dx) * trans_stl;
+        }
+
+        // Top side of interface
+        if (flag(i,j,k).isRegular())
+        {
+            sth = xhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
+                                                (xhat(i+1,j  ,k  )-xhat(i,j  ,k));
+
+        } else { // should be single-valued since it is connected across this face
+
+            Real dvdx_h;  //  (xhat(i+1,j,k  )-xhat(i,j,k)) if regular
+            Real u_tmp_h; //  0.5 * (u_ad(i+1,j,k  )+u_ad(i,j,k)) if regular
+
+            Real trans_sth; 
+
+            // If either x-face is covered, set the tranxverse term to zero
+            if (apx(i,j,k) == 0.0 or apx(i+1,j,k) == 0.0) {
+                trans_sth = 0.0;
+            } else {
+                // Tangential extrapolation in the y-direction at i-1/2
+                if (apx(i,j,k) == 1.0)
+                {
+                    u_tmp_i = u_ad(i,j,k);
+                    x_hat_i = xhat(i,j,k);
+                }
+                else if (fcx(i,j,k) <= 0.0) 
+                {
+                    u_tmp_i = u_ad(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j,k) - fcx(i,j-1,k)) * (u_ad(i,j,k) - u_ad(i,j-1,k));
+                    x_hat_i = xhat(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j,k) - fcx(i,j-1,k)) * (xhat(i,j,k) - xhat(i,j-1,k));
+                }
+                else if (fcx(i,j-1,k) > 0.0) 
+                {
+                    u_tmp_i = u_ad(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j+1,k) - fcx(i,j,k)) * (u_ad(i,j+1,k) - u_ad(i,j,k));
+                    x_hat_i = xhat(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j+1,k) - fcx(i,j,k)) * (xhat(i,j+1,k) - xhat(i,j,k));
+                }
+
+                // Tangential extrapolation in the y-direction at i+1/2
+                if (apx(i+1,j,k) == 1.0)
+                {
+                    u_tmp_ip1 = u_ad(i+1,j,k);
+                    x_hat_ip1 = xhat(i+1,j,k);
+                }
+                else if (fcx(i+1,j,k) <= 0.0) 
+                {
+                    u_tmp_ip1 = u_ad(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j,k) - fcx(i+1,j-1,k)) * (u_ad(i+1,j,k) - u_ad(i+1,j-1,k));
+                    x_hat_ip1 = xhat(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j,k) - fcx(i+1,j-1,k)) * (xhat(i+1,j,k) - xhat(i+1,j-1,k));
+                }
+                else if (fcx(i+1,j-1,k) > 0.0) 
+                {
+                    u_tmp_ip1 = u_ad(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j+1,k) - fcx(i+1,j,k)) * (u_ad(i+1,j+1,k) - v_ad(i+1,j,k));
+                    x_hat_ip1 = xhat(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j+1,k) - fcx(i+1,j,k)) * (xhat(i+1,j+1,k) - xhat(i+1,j,k));
+                }
+
+                u_tmp_h = 0.5 * (u_tmp_ip1 + u_tmp_i);
+                 dvdx_h =       (x_hat_ip1 - x_hat_i);
+
+                trans_sth = u_tmp_h * dvdx_h;
+            }
+
+            sth = xhi(i,j,k,n) - (0.5 * l_dt/dx) * trans_sth;
+        }
+
+        if (vfrac_arr(i,j-1,k) > 0.)
+            stl += 0.5 * l_dt * f(i,j-1,k,n);
+        if (vfrac_arr(i,j  ,k) > 0.)
+            sth += 0.5 * l_dt * f(i,j  ,k,n);
 
         if (l_use_mac_phi_in_godunov)
         {
             // Note that the getFluxes call returns (-1/rho G^Mac phi) so we use the negative here
-            gphi_y = -gmacphi_y(i,j,k);
+            Real gphi_y = -gmacphi_y(i,j,k);
             stl -= 0.5 * l_dt * gphi_y;
             sth -= 0.5 * l_dt * gphi_y;
         }
@@ -384,7 +694,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         qy(i,j,k) = ltm ? 0. : st;
 
         if (l_use_mac_phi_in_godunov)
+        {
+            // Note that the getFluxes call returns (-1/rho G^Mac phi) so we use the negative here
+            Real gphi_y = -gmacphi_y(i,j,k);
             qy(i,j,k) += 0.5 * l_dt * gphi_y;
+        }
+
+        } else {
+            qy(i,j,k) = 0.;
+        }
     });
 
 }
