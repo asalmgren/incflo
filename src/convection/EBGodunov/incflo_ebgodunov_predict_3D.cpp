@@ -128,6 +128,7 @@ void ebgodunov::predict_godunov (Real time,
                                    a_vel, u_ad, v_ad, w_ad, 
                                    Imx, Imy, Imz, Ipx, Ipy, Ipz, a_f, 
                                    domain, dx, l_dt, d_bcrec,
+                                   flagarr,
                                    gmacphi_x_arr, gmacphi_y_arr, gmacphi_z_arr,
                                    use_mac_phi_in_godunov, p);
 
@@ -225,6 +226,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                                         const Real* dx_arr,
                                         Real l_dt,
                                         BCRec  const* pbc,
+                                        Array4<EBCellFlag const> const& flag,
                                         Array4<Real const> const& gmacphi_x,
                                         Array4<Real const> const& gmacphi_y,
                                         Array4<Real const> const& gmacphi_z,
@@ -369,6 +371,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     //
     amrex::ParallelFor(xbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
+        if (flag(i,j,k).isConnected(-1,0,0))
+        {
         constexpr int n = 0;
         auto bc = pbc[n];
         Real stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
@@ -413,6 +417,10 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 
         if (l_use_mac_phi_in_godunov)
             qx(i,j,k) += 0.5 * l_dt * gphi_x;
+
+        } else {
+            qx(i,j,k) = 0.;
+        }
     });
 
     //
@@ -466,6 +474,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     //
     amrex::ParallelFor(ybx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
+        if (flag(i,j,k).isConnected(0,-1,0))
+        {
         constexpr int n = 1;
         auto bc = pbc[n];
         Real stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
@@ -510,6 +520,10 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 
         if (l_use_mac_phi_in_godunov)
             qy(i,j,k) += 0.5 * l_dt * gphi_y;
+
+        } else {
+            qy(i,j,k) = 0.;
+        }
     });
 
     //
@@ -567,6 +581,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     //
     amrex::ParallelFor(zbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
+        if (flag(i,j,k).isConnected(0,0,-1))
+        {
         constexpr int n = 2;
         auto bc = pbc[n];
         Real stl = zlo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k-1)+u_ad(i,j,k-1))*
@@ -611,5 +627,9 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 
         if (l_use_mac_phi_in_godunov)
             qz(i,j,k) += 0.5 * l_dt * gphi_z;
+
+        } else {
+            qz(i,j,k) = 0.;
+        }
     });
 }
