@@ -1,4 +1,5 @@
 #include <incflo.H>
+#include <AMReX_EB_slopes_K.H>
 
 using namespace amrex;
 
@@ -15,6 +16,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                                     AMREX_D_DECL(Array4<Real const> const& fcx,
                                                  Array4<Real const> const& fcy,
                                                  Array4<Real const> const& fcz),
+                                    Array4<Real const> const& ccent,
                                     Geometry& lev_geom)
 {
     const Box dbox = lev_geom.growPeriodicDomain(2);
@@ -24,19 +26,47 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     Box const& bxg1 = amrex::grow(bx,1);
     Box const& bxg2 = amrex::grow(bx,2);
 
-    IArrayBox nbor_fab(bx,9);
-    FArrayBox nbor_wt_fab(bx,1);
+    // Set to 1 if cell is in my nbhd, otherwise 0
+    IArrayBox nbor_fab      (bx,9);
+
+    // How many nbhds is this cell in
+    FArrayBox nrs_fab       (bxg1,1);
+
+    // Total volume of all cells in my nbhd
+    FArrayBox nbhd_vol_fab  (bxg1,1);
+
+    // Centroid of my nbhd
+    FArrayBox cent_hat_fab  (bxg1,AMREX_SPACEDIM);
+
+    // Slopes in my nbhd
+    FArrayBox slopes_hat_fab(bx  ,AMREX_SPACEDIM);
+
+    // Solution at the centroid of my nbhd
+    FArrayBox soln_hat_fab  (bx  ,ncomp);
+
     nbor_fab.setVal(0);
-    nbor_wt_fab.setVal(0.);
-    Array4<int>  nbor    = nbor_fab.array();
-    Array4<Real> nbor_wt = nbor_wt_fab.array();
+    nrs_fab.setVal(1.0);
+    nbhd_vol_fab.setVal(0.);
+    soln_hat_fab.setVal(0.);
+    cent_hat_fab.setVal(0.);
+    slopes_hat_fab.setVal(0.);
+
+    Array4<int>  nbor     = nbor_fab.array();
+    Array4<Real> nbhd_vol  = nbhd_vol_fab.array();
+    Array4<Real> nrs      = nrs_fab.array();
+    Array4<Real> soln_hat = soln_hat_fab.array();
+    Array4<Real> cent_hat = cent_hat_fab.array();
+    Array4<Real> slopes_hat = slopes_hat_fab.array();
 
     amrex::ParallelFor(bx,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        if (flag(i,j,k).isSingleValued() and vfrac(i,j,k) < 0.5 && i > 3 && i < 5) 
+        if (flag(i,j,k).isSingleValued() and vfrac(i,j,k) < 0.5)
         {
             amrex::Print() << "SMALL CELL " << IntVect(i,j) << " with vfrac " << vfrac(i,j,k) << std::endl;
+
+            // Always include the small cell itself
+            nbor(i,j,k,4) = 1;
 
             if (apx(i,j,k) > 0.)
             {
@@ -94,7 +124,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 }
             }
 
-            nbor_wt(i,j,k) = vfrac(i,j,k);
+            nbhd_vol(i,j,k) = vfrac(i,j,k);
 
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
@@ -102,20 +132,100 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 int index = (jj+1)*3 + (ii+1);
                 if (nbor(i,j,k,index) == 1)
                 {
-                    amrex::Print() << IntVect(ii,jj) << " is connected with vol " << vfrac(i+ii,j+jj,k) << std::endl;
-                    nbor_wt(i,j,k) += vfrac(i+ii,j+jj,k);
+                    // amrex::Print() << IntVect(ii,jj) << " is connected with vol " << vfrac(i+ii,j+jj,k) << std::endl;
+                    nbhd_vol(i,j,k) += vfrac(i+ii,j+jj,k);
+                    nrs(i+ii,j+jj,k) += 1.;
                 }
             }
-            amrex::Print() << "VOL IN NBOR OF CELL " << IntVect(i,j) << " " << nbor_wt(i,j,k) << std::endl;
+            // amrex::Print() << "VOL IN NBOR OF CELL " << IntVect(i,j) << " " << nbhd_vol(i,j,k) << std::endl;
         }
     });
 
-    exit(0);
+#if 0
+    amrex::ParallelFor(bx,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+        if (nrs(i,j,k) > 1 and i < 10 )
+        {
+            amrex::Print() << "NRS GE 1:  " << IntVect(i,j) << " " << nrs(i,j,k) << std::endl;
+        }
+    });
+#endif
+
+    // Define xhat,yhat (from Berger and Guliani)
+    amrex::ParallelFor(bx,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+        for (int jj = -1; jj <= 1; jj++)  
+        for (int ii = -1; ii <= 1; ii++)  
+        {
+            int index = (jj+1)*3 + (ii+1);
+            if (nbor(i,j,k,index) == 1)
+            {
+                cent_hat(i,j,k,0) += (ccent(i+ii,j+jj,k,0) + ii) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+                cent_hat(i,j,k,1) += (ccent(i+ii,j+jj,k,1) + jj) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+            }
+            cent_hat(i,j,k,0) /= nbhd_vol(i,j,k);
+            cent_hat(i,j,k,1) /= nbhd_vol(i,j,k);
+        }
+    });
+
+    // Define Qhat (from Berger and Guliani)
+    amrex::ParallelFor(bx, ncomp,  
+    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+    {
+        for (int jj = -1; jj <= 1; jj++)  
+        for (int ii = -1; ii <= 1; ii++)  
+        {
+            int index = (jj+1)*3 + (ii+1);
+            if (nbor(i,j,k,index) == 1)
+            {
+                soln_hat(i,j,k,n) += dUdt_in(i+ii,j+jj,k,n) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+            }
+            soln_hat(i,j,k,n) /= nbhd_vol(i,j,k);
+        }
+    });
 
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
-        dUdt(i,j,k,n) = dUdt_in(i,j,k,n) + tmp(i,j,k,n);
+        dUdt(i,j,k,n) = 0;
+    });
+
+    for (int n = 0; n < ncomp; n++)
+    {
+        amrex::ParallelFor(bx,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            const auto& slopes_eb = amrex_lim_slopes_eb(i,j,k,n,soln_hat,cent_hat,
+                                                        AMREX_D_DECL(fcx,fcy,fcz), flag);
+            slopes_hat(i,j,k,0) = slopes_eb[0];
+            slopes_hat(i,j,k,1) = slopes_eb[1];
+        });
+
+        amrex::ParallelFor(bx,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
+                int index = (jj+1)*3 + (ii+1);
+                if (nbor(i,j,k,index) == 1)
+                {
+                    int r = i+ii;
+                    int s = j+jj;
+                    dUdt(r,s,k,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,k,0)-cent_hat(i,j,k,0))
+                                                        + slopes_hat(i,j,k,1) * (ccent(r,s,k,1)-cent_hat(i,j,k,1)) );
+   
+                }
+            }
+        });
+    }
+
+    amrex::ParallelFor(bx, ncomp,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+    {
+        dUdt(i,j,k,n) /= nrs(i,j,k);
     });
 }
 #endif

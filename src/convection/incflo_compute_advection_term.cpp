@@ -304,7 +304,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                  geom[lev], true); // is_velocity
             redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag, 
                             AMREX_D_DECL(apx, apy, apz), vfrac,
-                            AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                            AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
 
             if (!m_constant_density) {
                 ebgodunov::compute_godunov_advection(gbx, 1,
@@ -320,7 +320,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      geom[lev]);
                 redistribute_eb(bx, 1, drdt, dUdt_tmp, scratch, flag,
                                 AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                                AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
             if (m_advect_tracer) {
                 ebgodunov::compute_godunov_advection(gbx, m_ntrac,
@@ -336,7 +336,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      geom[lev]);
                 redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag,
                                 AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                                AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
             Gpu::streamSynchronize();
         }
@@ -414,7 +414,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                             flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
             redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag,
                             AMREX_D_DECL(apx, apy, apz), vfrac,
-                            AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                            AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
 
             // density
             if (!m_constant_density) {
@@ -428,7 +428,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                 flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(bx, 1, drdt, dUdt_tmp, scratch, flag,
                                 AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                                AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
 
             if (m_advect_tracer) {
@@ -442,7 +442,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                 flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag,
                                 AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                                AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
         }
         else
@@ -542,7 +542,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
             redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, scratch, flag,
                             AMREX_D_DECL(apx, apy, apz), vfrac,
-                            AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                            AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
 
             // density
             if (!m_constant_density) {
@@ -567,7 +567,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                    flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(bx, 1, drdt, dUdt_tmp, scratch, flag,
                                 AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                                AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
 
             if (m_advect_tracer) {
@@ -592,7 +592,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                    flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
                 redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, scratch, flag,
                                 AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz),geom[lev]);
+                                AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             }
         }
         else
@@ -665,14 +665,15 @@ void incflo::redistribute_eb (Box const& bx, int ncomp,
                               AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
                                            amrex::Array4<amrex::Real const> const& fcy,
                                            amrex::Array4<amrex::Real const> const& fcz),
+                              amrex::Array4<amrex::Real const> const& ccc,
                               Geometry& lev_geom)
 {
-#if 1
+#if 0
     flux_redistribute_eb (bx, ncomp, dUdt, dUdt_in, scratch, flag, vfrac, lev_geom);
 #else
     state_redistribute_eb(bx, ncomp, dUdt, dUdt_in, scratch, flag,
                           AMREX_D_DECL(apx, apy, apz), vfrac,
-                          AMREX_D_DECL(fcx, fcy, fcz), lev_geom);
+                          AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 #endif
 }
 #endif
