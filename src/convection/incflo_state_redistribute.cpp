@@ -27,7 +27,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     Box const& bxg2 = amrex::grow(bx,2);
 
     // Set to 1 if cell is in my nbhd, otherwise 0
-    IArrayBox nbor_fab      (bx,9);
+    IArrayBox nbor_fab      (bxg1,9);
 
     // How many nbhds is this cell in
     FArrayBox nrs_fab       (bxg1,1);
@@ -39,10 +39,10 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     FArrayBox cent_hat_fab  (bxg1,AMREX_SPACEDIM);
 
     // Slopes in my nbhd
-    FArrayBox slopes_hat_fab(bx  ,AMREX_SPACEDIM);
+    FArrayBox slopes_hat_fab(bxg1,AMREX_SPACEDIM);
 
     // Solution at the centroid of my nbhd
-    FArrayBox soln_hat_fab  (bx  ,ncomp);
+    FArrayBox soln_hat_fab  (bxg1,ncomp);
 
     nbor_fab.setVal(0);
     nrs_fab.setVal(1.0);
@@ -63,7 +63,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     {
         if (flag(i,j,k).isSingleValued() and vfrac(i,j,k) < 0.5)
         {
-            amrex::Print() << "SMALL CELL " << IntVect(i,j) << " with vfrac " << vfrac(i,j,k) << std::endl;
+            // amrex::Print() << "SMALL CELL " << IntVect(i,j) << " with vfrac " << vfrac(i,j,k) << std::endl;
 
             // Always include the small cell itself
             nbor(i,j,k,4) = 1;
@@ -152,21 +152,36 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     });
 #endif
 
-    // Define xhat,yhat (from Berger and Guliani)
+
+    // Define xhat,yhat (from Berger and Guliani) 
     amrex::ParallelFor(bx,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        for (int jj = -1; jj <= 1; jj++)  
-        for (int ii = -1; ii <= 1; ii++)  
+        if (vfrac(i,j,k) > 0.5)
         {
-            int index = (jj+1)*3 + (ii+1);
-            if (nbor(i,j,k,index) == 1)
+            cent_hat(i,j,k,0) = ccent(i,j,k,0);
+            cent_hat(i,j,k,1) = ccent(i,j,k,1);
+
+        } else if (vfrac(i,j,k) > 0.0) {
+
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
             {
-                cent_hat(i,j,k,0) += (ccent(i+ii,j+jj,k,0) + ii) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
-                cent_hat(i,j,k,1) += (ccent(i+ii,j+jj,k,1) + jj) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+                int index = (jj+1)*3 + (ii+1);
+                if (nbor(i,j,k,index) == 1)
+                {
+                    int r = i+ii;
+                    int s = j+jj;
+                    if (i > 3 and i < 7)
+                    cent_hat(i,j,k,0) += (ccent(r,s,k,0) + ii) * vfrac(r,s,k) / nrs(r,s,k);
+                    cent_hat(i,j,k,1) += (ccent(r,s,k,1) + jj) * vfrac(r,s,k) / nrs(r,s,k);
+                }
+                cent_hat(i,j,k,0) /= nbhd_vol(i,j,k);
+                cent_hat(i,j,k,1) /= nbhd_vol(i,j,k);
             }
-            cent_hat(i,j,k,0) /= nbhd_vol(i,j,k);
-            cent_hat(i,j,k,1) /= nbhd_vol(i,j,k);
+        } else {
+            cent_hat(i,j,k,0) = 0.;
+            cent_hat(i,j,k,1) = 0.;
         }
     });
 
@@ -174,15 +189,24 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     amrex::ParallelFor(bx, ncomp,  
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
-        for (int jj = -1; jj <= 1; jj++)  
-        for (int ii = -1; ii <= 1; ii++)  
+        if (vfrac(i,j,k) > 0.5)
         {
-            int index = (jj+1)*3 + (ii+1);
-            if (nbor(i,j,k,index) == 1)
+            soln_hat(i,j,k,n) = dUdt_in(i,j,k,n);
+
+        } else if (vfrac(i,j,k) > 0.0) {
+
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
             {
-                soln_hat(i,j,k,n) += dUdt_in(i+ii,j+jj,k,n) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+                int index = (jj+1)*3 + (ii+1);
+                if (nbor(i,j,k,index) == 1)
+                {
+                    soln_hat(i,j,k,n) += dUdt_in(i+ii,j+jj,k,n) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+                }
+                soln_hat(i,j,k,n) /= nbhd_vol(i,j,k);
             }
-            soln_hat(i,j,k,n) /= nbhd_vol(i,j,k);
+        } else {
+            soln_hat(i,j,k,n) = 0.; // NOTE -- we shouldn't end up using this .... but lets check later
         }
     });
 
@@ -226,6 +250,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         dUdt(i,j,k,n) /= nrs(i,j,k);
+        if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) amrex::Print() << "CONV " << IntVect(i,j) << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
     });
 }
 #endif
