@@ -163,7 +163,7 @@ namespace ebgodunov {
                                  amrex::Real dt,
                                  amrex::BCRec const* d_bcrec,
                                  amrex::Array4<amrex::EBCellFlag const> const& flag,
-                                 AMREX_D_DECL(amrex::Array4<amrex::Real const> const& apx,
+                                 AMREX_D_DECL(amrex::Array4<amrex::Real const> const& epx,
                                               amrex::Array4<amrex::Real const> const& apy,
                                               amrex::Array4<amrex::Real const> const& apz),
                                  amrex::Array4<amrex::Real const> const& vfrac,
