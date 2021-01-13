@@ -221,10 +221,16 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
         amrex::ParallelFor(bx,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            const auto& slopes_eb = amrex_lim_slopes_eb(i,j,k,n,soln_hat,cent_hat,
-                                                        AMREX_D_DECL(fcx,fcy,fcz), flag);
-            slopes_hat(i,j,k,0) = slopes_eb[0];
-            slopes_hat(i,j,k,1) = slopes_eb[1];
+            if (vfrac(i,j,k) > 0.0)
+            {
+                const auto& slopes_eb = amrex_lim_slopes_eb(i,j,k,n,soln_hat,cent_hat,
+                                                            AMREX_D_DECL(fcx,fcy,fcz), flag);
+                slopes_hat(i,j,k,0) = slopes_eb[0];
+                slopes_hat(i,j,k,1) = slopes_eb[1];
+            } else {
+                slopes_hat(i,j,k,0) = 0.; // NOTE -- we shouldn't end up using this .... but lets check later
+                slopes_hat(i,j,k,1) = 0.; // NOTE -- we shouldn't end up using this .... but lets check later
+            }
         });
 
         amrex::ParallelFor(bx,
