@@ -633,3 +633,20 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
         amrex::Abort("Dont konw this advection type!");
     }
 }
+
+#ifdef AMREX_USE_EB
+void incflo::redistribute_eb (Box const& bx, int ncomp,
+                              Array4<Real> const& dUdt,
+                              Array4<Real const> const& dUdt_in,
+                              Array4<Real> const& scratch,
+                              Array4<EBCellFlag const> const& flag,
+                              Array4<Real const> const& vfrac,
+                              Geometry& lev_geom)
+{
+#if 1
+    flux_redistribute_eb (bx, AMREX_SPACEDIM, dUdt, dUdt_in, scratch, flag, vfrac, lev_geom);
+#else
+    state_redistribute_eb(bx, AMREX_SPACEDIM, dUdt, dUdt_in, scratch, flag, vfrac, lev_geom);
+#endif
+}
+#endif

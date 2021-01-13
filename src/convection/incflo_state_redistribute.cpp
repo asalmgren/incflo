@@ -3,13 +3,13 @@
 using namespace amrex;
 
 #ifdef AMREX_USE_EB
-void incflo::redistribute_eb (Box const& bx, int ncomp,
-                              Array4<Real> const& dUdt,
-                              Array4<Real const> const& dUdt_in,
-                              Array4<Real> const& scratch,
-                              Array4<EBCellFlag const> const& flag,
-                              Array4<Real const> const& vfrac,
-                              Geometry& lev_geom)
+void incflo::state_redistribute_eb (Box const& bx, int ncomp,
+                                    Array4<Real> const& dUdt,
+                                    Array4<Real const> const& dUdt_in,
+                                    Array4<Real> const& scratch,
+                                    Array4<EBCellFlag const> const& flag,
+                                    Array4<Real const> const& vfrac,
+                                    Geometry& lev_geom)
 {
     const Box dbox = lev_geom.growPeriodicDomain(2);
 
