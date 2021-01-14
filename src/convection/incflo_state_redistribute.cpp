@@ -179,14 +179,30 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 int index = (jj+1)*3 + (ii+1);
                 if (nbor(i,j,k,index) == 1)
                 {
-                    // amrex::Print() << IntVect(ii,jj) << " is connected with vol " << vfrac(i+ii,j+jj,k) << std::endl;
-                    nbhd_vol(i,j,k) += vfrac(i+ii,j+jj,k);
                     nrs(i+ii,j+jj,k) += 1.;
                 }
             }
-            // amrex::Print() << "VOL IN NBOR OF CELL " << IntVect(i,j) << " " << nbhd_vol(i,j,k) << std::endl;
         }
       }
+    });
+
+    amrex::ParallelFor(bxg1,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+        if (!flag(i,j,k).isCovered())
+        {
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
+                int index = (jj+1)*3 + (ii+1);
+                if (nbor(i,j,k,index) == 1)
+                {
+                    int r = i+ii;
+                    int s = j+jj;
+                    nbhd_vol(i,j,k) += vfrac(r,s,k) / nrs(r,s,k);
+                }
+            }
+        }
     });
 
 #if 0
