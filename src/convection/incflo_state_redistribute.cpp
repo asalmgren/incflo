@@ -62,6 +62,11 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     Array4<Real> cent_hat = cent_hat_fab.array();
     Array4<Real> slopes_hat = slopes_hat_fab.array();
 
+    amrex::ParallelFor(bxg2,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+    });
+
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
@@ -302,11 +307,29 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
             dUdt(i,j,k,n) /= nrs(i,j,k);
 
+
 //          if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) 
 //          if (std::abs(dUdt(i,j,k,n)) > 1.e-8) 
             if ( i == 16 and vfrac(i,j,k) > 0.)
                amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
         });
     }
+
+    //
+    // This tests whether the redistribution procedure was conservative
+    //
+    Real sum1(0);
+    Real sum2(0);
+
+    for (int j = 0; j <= domain.bigEnd(1); j++)  
+    for (int i = 0; i <= domain.bigEnd(0); i++)  
+    {
+        sum1 += vfrac(i,j,0)*dUdt_in(i,j,0,0);
+        sum2 += vfrac(i,j,0)*dUdt(i,j,0,0);
+    }
+    if (std::abs(sum1-sum2) > 1.e-8 * sum1 and std::abs(sum1-sum2) > 1.e-8)
+       amrex::Print() << " SUMS DO NOT MATCH " << sum1 << " " << sum2 << std::endl;
+    else
+       amrex::Print() << " SUMS DO     MATCH " << sum1 << " " << sum2 << std::endl;
 }
 #endif
