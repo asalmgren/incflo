@@ -19,7 +19,11 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                                     Array4<Real const> const& ccent,
                                     Geometry& lev_geom)
 {
+    const Box domain = lev_geom.Domain();
     const Box dbox = lev_geom.growPeriodicDomain(2);
+
+    const auto& is_periodic_x = lev_geom.isPeriodic(0);
+    const auto& is_periodic_y = lev_geom.isPeriodic(1);
 
     amrex::Print() << " DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
 
@@ -30,19 +34,19 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     IArrayBox nbor_fab      (bxg1,9);
 
     // How many nbhds is this cell in
-    FArrayBox nrs_fab       (bxg1,1);
+    FArrayBox nrs_fab       (bxg2,1);
 
     // Total volume of all cells in my nbhd
-    FArrayBox nbhd_vol_fab  (bxg1,1);
+    FArrayBox nbhd_vol_fab  (bxg2,1);
 
     // Centroid of my nbhd
-    FArrayBox cent_hat_fab  (bxg1,AMREX_SPACEDIM);
+    FArrayBox cent_hat_fab  (bxg2,AMREX_SPACEDIM);
 
     // Slopes in my nbhd
-    FArrayBox slopes_hat_fab(bxg1,AMREX_SPACEDIM);
+    FArrayBox slopes_hat_fab(bxg2,AMREX_SPACEDIM);
 
     // Solution at the centroid of my nbhd
-    FArrayBox soln_hat_fab  (bxg1,ncomp);
+    FArrayBox soln_hat_fab  (bxg2,ncomp);
 
     nbor_fab.setVal(0);
     nrs_fab.setVal(1.0);
@@ -58,7 +62,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     Array4<Real> cent_hat = cent_hat_fab.array();
     Array4<Real> slopes_hat = slopes_hat_fab.array();
 
-    amrex::ParallelFor(bx,
+    amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         if (flag(i,j,k).isSingleValued() and vfrac(i,j,k) < 0.5)
@@ -68,17 +72,34 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             // Always include the small cell itself
             nbor(i,j,k,4) = 1;
 
-            if (apx(i,j,k) > 0.)
+            // We only include cells into a neighborhood if they are in the interior
+            //    or in periodic ghost cells
+            bool allow_lo_x = (i > domain.smallEnd(0) || is_periodic_x);
+            bool allow_lo_y = (j > domain.smallEnd(1) || is_periodic_y);
+            bool allow_hi_x = (i < domain.bigEnd(0)   || is_periodic_x);
+            bool allow_hi_y = (j < domain.bigEnd(1)   || is_periodic_y);
+
+            if ( apx(i,j,k) > 0.)
             {
                 if (fcx(i,j,k,0) <= 0.)
                 {
-                    if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                    if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
-                    if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                    if (allow_lo_x)
+                    {
+                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
+                        if (allow_lo_y)
+                            if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
+                    }
+                    if (allow_lo_y)
+                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
                 } else {
-                    if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                    if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
-                    if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (allow_lo_x)
+                    {
+                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
+                        if (allow_hi_y)
+                            if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
+                    }
+                    if (allow_hi_y)
+                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
                 }
             }
 
@@ -86,13 +107,21 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             {
                 if (fcx(i+1,j,k,0) <= 0.)
                 {
-                    if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                    if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
-                    if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                    if (allow_hi_x)
+                    {
+                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
+                        if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
+                    }
+                    if (allow_lo_y)
+                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
                 } else {
-                    if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                    if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
-                    if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (allow_hi_x)
+                    {
+                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
+                        if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
+                    }
+                    if (allow_hi_y)
+                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
                 }
             }
 
@@ -100,13 +129,23 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             {
                 if (fcy(i,j,k,0) <= 0.)
                 {
-                    if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                    if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
-                    if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                    if (allow_lo_x)
+                    {
+                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
+                        if (allow_lo_y)
+                            if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
+                    }
+                    if (allow_lo_y)
+                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
                 } else {
-                    if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                    if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
-                    if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                    if (allow_hi_x)
+                    {
+                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
+                        if (allow_lo_y)
+                            if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
+                    }
+                    if (allow_lo_y)
+                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
                 }
             }
 
@@ -114,17 +153,25 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             {
                 if (fcy(i,j+1,k,0) <= 0.)
                 {
-                    if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                    if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
-                    if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (allow_lo_x)
+                    {
+                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
+                        if (allow_hi_y)
+                            if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
+                    }
+                    if (allow_hi_y)
+                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
                 } else {
-                    if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                    if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
-                    if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (allow_hi_x)
+                    {
+                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
+                        if (allow_hi_y)
+                            if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
+                    }
+                    if (allow_hi_y)
+                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
                 }
             }
-
-            nbhd_vol(i,j,k) = vfrac(i,j,k);
 
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
@@ -154,7 +201,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
 
     // Define xhat,yhat (from Berger and Guliani) 
-    amrex::ParallelFor(bx,
+    amrex::ParallelFor(bxg2,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         if (vfrac(i,j,k) > 0.5)
@@ -172,7 +219,6 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 {
                     int r = i+ii;
                     int s = j+jj;
-                    if (i > 3 and i < 7)
                     cent_hat(i,j,k,0) += (ccent(r,s,k,0) + ii) * vfrac(r,s,k) / nrs(r,s,k);
                     cent_hat(i,j,k,1) += (ccent(r,s,k,1) + jj) * vfrac(r,s,k) / nrs(r,s,k);
                 }
@@ -218,7 +264,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
     for (int n = 0; n < ncomp; n++)
     {
-        amrex::ParallelFor(bx,
+        amrex::ParallelFor(bxg1,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
             if (vfrac(i,j,k) > 0.0)
@@ -244,19 +290,21 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 {
                     int r = i+ii;
                     int s = j+jj;
+                    if (r < 0 or s < 0) 
+                      amrex::Print() << "ACCESSING OUT OF BOUNDS: " << IntVect(i,j) << " " << IntVect(r,s) << std::endl;
                     dUdt(r,s,k,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,k,0)-cent_hat(i,j,k,0))
                                                         + slopes_hat(i,j,k,1) * (ccent(r,s,k,1)-cent_hat(i,j,k,1)) );
    
                 }
             }
+
+            dUdt(i,j,k,n) /= nrs(i,j,k);
+
+//          if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) 
+//          if (std::abs(dUdt(i,j,k,n)) > 1.e-8) 
+            if ( i == 16 and vfrac(i,j,k) > 0.)
+               amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
         });
     }
-
-    amrex::ParallelFor(bx, ncomp,
-    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-    {
-        dUdt(i,j,k,n) /= nrs(i,j,k);
-        if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) amrex::Print() << "CONV " << IntVect(i,j) << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
-    });
 }
 #endif

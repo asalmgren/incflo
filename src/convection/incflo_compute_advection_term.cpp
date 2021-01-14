@@ -668,6 +668,9 @@ void incflo::redistribute_eb (Box const& bx, int ncomp,
                               amrex::Array4<amrex::Real const> const& ccc,
                               Geometry& lev_geom)
 {
+    bool do_redist = true;
+    if (do_redist)
+    {
 #if 0
     flux_redistribute_eb (bx, ncomp, dUdt, dUdt_in, scratch, flag, vfrac, lev_geom);
 #else
@@ -675,5 +678,13 @@ void incflo::redistribute_eb (Box const& bx, int ncomp,
                           AMREX_D_DECL(apx, apy, apz), vfrac,
                           AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 #endif
+    } else {
+        amrex::ParallelFor(bx, ncomp,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                dUdt(i,j,k,n) = dUdt_in(i,j,k,n);
+            }
+        );
+    }
 }
 #endif
