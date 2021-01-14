@@ -62,11 +62,6 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     Array4<Real> cent_hat = cent_hat_fab.array();
     Array4<Real> slopes_hat = slopes_hat_fab.array();
 
-    amrex::ParallelFor(bxg2,
-    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-    });
-
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
@@ -243,7 +238,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     {
         if (vfrac(i,j,k) > 0.5)
         {
-            soln_hat(i,j,k,n) = dUdt_in(i,j,k,n);
+            soln_hat(i,j,k,n) = dUdt_in(i,j,k,n) / nrs(i,j,k);
 
         } else if (vfrac(i,j,k) > 0.0) {
 
@@ -255,12 +250,23 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 {
                     soln_hat(i,j,k,n) += dUdt_in(i+ii,j+jj,k,n) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
                 }
-                soln_hat(i,j,k,n) /= nbhd_vol(i,j,k);
             }
+            soln_hat(i,j,k,n) /= nbhd_vol(i,j,k);
         } else {
-            soln_hat(i,j,k,n) = 0.; // NOTE -- we shouldn't end up using this .... but lets check later
+            soln_hat(i,j,k,n) = 1.e40; // NOTE -- we shouldn't end up using this 
         }
     });
+
+    Real sum1s(0);
+    Real sum2s(0);
+
+    for (int i = 0; i <= domain.bigEnd(0); i++)  
+    for (int j = 0; j <= domain.bigEnd(1); j++)  
+    {
+        sum1s += vfrac(i,j,0)*dUdt_in(i,j,0,0);
+        sum2s += vfrac(i,j,0)*soln_hat(i,j,0,0);
+    }
+    amrex::Print() << " SUMS OF QHAT " << sum1s << " " << sum2s << std::endl;
 
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -300,8 +306,6 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                       amrex::Print() << "ACCESSING OUT OF BOUNDS: " << IntVect(i,j) << " " << IntVect(r,s) << std::endl;
                     dUdt(r,s,k,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,k,0)-cent_hat(i,j,k,0))
                                                         + slopes_hat(i,j,k,1) * (ccent(r,s,k,1)-cent_hat(i,j,k,1)) );
-                if (r == 16 and s == 90) amrex::Print() << "ADDING TO (16,90) " << index << std::endl;
-   
                 }
             }
 
@@ -310,8 +314,9 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
 //          if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) 
 //          if (std::abs(dUdt(i,j,k,n)) > 1.e-8) 
-            if ( i == 16 and vfrac(i,j,k) > 0.)
-               amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
+            if ( i == 0 and vfrac(i,j,k) > 0.)
+               amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << 
+                    " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
         });
     }
 
