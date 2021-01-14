@@ -20,6 +20,8 @@ void incflo::flux_redistribute_eb (Box const& bx, int ncomp,
     Box const& bxg1 = amrex::grow(bx,1);
     Box const& bxg2 = amrex::grow(bx,2);
 
+#if 1
+
     // xxxxx TODO: more weight options
     amrex::ParallelFor(bxg2,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -31,6 +33,7 @@ void incflo::flux_redistribute_eb (Box const& bx, int ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         if (flag(i,j,k).isSingleValued()) {
+#if 1
             Real vtot = 0.0;
             Real divnc = 0.0;
             for (int kk = -1; kk <= 1; ++kk) {
@@ -46,6 +49,9 @@ void incflo::flux_redistribute_eb (Box const& bx, int ncomp,
                 }
             }}}
             divnc /= (vtot + 1.e-80);
+#else
+            Real divnc = vfrac(i,j,k)*dUdt_in(i,j,k,n);
+#endif
             Real optmp = (1.0-vfrac(i,j,k))*(divnc-dUdt_in(i,j,k,n));
             tmp(i,j,k,n) = optmp;
             delm(i,j,k,n) = -vfrac(i,j,k)*optmp;
@@ -89,5 +95,12 @@ void incflo::flux_redistribute_eb (Box const& bx, int ncomp,
     {
         dUdt(i,j,k,n) = dUdt_in(i,j,k,n) + tmp(i,j,k,n);
     });
+#else
+    amrex::ParallelFor(bx, ncomp,
+    [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+    {
+        dUdt(i,j,k,n) = dUdt_in(i,j,k,n) ;
+    });
+#endif
 }
 #endif
