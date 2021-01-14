@@ -81,7 +81,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
             if ( apx(i,j,k) > 0. && allow_lo_x)
             {
-                if (fcx(i,j,k,0) <= 0. and allow_lo_y)
+                if (fcx(i,j,k,0) <= 0. && allow_lo_y)
                 {
                     if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
                     if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
@@ -94,7 +94,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
             if (apx(i+1,j,k) > 0. && allow_hi_x)
             {
-                if (fcx(i+1,j,k,0) <= 0. and allow_lo_y)
+                if (fcx(i+1,j,k,0) <= 0. && allow_lo_y)
                 {
                     if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
                     if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
@@ -107,7 +107,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 
             if (apy(i,j,k) > 0. && allow_lo_y)
             {
-                if (fcy(i,j,k,0) <= 0. and allow_lo_x) {
+                if (fcy(i,j,k,0) <= 0. && allow_lo_x) {
                     if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
                     if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
                 } else if (allow_hi_x) {
@@ -117,9 +117,9 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
             }
 
-            if (apy(i,j+1,k) > 0. and allow_hi_y)
+            if (apy(i,j+1,k) > 0. && allow_hi_y)
             {
-                if (fcy(i,j+1,k,0) <= 0. and allow_lo_x)
+                if (fcy(i,j+1,k,0) <= 0. && allow_lo_x)
                 {
                     if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
                     if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
@@ -148,51 +148,40 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        bool allow_lo_x = (i > domain.smallEnd(0) || is_periodic_x);
-        bool allow_lo_y = (j > domain.smallEnd(1) || is_periodic_y);
-        bool allow_hi_x = (i < domain.bigEnd(0)   || is_periodic_x);
-        bool allow_hi_y = (j < domain.bigEnd(1)   || is_periodic_y);
-
         if (!flag(i,j,k).isCovered())
         {
-            for (int jj = -1; jj <= 1; jj++)  
-            for (int ii = -1; ii <= 1; ii++)  
+            if ( ( (i >= domain.smallEnd(0) && i <= domain.bigEnd(0)) || is_periodic_x ) &&
+                 ( (j >= domain.smallEnd(1) && j <= domain.bigEnd(1)) || is_periodic_y ) )
             {
-                int index = (jj+1)*3 + (ii+1);
-                if (nbor(i,j,k,index) == 1)
+                for (int jj = -1; jj <= 1; jj++)  
+                for (int ii = -1; ii <= 1; ii++)  
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    if ( ( (r >= domain.smallEnd(0) && r <= domain.bigEnd(0)) || is_periodic_x ) &&
-                         ( (s >= domain.smallEnd(1) && s <= domain.bigEnd(1)) || is_periodic_y ) )
-                    nbhd_vol(i,j,k) += vfrac(r,s,k) / nrs(r,s,k);
+                    int index = (jj+1)*3 + (ii+1);
+                    if (nbor(i,j,k,index) == 1)
+                    {
+                        int r = i+ii;
+                        int s = j+jj;
+                        if ( ( (r >= domain.smallEnd(0) && r <= domain.bigEnd(0)) || is_periodic_x ) &&
+                             ( (s >= domain.smallEnd(1) && s <= domain.bigEnd(1)) || is_periodic_y ) )
+                        nbhd_vol(i,j,k) += vfrac(r,s,k) / nrs(r,s,k);
+                    }
                 }
             }
         }
     });
 
-    Real sum1v(0);
-    Real sum2v(0);
+    { // STRT:SUM OF VOLUMES
+        Real sum1v(0);
+        Real sum2v(0);
 
-    for (int i = 0; i <= domain.bigEnd(0); i++)  
-    for (int j = 0; j <= domain.bigEnd(1); j++)  
-    {
-        sum1v += vfrac(i,j,0);
-        sum2v += nbhd_vol(i,j,0);
-    }
-    amrex::Print() << " SUMS OF VOLS " << sum1v << " " << sum2v << std::endl;
-
-#if 0
-    amrex::ParallelFor(bx,
-    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-        if (nrs(i,j,k) > 1 and i < 10 )
+        for (int i = 0; i <= domain.bigEnd(0); i++)  
+        for (int j = 0; j <= domain.bigEnd(1); j++)  
         {
-            amrex::Print() << "NRS GE 1:  " << IntVect(i,j) << " " << nrs(i,j,k) << std::endl;
+            sum1v += vfrac(i,j,0);
+            sum2v += nbhd_vol(i,j,0);
         }
-    });
-#endif
-
+        amrex::Print() << " SUMS OF VOLS " << sum1v << " " << sum2v << std::endl;
+    } //  END:SUM OF VOLUMES
 
     // Define xhat,yhat (from Berger and Guliani) 
     amrex::ParallelFor(bxg2,
@@ -231,7 +220,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     {
         if (vfrac(i,j,k) > 0.5)
         {
-            soln_hat(i,j,k,n) = dUdt_in(i,j,k,n) / nrs(i,j,k);
+            soln_hat(i,j,k,n) = dUdt_in(i,j,k,n);
 
         } else if (vfrac(i,j,k) > 0.0) {
 
@@ -241,25 +230,30 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 int index = (jj+1)*3 + (ii+1);
                 if (nbor(i,j,k,index) == 1)
                 {
-                    soln_hat(i,j,k,n) += dUdt_in(i+ii,j+jj,k,n) * vfrac(i+ii,j+jj,k) / nrs(i+ii,j+jj,k);
+                    int r = i+ii;
+                    int s = j+jj;
+                    soln_hat(i,j,k,n) += dUdt_in(r,s,k,n) * vfrac(r,s,k) / nrs(r,s,k);
                 }
             }
+
             soln_hat(i,j,k,n) /= nbhd_vol(i,j,k);
         } else {
             soln_hat(i,j,k,n) = 1.e40; // NOTE -- we shouldn't end up using this 
         }
     });
 
-    Real sum1s(0);
-    Real sum2s(0);
+    { // STRT:SUM OF QHAT
+        Real sum1s(0);
+        Real sum2s(0);
 
-    for (int i = 0; i <= domain.bigEnd(0); i++)  
-    for (int j = 0; j <= domain.bigEnd(1); j++)  
-    {
-        sum1s += vfrac(i,j,0)*dUdt_in(i,j,0,0);
-        sum2s += nbhd_vol(i,j,0)*soln_hat(i,j,0,0);
-    }
-    amrex::Print() << " SUMS OF QHAT " << sum1s << " " << sum2s << std::endl;
+        for (int i = 0; i <= domain.bigEnd(0); i++)  
+        for (int j = 0; j <= domain.bigEnd(1); j++)  
+        {
+            sum1s += vfrac(i,j,0)*dUdt_in(i,j,0,0);
+            sum2s += nbhd_vol(i,j,0)*soln_hat(i,j,0,0);
+        }
+        amrex::Print() << " SUMS OF QHAT " << sum1s << " " << sum2s << std::endl;
+    } //  END:SUM OF QHAT 
 
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -278,9 +272,11 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                                                             AMREX_D_DECL(fcx,fcy,fcz), flag);
                 slopes_hat(i,j,k,0) = slopes_eb[0];
                 slopes_hat(i,j,k,1) = slopes_eb[1];
+                slopes_hat(i,j,k,0) = 0.;
+                slopes_hat(i,j,k,1) = 0.;
             } else {
-                slopes_hat(i,j,k,0) = 0.; // NOTE -- we shouldn't end up using this .... but lets check later
-                slopes_hat(i,j,k,1) = 0.; // NOTE -- we shouldn't end up using this .... but lets check later
+                slopes_hat(i,j,k,0) = 1.e40; // NOTE -- we shouldn't end up using this .... but lets check later
+                slopes_hat(i,j,k,1) = 1.e40; // NOTE -- we shouldn't end up using this .... but lets check later
             }
         });
 
@@ -309,8 +305,8 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 if (nrs(i,j,k) < 1.) amrex::Print() << "NRS ZERO " << IntVect(i,j) << std::endl;
                 dUdt(i,j,k,n) /= nrs(i,j,k);
 
-                if ( i == 0 and vfrac(i,j,k) > 0.)
-                   amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << 
+                if ( (i >= 15 && i <= 17) && vfrac(i,j,k) > 0.)
+                   amrex::Print() << "OLD / NEW CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << 
                         " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
             }
         });
@@ -319,18 +315,20 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     //
     // This tests whether the redistribution procedure was conservative
     //
-    Real sum1(0);
-    Real sum2(0);
+    { // STRT:SUM OF FINAL DUDT
+        Real sum1(0);
+        Real sum2(0);
 
-    for (int j = 0; j <= domain.bigEnd(1); j++)  
-    for (int i = 0; i <= domain.bigEnd(0); i++)  
-    {
-        sum1 += vfrac(i,j,0)*dUdt_in(i,j,0,0);
-        sum2 += vfrac(i,j,0)*dUdt(i,j,0,0);
-    }
-    if (std::abs(sum1-sum2) > 1.e-8 * sum1 and std::abs(sum1-sum2) > 1.e-8)
-       amrex::Print() << " SUMS DO NOT MATCH " << sum1 << " " << sum2 << std::endl;
-    else
-       amrex::Print() << " SUMS DO     MATCH " << sum1 << " " << sum2 << std::endl;
+        for (int j = 0; j <= domain.bigEnd(1); j++)  
+        for (int i = 0; i <= domain.bigEnd(0); i++)  
+        {
+            sum1 += vfrac(i,j,0)*dUdt_in(i,j,0,0);
+            sum2 += vfrac(i,j,0)*dUdt(i,j,0,0);
+        }
+        if (std::abs(sum1-sum2) > 1.e-8 * sum1 && std::abs(sum1-sum2) > 1.e-8)
+           amrex::Print() << " SUMS DO NOT MATCH " << sum1 << " " << sum2 << std::endl;
+        else
+           amrex::Print() << " SUMS DO     MATCH " << sum1 << " " << sum2 << std::endl;
+    } //  END:SUM OF FINAL DUDT
 }
 #endif
