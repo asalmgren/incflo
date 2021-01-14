@@ -49,7 +49,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     FArrayBox soln_hat_fab  (bxg2,ncomp);
 
     nbor_fab.setVal(0);
-    nrs_fab.setVal(1.0);
+    nrs_fab.setVal(0.0);
     nbhd_vol_fab.setVal(0.);
     soln_hat_fab.setVal(0.);
     cent_hat_fab.setVal(0.);
@@ -79,108 +79,67 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             bool allow_hi_x = (i < domain.bigEnd(0)   || is_periodic_x);
             bool allow_hi_y = (j < domain.bigEnd(1)   || is_periodic_y);
 
-            if ( apx(i,j,k) > 0.)
+            if ( apx(i,j,k) > 0. && allow_lo_x)
             {
-                if (fcx(i,j,k,0) <= 0.)
+                if (fcx(i,j,k,0) <= 0. and allow_lo_y)
                 {
-                    if (allow_lo_x)
-                    {
-                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                        if (allow_lo_y)
-                            if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
-                    }
-                    if (allow_lo_y)
-                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
-                } else {
-                    if (allow_lo_x)
-                    {
-                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                        if (allow_hi_y)
-                            if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
-                    }
-                    if (allow_hi_y)
-                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
+                    if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                } else if (allow_hi_y) {
+                    if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
+                    if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
                 }
+                if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
             }
 
-            if (apx(i+1,j,k) > 0.)
+            if (apx(i+1,j,k) > 0. && allow_hi_x)
             {
-                if (fcx(i+1,j,k,0) <= 0.)
+                if (fcx(i+1,j,k,0) <= 0. and allow_lo_y)
                 {
-                    if (allow_hi_x)
-                    {
-                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                        if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
-                    }
-                    if (allow_lo_y)
-                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
-                } else {
-                    if (allow_hi_x)
-                    {
-                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                        if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
-                    }
-                    if (allow_hi_y)
-                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
+                    if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                } else if (allow_hi_y) {
+                    if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
+                    if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
                 }
+                if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
             }
 
-            if (apy(i,j,k) > 0.)
+            if (apy(i,j,k) > 0. && allow_lo_y)
             {
-                if (fcy(i,j,k,0) <= 0.)
-                {
-                    if (allow_lo_x)
-                    {
-                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                        if (allow_lo_y)
-                            if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
-                    }
-                    if (allow_lo_y)
-                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
-                } else {
-                    if (allow_hi_x)
-                    {
-                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                        if (allow_lo_y)
-                            if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
-                    }
-                    if (allow_lo_y)
-                        if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
+                if (fcy(i,j,k,0) <= 0. and allow_lo_x) {
+                    if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
+                    if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
+                } else if (allow_hi_x) {
+                    if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
+                    if (vfrac(i+1,j-1,k) > 0.) nbor(i,j,k,2) = 1;
                 }
+                if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
             }
 
-            if (apy(i,j+1,k) > 0.)
+            if (apy(i,j+1,k) > 0. and allow_hi_y)
             {
-                if (fcy(i,j+1,k,0) <= 0.)
+                if (fcy(i,j+1,k,0) <= 0. and allow_lo_x)
                 {
-                    if (allow_lo_x)
-                    {
-                        if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
-                        if (allow_hi_y)
-                            if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
-                    }
-                    if (allow_hi_y)
-                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
-                } else {
-                    if (allow_hi_x)
-                    {
-                        if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
-                        if (allow_hi_y)
-                            if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
-                    }
-                    if (allow_hi_y)
-                        if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
+                    if (vfrac(i-1,j  ,k) > 0.) nbor(i,j,k,3) = 1;
+                    if (vfrac(i-1,j+1,k) > 0.) nbor(i,j,k,6) = 1;
+                } else if (allow_hi_x) {
+                    if (vfrac(i+1,j  ,k) > 0.) nbor(i,j,k,5) = 1;
+                    if (vfrac(i+1,j+1,k) > 0.) nbor(i,j,k,8) = 1;
                 }
+                if (vfrac(i  ,j+1,k) > 0.) nbor(i,j,k,7) = 1;
             }
+        }
 
-            for (int jj = -1; jj <= 1; jj++)  
-            for (int ii = -1; ii <= 1; ii++)  
+        for (int jj = -1; jj <= 1; jj++)  
+        for (int ii = -1; ii <= 1; ii++)  
+        {
+            int index = (jj+1)*3 + (ii+1);
+            if (nbor(i,j,k,index) == 1)
             {
-                int index = (jj+1)*3 + (ii+1);
-                if (nbor(i,j,k,index) == 1)
-                {
-                    nrs(i+ii,j+jj,k) += 1.;
-                }
+                int r = i+ii;
+                int s = j+jj;
+                nrs(r,s,k) += 1.;
             }
         }
       }
@@ -189,6 +148,11 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
+        bool allow_lo_x = (i > domain.smallEnd(0) || is_periodic_x);
+        bool allow_lo_y = (j > domain.smallEnd(1) || is_periodic_y);
+        bool allow_hi_x = (i < domain.bigEnd(0)   || is_periodic_x);
+        bool allow_hi_y = (j < domain.bigEnd(1)   || is_periodic_y);
+
         if (!flag(i,j,k).isCovered())
         {
             for (int jj = -1; jj <= 1; jj++)  
@@ -199,11 +163,24 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 {
                     int r = i+ii;
                     int s = j+jj;
+                    if ( ( (r >= domain.smallEnd(0) && r <= domain.bigEnd(0)) || is_periodic_x ) &&
+                         ( (s >= domain.smallEnd(1) && s <= domain.bigEnd(1)) || is_periodic_y ) )
                     nbhd_vol(i,j,k) += vfrac(r,s,k) / nrs(r,s,k);
                 }
             }
         }
     });
+
+    Real sum1v(0);
+    Real sum2v(0);
+
+    for (int i = 0; i <= domain.bigEnd(0); i++)  
+    for (int j = 0; j <= domain.bigEnd(1); j++)  
+    {
+        sum1v += vfrac(i,j,0);
+        sum2v += nbhd_vol(i,j,0);
+    }
+    amrex::Print() << " SUMS OF VOLS " << sum1v << " " << sum2v << std::endl;
 
 #if 0
     amrex::ParallelFor(bx,
@@ -239,9 +216,9 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                     cent_hat(i,j,k,0) += (ccent(r,s,k,0) + ii) * vfrac(r,s,k) / nrs(r,s,k);
                     cent_hat(i,j,k,1) += (ccent(r,s,k,1) + jj) * vfrac(r,s,k) / nrs(r,s,k);
                 }
-                cent_hat(i,j,k,0) /= nbhd_vol(i,j,k);
-                cent_hat(i,j,k,1) /= nbhd_vol(i,j,k);
             }
+            cent_hat(i,j,k,0) /= nbhd_vol(i,j,k);
+            cent_hat(i,j,k,1) /= nbhd_vol(i,j,k);
         } else {
             cent_hat(i,j,k,0) = 0.;
             cent_hat(i,j,k,1) = 0.;
@@ -280,7 +257,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     for (int j = 0; j <= domain.bigEnd(1); j++)  
     {
         sum1s += vfrac(i,j,0)*dUdt_in(i,j,0,0);
-        sum2s += vfrac(i,j,0)*soln_hat(i,j,0,0);
+        sum2s += nbhd_vol(i,j,0)*soln_hat(i,j,0,0);
     }
     amrex::Print() << " SUMS OF QHAT " << sum1s << " " << sum2s << std::endl;
 
@@ -318,21 +295,24 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                 {
                     int r = i+ii;
                     int s = j+jj;
-                    if (r < 0 or s < 0) 
-                      amrex::Print() << "ACCESSING OUT OF BOUNDS: " << IntVect(i,j) << " " << IntVect(r,s) << std::endl;
                     dUdt(r,s,k,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,k,0)-cent_hat(i,j,k,0))
                                                         + slopes_hat(i,j,k,1) * (ccent(r,s,k,1)-cent_hat(i,j,k,1)) );
                 }
             }
+        });
 
-            dUdt(i,j,k,n) /= nrs(i,j,k);
+        amrex::ParallelFor(bx,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            if (!flag(i,j,k).isCovered())
+            {
+                if (nrs(i,j,k) < 1.) amrex::Print() << "NRS ZERO " << IntVect(i,j) << std::endl;
+                dUdt(i,j,k,n) /= nrs(i,j,k);
 
-
-//          if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) 
-//          if (std::abs(dUdt(i,j,k,n)) > 1.e-8) 
-            if ( i == 0 and vfrac(i,j,k) > 0.)
-               amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << 
-                    " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
+                if ( i == 0 and vfrac(i,j,k) > 0.)
+                   amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << 
+                        " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
+            }
         });
     }
 
