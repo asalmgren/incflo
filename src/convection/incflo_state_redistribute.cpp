@@ -239,9 +239,9 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                     cent_hat(i,j,k,0) += (ccent(r,s,k,0) + ii) * vfrac(r,s,k) / nrs(r,s,k);
                     cent_hat(i,j,k,1) += (ccent(r,s,k,1) + jj) * vfrac(r,s,k) / nrs(r,s,k);
                 }
+            }
                 cent_hat(i,j,k,0) /= nbhd_vol(i,j,k);
                 cent_hat(i,j,k,1) /= nbhd_vol(i,j,k);
-            }
         } else {
             cent_hat(i,j,k,0) = 0.;
             cent_hat(i,j,k,1) = 0.;
