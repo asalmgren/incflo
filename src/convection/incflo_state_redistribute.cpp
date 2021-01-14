@@ -65,13 +65,13 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        if (flag(i,j,k).isSingleValued() and vfrac(i,j,k) < 0.5)
+        if (!flag(i,j,k).isCovered())
         {
-            // amrex::Print() << "SMALL CELL " << IntVect(i,j) << " with vfrac " << vfrac(i,j,k) << std::endl;
+          // Always include the small cell itself
+          nbor(i,j,k,4) = 1;
 
-            // Always include the small cell itself
-            nbor(i,j,k,4) = 1;
-
+          if (vfrac(i,j,k) < 0.5)
+          {
             // We only include cells into a neighborhood if they are in the interior
             //    or in periodic ghost cells
             bool allow_lo_x = (i > domain.smallEnd(0) || is_periodic_x);
@@ -186,6 +186,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             }
             // amrex::Print() << "VOL IN NBOR OF CELL " << IntVect(i,j) << " " << nbhd_vol(i,j,k) << std::endl;
         }
+      }
     });
 
 #if 0
@@ -294,6 +295,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                       amrex::Print() << "ACCESSING OUT OF BOUNDS: " << IntVect(i,j) << " " << IntVect(r,s) << std::endl;
                     dUdt(r,s,k,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,k,0)-cent_hat(i,j,k,0))
                                                         + slopes_hat(i,j,k,1) * (ccent(r,s,k,1)-cent_hat(i,j,k,1)) );
+                if (r == 16 and s == 90) amrex::Print() << "ADDING TO (16,90) " << index << std::endl;
    
                 }
             }
@@ -303,7 +305,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
 //          if (i > 10 and i < 15 and vfrac(i,j,k) > 0.) 
 //          if (std::abs(dUdt(i,j,k,n)) > 1.e-8) 
             if ( i == 16 and vfrac(i,j,k) > 0.)
-               amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
+               amrex::Print() << "CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
         });
     }
 }
