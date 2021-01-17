@@ -1,31 +1,31 @@
-#include <incflo.H>
+#include <Redistribution.H>
 #include <AMReX_EB_slopes_K.H>
 
 using namespace amrex;
 
 #ifdef AMREX_USE_EB
-void incflo::state_redistribute_eb (Box const& bx, int ncomp,
-                                    Array4<Real> const& dUdt,
-                                    Array4<Real const> const& dUdt_in,
-                                    Array4<Real> const& scratch,
-                                    Array4<EBCellFlag const> const& flag,
-                                    AMREX_D_DECL(Array4<Real const> const& apx,
-                                                 Array4<Real const> const& apy,
-                                                 Array4<Real const> const& apz),
-                                    Array4<Real const> const& vfrac,
-                                    AMREX_D_DECL(Array4<Real const> const& fcx,
-                                                 Array4<Real const> const& fcy,
-                                                 Array4<Real const> const& fcz),
-                                    Array4<Real const> const& ccent,
-                                    Geometry& lev_geom)
+void 
+redistribution::state_redistribute_eb (
+                       Box const& bx, int ncomp,
+                       Array4<Real> const& dUdt,
+                       Array4<Real const> const& dUdt_in,
+                       Array4<EBCellFlag const> const& flag,
+                       AMREX_D_DECL(Array4<Real const> const& apx,
+                                    Array4<Real const> const& apy,
+                                    Array4<Real const> const& apz),
+                       Array4<Real const> const& vfrac,
+                       AMREX_D_DECL(Array4<Real const> const& fcx,
+                                    Array4<Real const> const& fcy,
+                                    Array4<Real const> const& fcz),
+                       Array4<Real const> const& ccent,
+                       Geometry& lev_geom)
 {
     const Box domain = lev_geom.Domain();
-    const Box dbox = lev_geom.growPeriodicDomain(2);
 
     const auto& is_periodic_x = lev_geom.isPeriodic(0);
     const auto& is_periodic_y = lev_geom.isPeriodic(1);
 
-    amrex::Print() << " DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
+    amrex::Print() << " IN STATE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
 
     Box const& bxg1 = amrex::grow(bx,1);
     Box const& bxg2 = amrex::grow(bx,2);
@@ -67,7 +67,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
     {
         if (!flag(i,j,k).isCovered())
         {
-          // Always include the small cell itself
+          // Always include the cell itself
           nbor(i,j,k,4) = 1;
 
           if (vfrac(i,j,k) < 0.5)
@@ -79,7 +79,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             bool allow_hi_x = (i < domain.bigEnd(0)   || is_periodic_x);
             bool allow_hi_y = (j < domain.bigEnd(1)   || is_periodic_y);
 
-            if ( apx(i,j,k) > 0. && allow_lo_x)
+            if (apx(i,j,k) > 0. && allow_lo_x)
             {
                 if (fcx(i,j,k,0) <= 0. && allow_lo_y)
                 {
@@ -255,14 +255,17 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
         amrex::Print() << " SUMS OF QHAT " << sum1s << " " << sum2s << std::endl;
     } //  END:SUM OF QHAT 
 
+#if 1
     amrex::ParallelFor(bx, ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
     {
         dUdt(i,j,k,n) = 0;
     });
+#endif
 
     for (int n = 0; n < ncomp; n++)
     {
+#if 1
         amrex::ParallelFor(bxg1,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
@@ -272,8 +275,6 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
                                                             AMREX_D_DECL(fcx,fcy,fcz), flag);
                 slopes_hat(i,j,k,0) = slopes_eb[0];
                 slopes_hat(i,j,k,1) = slopes_eb[1];
-                slopes_hat(i,j,k,0) = 0.;
-                slopes_hat(i,j,k,1) = 0.;
             } else {
                 slopes_hat(i,j,k,0) = 1.e40; // NOTE -- we shouldn't end up using this .... but lets check later
                 slopes_hat(i,j,k,1) = 1.e40; // NOTE -- we shouldn't end up using this .... but lets check later
@@ -286,6 +287,7 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
+                // Note every cell is at least in its own neighborhood so this will update every (i,j,k)
                 int index = (jj+1)*3 + (ii+1);
                 if (nbor(i,j,k,index) == 1)
                 {
@@ -302,14 +304,25 @@ void incflo::state_redistribute_eb (Box const& bx, int ncomp,
         {
             if (!flag(i,j,k).isCovered())
             {
-                if (nrs(i,j,k) < 1.) amrex::Print() << "NRS ZERO " << IntVect(i,j) << std::endl;
                 dUdt(i,j,k,n) /= nrs(i,j,k);
+            }
+        });
+#endif
 
-                if ( (i >= 15 && i <= 17) && vfrac(i,j,k) > 0.)
-                   amrex::Print() << "OLD / NEW CONV " << IntVect(i,j) << " " << n << " " << vfrac(i,j,k) << 
+#if 0
+        // PRINTING ONLY
+        amrex::ParallelFor(bx,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            if (!flag(i,j,k).isCovered())
+            {
+                if ( (i >= 15 && i <= 17) && vfrac(i,j,k) > 0. 
+                     && (std::abs(dUdt_in(i,j,k,n)) > 1.e-8 || std::abs(dUdt(i,j,k,n)) > 1.e-8) )
+                   amrex::Print() << "OLD / NEW CONV " << IntVect(i,j) << " " << vfrac(i,j,k) << 
                         " " << dUdt_in(i,j,k,n) << " " << dUdt(i,j,k,n) << std::endl;
             }
         });
+#endif
     }
 
     //

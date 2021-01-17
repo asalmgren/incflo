@@ -2,4 +2,8 @@ CEXE_sources += incflo_compute_advection_term.cpp
 CEXE_sources += incflo_compute_MAC_projected_velocities.cpp
 CEXE_sources += incflo_correct_small_cells.cpp
 CEXE_sources += incflo_flux_redistribute.cpp
+CEXE_sources += incflo_merge_redistribute.cpp
 CEXE_sources += incflo_state_redistribute.cpp
+CEXE_sources += incflo_redistribute.cpp
+
+CEXE_headers += Redistribution.H

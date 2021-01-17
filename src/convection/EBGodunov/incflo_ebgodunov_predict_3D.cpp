@@ -28,6 +28,8 @@ void ebgodunov::predict_godunov (Real time,
     auto const& ccent = ebfact->getCentroid();
     auto const& vfrac = ebfact->getVolFrac();
 
+    auto const& areafrac = ebfact->getAreaFrac();
+
     const int ncomp = AMREX_SPACEDIM;
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -122,13 +124,25 @@ void ebgodunov::predict_godunov (Real time,
             make_trans_velocities(Box(u_ad), Box(v_ad), Box(w_ad),
                                   u_ad, v_ad, w_ad,
                                   Imx, Imy, Imz, Ipx, Ipy, Ipz, a_vel, a_f, 
-                                  domain, l_dt, d_bcrec);
+                                  flagarr, domain, l_dt, d_bcrec);
+
+            AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
+                         Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
+                         Array4<Real const> const& apz = areafrac[2]->const_array(mfi););
+
+            AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
+                         Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
+                         Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
+
+            Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
 
             predict_godunov_on_box(bx, ncomp, xbx, ybx, zbx, a_umac, a_vmac, a_wmac,
                                    a_vel, u_ad, v_ad, w_ad, 
                                    Imx, Imy, Imz, Ipx, Ipy, Ipz, a_f, 
                                    domain, dx, l_dt, d_bcrec,
                                    flagarr,
+                                   apx, apy, apz, vfrac_arr,
+                                   fcx, fcy, fcz, 
                                    gmacphi_x_arr, gmacphi_y_arr, gmacphi_z_arr,
                                    use_mac_phi_in_godunov, p);
 
@@ -149,6 +163,7 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx, Box const
                                        Array4<Real const> const& Ipz,
                                        Array4<Real const> const& vel,
                                        Array4<Real const> const& f,
+                                       Array4<EBCellFlag const> const& flag,
                                        const Box& domain,
                                        Real l_dt, 
                                        BCRec  const* pbc)
@@ -227,6 +242,13 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                                         Real l_dt,
                                         BCRec  const* pbc,
                                         Array4<EBCellFlag const> const& flag,
+                                        Array4<Real const> const& apx,
+                                        Array4<Real const> const& apy,
+                                        Array4<Real const> const& apz,
+                                        Array4<Real const> const& vfrac_arr,
+                                        Array4<Real const> const& fcx,
+                                        Array4<Real const> const& fcy,
+                                        Array4<Real const> const& fcz,
                                         Array4<Real const> const& gmacphi_x,
                                         Array4<Real const> const& gmacphi_y,
                                         Array4<Real const> const& gmacphi_z,
@@ -375,16 +397,39 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         {
         constexpr int n = 0;
         auto bc = pbc[n];
-        Real stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
-                                                 (yzlo(i-1,j+1,k  )-yzlo(i-1,j,k))
-                                - (0.25*l_dt/dz)*(w_ad(i-1,j  ,k+1)+w_ad(i-1,j,k))*
-                                                 (zylo(i-1,j  ,k+1)-zylo(i-1,j,k));
-        Real sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
+
+        // stl is on the left  side of the lo-x side of cell (i,j)
+        // sth is on the right side of the lo-x side of cell (i,j)
+        Real stl, sth;
+        Real v_tmp_j, v_tmp_jp1;
+        Real y_hat_j, y_hat_jp1;
+
+        // Left side of interface
+        if (flag(i-1,j,k).isRegular())
+        {
+            stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
+                                                (yzlo(i-1,j+1,k  )-yzlo(i-1,j,k))
+                               - (0.25*l_dt/dz)*(w_ad(i-1,j  ,k+1)+w_ad(i-1,j,k))*
+                                                (zylo(i-1,j  ,k+1)-zylo(i-1,j,k));
+        } else {
+            stl = xlo(i,j,k,n);
+        }
+
+        // Right side of interface
+        if (flag(i,j,k).isRegular())
+        {
+             sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
                                                  (yzlo(i  ,j+1,k  )-yzlo(i  ,j,k))
                                 - (0.25*l_dt/dz)*(w_ad(i  ,j  ,k+1)+w_ad(i  ,j,k))*
                                                  (zylo(i  ,j  ,k+1)-zylo(i  ,j,k));
-        stl += 0.5 * l_dt * f(i-1,j,k,n);
-        sth += 0.5 * l_dt * f(i  ,j,k,n);
+        } else {
+            sth = xhi(i,j,k,n);
+        }
+
+        if (vfrac_arr(i-1,j,k) > 0.)
+            stl += 0.5 * l_dt * f(i-1,j,k,n);
+        if (vfrac_arr(i,j,k) > 0.)
+            sth += 0.5 * l_dt * f(i  ,j,k,n);
 
         Real gphi_x;
 
@@ -478,16 +523,39 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         {
         constexpr int n = 1;
         auto bc = pbc[n];
-        Real stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
-                                                 (xzlo(i+1,j-1,k  )-xzlo(i,j-1,k))
-                                - (0.25*l_dt/dz)*(w_ad(i  ,j-1,k+1)+w_ad(i,j-1,k))*
-                                                 (zxlo(i  ,j-1,k+1)-zxlo(i,j-1,k));
-        Real sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
-                                                 (xzlo(i+1,j  ,k  )-xzlo(i,j  ,k))
-                                - (0.25*l_dt/dz)*(w_ad(i  ,j  ,k+1)+w_ad(i,j  ,k))*
-                                                 (zxlo(i  ,j  ,k+1)-zxlo(i,j  ,k));
-        stl += 0.5 * l_dt * f(i,j-1,k,n);
-        sth += 0.5 * l_dt * f(i,j  ,k,n);
+
+        // stl is on the left  side of the lo-x side of cell (i,j)
+        // sth is on the right side of the lo-x side of cell (i,j)
+        Real stl, sth;
+        Real v_tmp_j, v_tmp_jp1;
+        Real y_hat_j, y_hat_jp1;
+
+        // Low side of interface
+        if (flag(i,j-1,k).isRegular())
+        {
+            stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
+                                                (xzlo(i+1,j-1,k  )-xzlo(i,j-1,k))
+                               - (0.25*l_dt/dz)*(w_ad(i  ,j-1,k+1)+w_ad(i,j-1,k))*
+                                                (zxlo(i  ,j-1,k+1)-zxlo(i,j-1,k));
+        } else {
+            stl = ylo(i,j,k,n);
+        }
+
+        // High side of interface
+        if (flag(i,j,k).isRegular())
+        {
+            sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
+                                                (xzlo(i+1,j  ,k  )-xzlo(i,j  ,k))
+                               - (0.25*l_dt/dz)*(w_ad(i  ,j  ,k+1)+w_ad(i,j  ,k))*
+                                                (zxlo(i  ,j  ,k+1)-zxlo(i,j  ,k));
+        } else {
+            sth = yhi(i,j,k,n);
+        }
+
+        if (vfrac_arr(i,j-1,k) > 0.)
+            stl += 0.5 * l_dt * f(i,j-1,k,n);
+        if (vfrac_arr(i,j,k) > 0.)
+            sth += 0.5 * l_dt * f(i,j  ,k,n);
 
         Real gphi_y;
 
@@ -585,16 +653,38 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         {
         constexpr int n = 2;
         auto bc = pbc[n];
-        Real stl = zlo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k-1)+u_ad(i,j,k-1))*
-                                                 (xylo(i+1,j  ,k-1)-xylo(i,j,k-1))
-                                - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k-1)+v_ad(i,j,k-1))*
-                                                 (yxlo(i  ,j+1,k-1)-yxlo(i,j,k-1));
-        Real sth = zhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j,k  ))*
-                                                 (xylo(i+1,j  ,k  )-xylo(i,j,k  ))
-                                - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i,j,k  ))*
-                                                 (yxlo(i  ,j+1,k  )-yxlo(i,j,k  ));
-        stl += 0.5 * l_dt * f(i,j,k-1,n);
-        sth += 0.5 * l_dt * f(i,j,k  ,n);
+
+        // stl is on the left  side of the lo-x side of cell (i,j)
+        // sth is on the right side of the lo-x side of cell (i,j)
+        Real stl, sth;
+        Real v_tmp_j, v_tmp_jp1;
+        Real y_hat_j, y_hat_jp1;
+
+        // Low side of interface
+        if (flag(i,j,k-1).isRegular())
+        {
+            stl = zlo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k-1)+u_ad(i,j,k-1))*
+                                                (xylo(i+1,j  ,k-1)-xylo(i,j,k-1))
+                               - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k-1)+v_ad(i,j,k-1))*
+                                                (yxlo(i  ,j+1,k-1)-yxlo(i,j,k-1));
+        } else {
+            stl = zlo(i,j,k,n);
+        }
+
+        if (flag(i,j,k).isRegular())
+        {
+            sth = zhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j,k  ))*
+                                                (xylo(i+1,j  ,k  )-xylo(i,j,k  ))
+                               - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i,j,k  ))*
+                                                (yxlo(i  ,j+1,k  )-yxlo(i,j,k  ));
+        } else {
+            sth = zhi(i,j,k,n);
+        }
+
+        if (vfrac_arr(i,j,k-1) > 0.)
+            stl += 0.5 * l_dt * f(i,j,k-1,n);
+        if (vfrac_arr(i,j,k  ) > 0.)
+            sth += 0.5 * l_dt * f(i,j,k  ,n);
 
         Real gphi_z;
 

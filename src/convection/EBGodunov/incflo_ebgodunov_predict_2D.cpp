@@ -106,9 +106,6 @@ void ebgodunov::predict_godunov (Real time,
                                   Imx, Imy, Ipx, Ipy, a_vel, a_f, 
                                   flagarr, domain, l_dt, d_bcrec);
 
-            // Array4<Real const> apx_arr = apx->const_array(mfi);
-            // Array4<Real const> apy_arr = apy->const_array(mfi);
-
             AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
                          Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
                          Array4<Real const> const& apz = areafrac[2]->const_array(mfi););
@@ -124,9 +121,8 @@ void ebgodunov::predict_godunov (Real time,
                                    a_vel, u_ad, v_ad, 
                                    Imx, Imy, Ipx, Ipy, a_f, 
                                    domain, dx, l_dt, d_bcrec, 
-                                   flagarr,
-                                   AMREX_D_DECL(apx,apy,apz),vfrac_arr,
-                                   AMREX_D_DECL(fcx,fcy,fcz),
+                                   flagarr, apx,apy,vfrac_arr,
+                                   fcx,fcy,
                                    gmacphi_x_arr, gmacphi_y_arr, 
                                    use_mac_phi_in_godunov, p);
 

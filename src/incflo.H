@@ -143,44 +143,6 @@ public: // for cuda
                                                   amrex::Vector<amrex::MultiFab const*> const& v_mac,
                                                   amrex::Vector<amrex::MultiFab const*> const& w_mac));
 
-#ifdef AMREX_USE_EB
-    void redistribute_eb ( amrex::Box const& bx, int ncomp,
-                          amrex::Array4<amrex::Real> const& dUdt,
-                          amrex::Array4<amrex::Real const> const& dUdt_in,
-                          amrex::Array4<amrex::Real> const& scratch,
-                          amrex::Array4<amrex::EBCellFlag const> const& flag,
-                          AMREX_D_DECL(amrex::Array4<amrex::Real const> const& apx,
-                                       amrex::Array4<amrex::Real const> const& apy,
-                                       amrex::Array4<amrex::Real const> const& apz),
-                          amrex::Array4<amrex::Real const> const& vfrac,
-                          AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
-                                       amrex::Array4<amrex::Real const> const& fcy,
-                                       amrex::Array4<amrex::Real const> const& fcz),
-                          amrex::Array4<amrex::Real const> const& ccent,
-                          amrex::Geometry& geom);
-    void flux_redistribute_eb ( amrex::Box const& bx, int ncomp,
-                                amrex::Array4<amrex::Real> const& dUdt,
-                                amrex::Array4<amrex::Real const> const& dUdt_in,
-                                amrex::Array4<amrex::Real> const& scratch,
-                                amrex::Array4<amrex::EBCellFlag const> const& flag,
-                                amrex::Array4<amrex::Real const> const& vfrac,
-                                amrex::Geometry& geom);
-    void state_redistribute_eb ( amrex::Box const& bx, int ncomp,
-                                 amrex::Array4<amrex::Real> const& dUdt,
-                                 amrex::Array4<amrex::Real const> const& dUdt_in,
-                                 amrex::Array4<amrex::Real> const& scratch,
-                                 amrex::Array4<amrex::EBCellFlag const> const& flag,
-                                 AMREX_D_DECL(amrex::Array4<amrex::Real const> const& apx,
-                                              amrex::Array4<amrex::Real const> const& apy,
-                                              amrex::Array4<amrex::Real const> const& apz),
-                                 amrex::Array4<amrex::Real const> const& vfrac,
-                                 AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
-                                              amrex::Array4<amrex::Real const> const& fcy,
-                                              amrex::Array4<amrex::Real const> const& fcz),
-                                 amrex::Array4<amrex::Real const> const& ccent,
-                                 amrex::Geometry& geom);
-#endif
-
     ///////////////////////////////////////////////////////////////////////////
     //
     // derive
