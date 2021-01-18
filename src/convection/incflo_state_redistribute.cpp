@@ -1,9 +1,9 @@
+#ifdef AMREX_USE_EB
 #include <Redistribution.H>
 #include <AMReX_EB_slopes_K.H>
 
 using namespace amrex;
 
-#ifdef AMREX_USE_EB
 void 
 redistribution::state_redistribute_eb (
                        Box const& bx, int ncomp,
