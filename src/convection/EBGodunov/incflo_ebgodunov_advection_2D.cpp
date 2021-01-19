@@ -168,26 +168,28 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
 
         if (apx(i,j,k) > 0.)
         {
-            Real use_trans = 0.0;
-            if (apy(i-1,j,k) > 0. && apy(i-1,j+1,k) > 0.) use_trans = 1.0;
+            stl = xlo(i,j,k,n);
+            sth = xhi(i,j,k,n);
 
-            Real uxl = (apx(i,j,k)*u_mac(i,j,k) - apx(i-1,j,k)*u_mac(i-1,j,k)) / vfrac_arr(i-1,j,k);
-            stl = xlo(i,j,k,n) - (0.5*dtdx) * q(i-1,j,k,n) * uxl
-                               - (0.5*dtdy)*(apy(i-1,j+1,k)*yzlo(i-1,j+1,k  ,n)*v_mac(i-1,j+1,k  )
-                                           - apy(i-1,j  ,k)*yzlo(i-1,j  ,k  ,n)*v_mac(i-1,j  ,k  )) / vfrac_arr(i-1,j,k) * use_trans;
-
-            use_trans = 0.0;
-            if (apy(i,j,k) > 0. && apy(i,j+1,k) > 0.) use_trans = 1.0;
-
-            Real uxh = (apx(i+1,j,k)*u_mac(i+1,j,k) - apx(i,j,k)*u_mac(i,j,k)) / vfrac_arr(i,j,k);
-            sth = xhi(i,j,k,n) - (0.5*dtdx) * q(i  ,j,k,n) * uxh
-                               - (0.5*dtdy)*(apy(i,j+1,k)*yzlo(i,j+1,k,n)*v_mac(i,j+1,k)
-                                            -apy(i,j  ,k)*yzlo(i,j  ,k,n)*v_mac(i,j  ,k)) / vfrac_arr(i,j,k) * use_trans;
-
-            if (fq) {
-                if (vfrac(i-1,j,k) > 0.)
+            // If we can't compute good transverse terms, don't use any d/dt terms at all
+            if (apy(i-1,j,k) > 0. && apy(i-1,j+1,k) > 0.)
+            {
+                Real quxl = (apx(i,j,k)*u_mac(i,j,k) - apx(i-1,j,k)*u_mac(i-1,j,k)) * q(i-1,j,k,n);
+                stl += ( - (0.5*dtdx) * quxl
+                         - (0.5*dtdy) * (apy(i-1,j+1,k)*yzlo(i-1,j+1,k  ,n)*v_mac(i-1,j+1,k  )
+                                        -apy(i-1,j  ,k)*yzlo(i-1,j  ,k  ,n)*v_mac(i-1,j  ,k  )) ) / vfrac_arr(i-1,j,k);
+                if (fq && vfrac_arr(i-1,j,k) > 0.)
                     stl += 0.5*l_dt*fq(i-1,j,k,n);
-                if (vfrac(i  ,j,k) > 0.)
+            }
+
+            // If we can't compute good transverse terms, don't use any d/dt terms at all
+            if (apy(i,j,k) > 0. && apy(i,j+1,k) > 0.) 
+            {
+                Real quxh = (apx(i+1,j,k)*u_mac(i+1,j,k) - apx(i,j,k)*u_mac(i,j,k)) * q(i,j,k,n);
+                sth += ( - (0.5*dtdx) * quxh
+                         - (0.5*dtdy)*(apy(i,j+1,k)*yzlo(i,j+1,k,n)*v_mac(i,j+1,k)
+                                      -apy(i,j  ,k)*yzlo(i,j  ,k,n)*v_mac(i,j  ,k)) ) / vfrac_arr(i,j,k);
+                if (fq && vfrac_arr(i  ,j,k) > 0.)
                     sth += 0.5*l_dt*fq(i  ,j,k,n);
             }
  
@@ -198,7 +200,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real temp = (u_mac(i,j,k) >= 0.) ? stl : sth; 
             temp = (amrex::Math::abs(u_mac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
             qx(i,j,k,n) = temp;
-            
+
         } else {
             qx(i,j,k,n) = 0.;
         }
@@ -241,25 +243,29 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
 
         if (apy(i,j,k) > 0.)
         {
-            Real use_trans = 0.0;
-            if (apx(i,j-1,k) > 0. && apx(i+1,j-1,k) > 0.) use_trans = 1.0;
+            stl = ylo(i,j,k,n);
+            sth = yhi(i,j,k,n);
 
-            Real vyl = (apy(i,j,k)*v_mac(i,j,k) - apy(i,j-1,k)*v_mac(i,j-1,k)) / vfrac_arr(i,j-1,k);
-            stl = ylo(i,j,k,n) - (0.5*dtdy)*q(i,j-1,k,n)*vyl  
-                               - (0.5*dtdx)*(apx(i+1,j-1,k)*xzlo(i+1,j-1,k  ,n)*u_mac(i+1,j-1,k  )
-                                           - apx(i  ,j-1,k)*xzlo(i  ,j-1,k  ,n)*u_mac(i  ,j-1,k  )) / vfrac_arr(i,j-1,k) * use_trans;
-
-            use_trans = 0.0;
-            if (apx(i,j,k) > 0. && apx(i+1,j,k) > 0.) use_trans = 1.0;
-
-            Real vyh = (apy(i,j+1,k)*v_mac(i,j+1,k) - apy(i,j,k)*v_mac(i,j,k)) / vfrac_arr(i,j,k);
-            sth = yhi(i,j,k,n) - (0.5*dtdy)*q(i,j  ,k,n)* vyh
-                               - (0.5*dtdx)*(apx(i+1,j,k)*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
-                                           - apx(i  ,j,k)*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  )) / vfrac_arr(i,j  ,k) * use_trans;
-
-            if (fq) {
-                stl += 0.5*l_dt*fq(i,j-1,k,n);
-                sth += 0.5*l_dt*fq(i,j  ,k,n);
+            // If we can't compute good transverse terms, don't use any d/dt terms at all
+            if (apx(i,j-1,k) > 0. && apx(i+1,j-1,k) > 0.)
+            {
+                Real qvyl = (apy(i,j,k)*v_mac(i,j,k) - apy(i,j-1,k)*v_mac(i,j-1,k)) * q(i,j-1,k,n);
+                stl += ( - (0.5*dtdy)*qvyl  
+                         - (0.5*dtdx)*(apx(i+1,j-1,k)*xzlo(i+1,j-1,k  ,n)*u_mac(i+1,j-1,k  )
+                                      -apx(i  ,j-1,k)*xzlo(i  ,j-1,k  ,n)*u_mac(i  ,j-1,k  )) ) / vfrac_arr(i,j-1,k);
+                if (fq && vfrac_arr(i,j-1,k) > 0.)
+                    stl += 0.5*l_dt*fq(i,j-1,k,n);
+            }
+    
+            // If we can't compute good transverse terms, don't use any d/dt terms at all
+            if (apx(i,j,k) > 0. && apx(i+1,j,k) > 0.)
+            {
+                Real qvyh = (apy(i,j+1,k)*v_mac(i,j+1,k) - apy(i,j,k)*v_mac(i,j,k)) * q(i,j,k,n);
+                sth += ( - (0.5*dtdy)*qvyh
+                         - (0.5*dtdx)*(apx(i+1,j,k)*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
+                                      -apx(i  ,j,k)*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  )) ) / vfrac_arr(i,j  ,k);
+                if (fq && vfrac_arr(i,j,k) > 0.)
+                    sth += 0.5*l_dt*fq(i,j,k,n);
             }
 
             auto bc = pbc[n];
@@ -285,7 +291,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                 +            dxinv[1]*( apy(i  ,j,k)*v_mac(i,j  ,k)*qy(i,j  ,k,n) -
                                         apy(i,j+1,k)*v_mac(i,j+1,k)*qy(i,j+1,k,n))) / vfrac_arr(i,j,k);
 #if 0
-            if (i == 127 && j == 207 && n == 0) 
+            if (i == 15 && j == 95 && n == 0) 
             {
                amrex::Print() << " UPDATE " << IntVect(i,j) << " " << q(i,j,k,n) << " " << dqdt(i,j,k,n) << std::endl;
                amrex::Print() << "   LO X: " << apx(i,j,k) << " " << u_mac(i,j,k) << " " << qx(i,j,k,n) << std::endl;

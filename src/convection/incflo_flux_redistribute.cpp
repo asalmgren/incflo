@@ -1,6 +1,8 @@
+#ifdef AMREX_USE_EB
 #include <Redistribution.H>
 
-#ifdef AMREX_USE_EB
+using namespace amrex;
+
 void redistribution::flux_redistribute_eb (Box const& bx, int ncomp,
                                            Array4<Real> const& dUdt,
                                            Array4<Real const> const& dUdt_in,

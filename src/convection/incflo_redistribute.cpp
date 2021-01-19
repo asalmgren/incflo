@@ -4,8 +4,9 @@
 using namespace amrex;
 
 void redistribution::redistribute_eb (Box const& bx, int ncomp,
-                                      Array4<Real> const& dUdt,
+                                      Array4<Real      > const& dUdt_out,
                                       Array4<Real const> const& dUdt_in,
+                                      Array4<Real const> const& U_in,
                                       Array4<Real> const& scratch,
                                       AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
                                                    amrex::Array4<amrex::Real const> const& vmac,
@@ -19,40 +20,51 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
                                                    amrex::Array4<amrex::Real const> const& fcy,
                                                    amrex::Array4<amrex::Real const> const& fcz),
                                       amrex::Array4<amrex::Real const> const& ccc,
-                                      Geometry& lev_geom, bool is_velocity)
+                                      Geometry& lev_geom, Real dt, std::string advection_type)
 {
-    // int redist_type = 0;   // no redistribution
-    // int redist_type = 1;   // flux_redistribute
-    // int redist_type = 2;   // state_redistribute
-    int redist_type = 3;   // merge_redistribute
-  
+    int redist_type;
+    // redist_type = 0;   // no redistribution
+    // redist_type = 1;   // flux_redistribute
+    // redist_type = 2;   // state_redistribute
+    // redist_type = 3;   // merge_redistribute update
+    // redist_type = 4;   // merge_redistribute full
+
+    if (advection_type == "MOL")
+        redist_type = 1;   // flux_redistribute
+    else if (advection_type == "Godunov")
+        redist_type = 3;   // merge_redistribute update
+
+    if (redist_type == 1)
     {
-        if (redist_type == 1)
-        {
-            flux_redistribute_eb (bx, ncomp, dUdt, dUdt_in, scratch, flag, vfrac, lev_geom);
-    
-        } else if (redist_type == 2) {
-            state_redistribute_eb(bx, ncomp, dUdt, dUdt_in, flag,
-                                  AMREX_D_DECL(apx, apy, apz), vfrac,
-                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
+        flux_redistribute_eb (bx, ncomp, dUdt_out, dUdt_in, scratch, flag, vfrac, lev_geom);
 
-        } else if (redist_type == 3) {
-            merge_redistribute_eb(bx, ncomp, dUdt, dUdt_in,
-                                  AMREX_D_DECL(umac, vmac, wmac), flag,
-                                  AMREX_D_DECL(apx, apy, apz), vfrac,
-                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
+    } else if (redist_type == 2) {
+        state_redistribute_eb(bx, ncomp, dUdt_out, dUdt_in, flag,
+                              AMREX_D_DECL(apx, apy, apz), vfrac,
+                              AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 
-        } else if (redist_type == 0) {
-            amrex::ParallelFor(bx, ncomp,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
-                {
-                    dUdt(i,j,k,n) = dUdt_in(i,j,k,n);
-                }
-            );
+    } else if (redist_type == 3) {
+        merge_redistribute_update(bx, ncomp, dUdt_out, dUdt_in,
+                              AMREX_D_DECL(umac, vmac, wmac), flag,
+                              AMREX_D_DECL(apx, apy, apz), vfrac,
+                              AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 
-        } else {
-           amrex::Error("Not a legit redist_type");
-        }
+    } else if (redist_type == 4) {
+        merge_redistribute_full(bx, ncomp, dUdt_out, dUdt_in, U_in, 
+                              AMREX_D_DECL(umac, vmac, wmac), flag,
+                              AMREX_D_DECL(apx, apy, apz), vfrac,
+                              AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom, dt);
+
+    } else if (redist_type == 0) {
+        amrex::ParallelFor(bx, ncomp,
+        [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+            {
+                dUdt_out(i,j,k,n) = dUdt_in(i,j,k,n);
+            }
+        );
+
+    } else {
+       amrex::Error("Not a legit redist_type");
     }
 }
 #endif
