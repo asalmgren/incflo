@@ -336,12 +336,11 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real dudy_l;  //  (yhat(i-1,j+1,k)-yhat(i-1,j,k)) if regular
             Real v_tmp_l; //  0.5 * (v_ad(i-1,j+1,k)+v_ad(i-1,j,k)) if regular
 
-            Real trans_stl;
+            stl = xlo(i,j,k,n);
 
             // If either y-face is covered, set the tranxverse term to zero
-            if (apy(i-1,j,k) == 0.0 or apy(i-1,j+1,k) == 0.0) {
-                trans_stl = 0.0;
-            } else {
+            if (apy(i-1,j,k) > 0.0 && apy(i-1,j+1,k) > 0.0) 
+            {
                 // Tangential extrapolation in the x-direction at j-1/2
                 if (apy(i-1,j,k) == 1.0)
                 {
@@ -379,10 +378,14 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 v_tmp_l = 0.5 * (v_tmp_jp1 + v_tmp_j);
                  dudy_l =       (y_hat_jp1 - y_hat_j);
 
-                trans_stl = v_tmp_l * dudy_l;
+                Real trans_stl = v_tmp_l * dudy_l / dy;
+
+                stl += -0.5 * l_dt * trans_stl;
+
+                if (vfrac_arr(i-1,j,k) > 0.)
+                    stl += 0.5 * l_dt * f(i-1,j,k,n);
             }
 
-            stl = xlo(i,j,k,n) - (0.5 * l_dt/dy) * trans_stl;
         }
 
         // Right side of interface
@@ -397,13 +400,11 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real dudy_h;  //       (yhat(i,j+1,k)-yhat(i,j,k)) if regular
             Real v_tmp_h; // 0.5 * (v_ad(i,j+1,k)+v_ad(i,j,k)) if regular
 
-            Real trans_sth;
+            Real sth = xhi(i,j,k,n);
 
             // If either face is covered, use the cell-centered y-velocity
-            if (apy(i,j,k) == 0.0 or apy(i,j+1,k) == 0.0) 
+            if (apy(i,j,k) > 0.0 && apy(i,j+1,k) > 0.0) 
             {
-                trans_sth = 0.0;
-            } else {
                 // Tangential extrapolation in the x-direction at j-1/2
                 if (apy(i,j,k) == 1.0)
                 {
@@ -441,16 +442,14 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 v_tmp_h = 0.5 * (v_tmp_jp1 + v_tmp_j);
                  dudy_h =       (y_hat_jp1 - y_hat_j);
 
-                trans_sth = v_tmp_h * dudy_h;
+                Real trans_sth = v_tmp_h * dudy_h / dy;
+
+                sth += -0.5 * l_dt * trans_sth;
+
+                if (vfrac_arr(i,j,k) > 0.)
+                    sth += 0.5 * l_dt * f(i  ,j,k,n);
             }
-
-            sth = xhi(i,j,k,n) - trans_sth;
         }
-
-        if (vfrac_arr(i-1,j,k) > 0.)
-            stl += 0.5 * l_dt * f(i-1,j,k,n);
-        if (vfrac_arr(i,j,k) > 0.)
-            sth += 0.5 * l_dt * f(i  ,j,k,n);
 
         if (l_use_mac_phi_in_godunov)
         {
@@ -546,12 +545,11 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real dvdx_l;  //  (xhat(i+1,j-1,k  )-xhat(i,j-1,k)) if regular
             Real u_tmp_l; //  0.5 * (u_ad(i+1,j-1,k  )+u_ad(i,j-1,k)) if regular
 
-            Real trans_stl; 
+            stl = ylo(i,j,k,n);
 
             // If either x-face is covered, set the tranxverse term to zero
-            if (apx(i,j-1,k) == 0.0 or apx(i+1,j-1,k) == 0.0) {
-                trans_stl = 0.0;
-            } else {
+            if (apx(i,j-1,k) > 0.0 && apx(i+1,j-1,k) > 0.0) 
+            {
                 // Tangential extrapolation in the y-direction at i-1/2
                 if (apx(i,j-1,k) == 1.0)
                 {
@@ -589,10 +587,13 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 u_tmp_l = 0.5 * (u_tmp_ip1 + u_tmp_i);
                  dvdx_l =       (x_hat_ip1 - x_hat_i);
 
-                trans_stl = u_tmp_l * dvdx_l;
-            }
+                Real trans_stl = u_tmp_l * dvdx_l / dx;
 
-            stl = ylo(i,j,k,n) - (0.5 * l_dt/dx) * trans_stl;
+                stl += - 0.5 * l_dt * trans_stl;
+
+                if (vfrac_arr(i,j-1,k) > 0.)
+                    stl += 0.5 * l_dt * f(i,j-1,k,n);
+            }
         }
 
         // Top side of interface
@@ -649,16 +650,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 u_tmp_h = 0.5 * (u_tmp_ip1 + u_tmp_i);
                  dvdx_h =       (x_hat_ip1 - x_hat_i);
 
-                trans_sth = u_tmp_h * dvdx_h;
-            }
+                trans_sth = u_tmp_h * dvdx_h / dx;
 
-            sth = yhi(i,j,k,n) - (0.5 * l_dt/dx) * trans_sth;
+                sth +=  - 0.5 * l_dt * trans_sth;
+
+                if (vfrac_arr(i,j  ,k) > 0.)
+                    sth += 0.5 * l_dt * f(i,j  ,k,n);
+            }
         }
 
-        if (vfrac_arr(i,j-1,k) > 0.)
-            stl += 0.5 * l_dt * f(i,j-1,k,n);
-        if (vfrac_arr(i,j  ,k) > 0.)
-            sth += 0.5 * l_dt * f(i,j  ,k,n);
 
         if (l_use_mac_phi_in_godunov)
         {
