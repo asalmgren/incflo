@@ -5,7 +5,7 @@
 
 using namespace amrex;
 
-void ebgodunov::predict_godunov (Real time, 
+void ebgodunov::predict_godunov (Real /*time*/, 
                                  MultiFab& u_mac, MultiFab& v_mac,
                                  MultiFab const& vel, 
                                  MultiFab const& vel_forces,
@@ -42,7 +42,6 @@ void ebgodunov::predict_godunov (Real time,
 
             EBCellFlagFab const& flagfab = flags[mfi];
             Array4<EBCellFlag const> const& flagarr = flagfab.const_array();
-            auto const typ = flagfab.getType(amrex::grow(bx,2));
 
             Array4<Real> const& a_umac = u_mac.array(mfi);
             Array4<Real> const& a_vmac = v_mac.array(mfi);
@@ -82,6 +81,21 @@ void ebgodunov::predict_godunov (Real time,
                 godunov::predict_plm_y (bx, Imy, Ipy, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
 
+                bool local_use_forces_in_trans = false;
+                godunov::make_trans_velocities(Box(u_ad), Box(v_ad),
+                                               u_ad, v_ad,
+                                               Imx, Imy, Ipx, Ipy, a_vel, a_f,
+                                               domain, l_dt, d_bcrec, local_use_forces_in_trans);
+
+                godunov::predict_godunov_on_box(bx, ncomp, xbx, ybx, 
+                                                a_umac, a_vmac,
+                                                a_vel, u_ad, v_ad, 
+                                                Imx, Imy, Ipx, Ipy, a_f, 
+                                                domain, dx, l_dt, d_bcrec, 
+                                                local_use_forces_in_trans,
+                                                gmacphi_x_arr, gmacphi_y_arr, 
+                                                use_mac_phi_in_godunov, p);
+
             } else {
  
                 AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
@@ -99,32 +113,26 @@ void ebgodunov::predict_godunov (Real time,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
+
+                ebgodunov::make_trans_velocities(Box(u_ad), Box(v_ad),
+                                                 u_ad, v_ad,
+                                                 Imx, Imy, Ipx, Ipy, a_vel,
+                                                 flagarr, domain, d_bcrec);
+   
+                AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
+                             Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
+                             Array4<Real const> const& apz = areafrac[2]->const_array(mfi););
+
+                ebgodunov::predict_godunov_on_box(bx, ncomp, xbx, ybx, 
+                                                  a_umac, a_vmac,
+                                                  a_vel, u_ad, v_ad, 
+                                                  Imx, Imy, Ipx, Ipy, a_f, 
+                                                  domain, dx, l_dt, d_bcrec, 
+                                                  flagarr, apx,apy,vfrac_arr,
+                                                  fcx,fcy,
+                                                  gmacphi_x_arr, gmacphi_y_arr, 
+                                                  use_mac_phi_in_godunov, p);
             }
-
-            make_trans_velocities(Box(u_ad), Box(v_ad),
-                                  u_ad, v_ad,
-                                  Imx, Imy, Ipx, Ipy, a_vel, a_f, 
-                                  flagarr, domain, l_dt, d_bcrec);
-
-            AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
-                         Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
-                         Array4<Real const> const& apz = areafrac[2]->const_array(mfi););
-
-            AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
-                         Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
-                         Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
-
-            Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
-
-            predict_godunov_on_box(bx, ncomp, xbx, ybx, 
-                                   a_umac, a_vmac,
-                                   a_vel, u_ad, v_ad, 
-                                   Imx, Imy, Ipx, Ipy, a_f, 
-                                   domain, dx, l_dt, d_bcrec, 
-                                   flagarr, apx,apy,vfrac_arr,
-                                   fcx,fcy,
-                                   gmacphi_x_arr, gmacphi_y_arr, 
-                                   use_mac_phi_in_godunov, p);
 
             Gpu::streamSynchronize();  // otherwise we might be using too much memory
         }
@@ -139,10 +147,8 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx,
                                        Array4<Real const> const& Ipx,
                                        Array4<Real const> const& Ipy,
                                        Array4<Real const> const& vel,
-                                       Array4<Real const> const& f,
                                        Array4<EBCellFlag const> const& flag,
                                        const Box& domain,
-                                       Real l_dt, 
                                        BCRec  const* pbc)
   {
     const Dim3 dlo = amrex::lbound(domain);
@@ -400,7 +406,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real dudy_h;  //       (yhat(i,j+1,k)-yhat(i,j,k)) if regular
             Real v_tmp_h; // 0.5 * (v_ad(i,j+1,k)+v_ad(i,j,k)) if regular
 
-            Real sth = xhi(i,j,k,n);
+            sth = xhi(i,j,k,n);
 
             // If either face is covered, use the cell-centered y-velocity
             if (apy(i,j,k) > 0.0 && apy(i,j+1,k) > 0.0) 

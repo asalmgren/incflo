@@ -134,10 +134,8 @@ namespace ebgodunov {
                                              amrex::Array4<amrex::Real const> const& Ipy,
                                              amrex::Array4<amrex::Real const> const& Ipz),
                                 amrex::Array4<amrex::Real const> const& vel,
-                                amrex::Array4<amrex::Real const> const& f,
                                 amrex::Array4<amrex::EBCellFlag const> const& flag,
                                 const amrex::Box& domain,
-                                amrex::Real dt,
                                 amrex::BCRec const* d_bcrec);
 
     void predict_godunov_on_box (amrex::Box const& bx, int ncomp,
