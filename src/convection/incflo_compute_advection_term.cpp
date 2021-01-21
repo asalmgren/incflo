@@ -138,18 +138,24 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
         }
 
         MultiFab divu(vel[lev]->boxArray(),vel[lev]->DistributionMap(),1,1);
+        divu.setVal(0.);
         Array<MultiFab const*, AMREX_SPACEDIM> u;
         u[0] = u_mac[lev];
         u[1] = v_mac[lev];
 #if (AMREX_SPACEDIM == 3)
         u[2] = w_mac[lev];
 #endif
+
 #ifdef AMREX_USE_EB
-        EB_computeDivergence(divu,u,geom[lev],true);
+        auto const& fact = EBFactory(lev);
+        if (fact.isAllRegular())
+            computeDivergence(divu,u,geom[lev]);
+        else
+            EB_computeDivergence(divu,u,geom[lev],true);
 #else
         computeDivergence(divu,u,geom[lev]);
 #endif
-        
+        divu.FillBoundary(geom[lev].periodicity());
 
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
