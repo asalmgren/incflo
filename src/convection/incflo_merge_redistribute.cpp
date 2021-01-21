@@ -26,6 +26,8 @@ redistribution::merge_redistribute_update (
 {
     const Box domain = lev_geom.Domain();
 
+    const Real small_vel = 1.e-8;
+
     const auto& is_periodic_x = lev_geom.isPeriodic(0);
     const auto& is_periodic_y = lev_geom.isPeriodic(1);
 #if (AMREX_SPACEDIM == 3)
@@ -73,15 +75,14 @@ redistribution::merge_redistribute_update (
            dUdt_out(i,j,k,n) = dUdt_in(i,j,k,n);
 
            // At lo-x or hi-x outflow face
-           if ( (i == domain.smallEnd(0) && !is_periodic_x && apx(i  ,j,k)*umac(i  ,j,k) < 0.) ||
-                (i == domain.bigEnd(0)   && !is_periodic_x && apx(i+1,j,k)*umac(i+1,j,k) > 0.) )
+           if ( (i == domain.smallEnd(0) && !is_periodic_x && apx(i  ,j,k)*umac(i  ,j,k) < -small_vel) ||
+                (i == domain.bigEnd(0)   && !is_periodic_x && apx(i+1,j,k)*umac(i+1,j,k) >  small_vel) )
            {
                if (vfrac(i,j-1,k) > 0.)
                {
                  sum_vol += vfrac(i,j-1,k);
                  sum_upd += vfrac(i,j-1,k)*(dUdt_in(i,j-1,k,n));
                  num_merge++;
-
                } else if (vfrac(i,j+1,k) > 0.)
                {
                  sum_vol += vfrac(i,j+1,k);
@@ -89,8 +90,9 @@ redistribution::merge_redistribute_update (
                  num_merge++;
                }
            }
-           else if ( (j == domain.smallEnd(1) && !is_periodic_y && apy(i,j  ,k)*vmac(i,j  ,k) < 0.) ||
-                     (j == domain.bigEnd(1)   && !is_periodic_y && apy(i,j+1,k)*vmac(i,j+1,k) > 0.) )
+           // At lo-y or hi-y outflow face
+           else if ( (j == domain.smallEnd(1) && !is_periodic_y && apy(i,j  ,k)*vmac(i,j  ,k) < -small_vel) ||
+                     (j == domain.bigEnd(1)   && !is_periodic_y && apy(i,j+1,k)*vmac(i,j+1,k) >  small_vel) )
            {
                if (vfrac(i-1,j,k) > 0.)
                {
@@ -105,8 +107,9 @@ redistribution::merge_redistribute_update (
                  num_merge++;
                }
 #if (AMREX_SPACEDIM == 3)
-           } else if ( (k == domain.smallEnd(2) && !is_periodic_z && apz(i,j,k  )*wmac(i,j,k  ) < 0.) ||
-                       (k == domain.bigEnd(2)   && !is_periodic_z && apz(i,j,k+1)*wmac(i,j,k+1) > 0.) )
+           // At lo-z or hi-z outflow face
+           } else if ( (k == domain.smallEnd(2) && !is_periodic_z && apz(i,j,k  )*wmac(i,j,k  ) < -small_vel) ||
+                       (k == domain.bigEnd(2)   && !is_periodic_z && apz(i,j,k+1)*wmac(i,j,k+1) >  small_vel) )
            {
                if (vfrac(i,j,k-1) > 0.)
                {
@@ -123,28 +126,28 @@ redistribution::merge_redistribute_update (
 #endif
            } else {
 
-                if ( allow_lo_x && apx(i,j,k) > 0. && umac(i,j,k) < 0. &&
+                if ( allow_lo_x && apx(i,j,k) > 0. && umac(i,j,k) < -small_vel &&
                      std::abs(dUdt_in(i-1,j,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through left face
                 {
                   sum_vol += vfrac(i-1,j,k);
                   sum_upd += vfrac(i-1,j,k)*(dUdt_in(i-1,j,k,n));
                   num_merge++;
                 }
-                if ( allow_hi_x && apx(i+1,j,k) > 0. && umac(i+1,j,k) > 0. &&
+                if ( allow_hi_x && apx(i+1,j,k) > 0. && umac(i+1,j,k) > small_vel &&
                      std::abs(dUdt_in(i+1,j,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through right face
                 {
                   sum_vol += vfrac(i+1,j,k);
                   sum_upd += vfrac(i+1,j,k)*(dUdt_in(i+1,j,k,n));
                   num_merge++;
                 }
-                if ( allow_lo_y && apy(i,j,k) > 0. && vmac(i,j,k) < 0. &&
+                if ( allow_lo_y && apy(i,j,k) > 0. && vmac(i,j,k) < -small_vel &&
                      std::abs(dUdt_in(i,j-1,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through bottom face
                 {
                   sum_vol += vfrac(i,j-1,k);
                   sum_upd += vfrac(i,j-1,k)*(dUdt_in(i,j-1,k,n));
                   num_merge++;
                 }
-                if (allow_hi_y && apy(i,j+1,k) > 0. && vmac(i,j+1,k) > 0. &&
+                if (allow_hi_y && apy(i,j+1,k) > 0. && vmac(i,j+1,k) > small_vel &&
                      std::abs(dUdt_in(i,j+1,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through right face
                 {
                   sum_vol += vfrac(i,j+1,k);
@@ -152,14 +155,14 @@ redistribution::merge_redistribute_update (
                   num_merge++;
                 }
 #if (AMREX_SPACEDIM == 3)
-                if ( allow_lo_z && apz(i,j,k) > 0. && wmac(i,j,k) < 0. &&
+                if ( allow_lo_z && apz(i,j,k) > 0. && wmac(i,j,k) < -small_vel &&
                      std::abs(dUdt_in(i,j,k-1,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through bottom face
                 {
                   sum_vol += vfrac(i,j,k-1);
                   sum_upd += vfrac(i,j,k-1)*(dUdt_in(i,j,k-1,n));
                   num_merge++;
                 }
-                if (allow_hi_z && apz(i,j+1,k) > 0. && wmac(i,j,k+1) > 0. &&
+                if (allow_hi_z && apz(i,j+1,k) > 0. && wmac(i,j,k+1) > small_vel &&
                      std::abs(dUdt_in(i,j,k+1,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through right face
                 {
                   sum_vol += vfrac(i,j,k+1);
@@ -173,14 +176,24 @@ redistribution::merge_redistribute_update (
 
            if (num_merge > 1) 
            {
-              amrex::Print() << "Not sure what to do here" << IntVect(AMREX_D_DECL(i,j,k)) << " " 
-                             << vfrac(i,j,k) << std::endl;
+              amrex::Print() << "Not sure what to do here" << IntVect(AMREX_D_DECL(i,j,k)) << std::endl;
+              amrex::Print() << "Cell has volfrac        " << vfrac(i,j,k) << std::endl;
+              amrex::Print() << "Cell has x-areas        " << apx(i,j,k) << " " << apx(i+1,j,k) << std::endl;
+              amrex::Print() << "Cell has y-areas        " << apy(i,j,k) << " " << apy(i,j+1,k) << std::endl;
+#if (AMREX_SPACEDIM == 3)
+              amrex::Print() << "Cell has z-areas        " << apz(i,j,k) << " " << apz(i,j,k+1) << std::endl;
+#endif
+              amrex::Print() << "Cell has x-vels         " << umac(i,j,k) << " " << umac(i+1,j,k) << std::endl;
+              amrex::Print() << "Cell has y-vels         " << vmac(i,j,k) << " " << vmac(i,j+1,k) << std::endl;
+#if (AMREX_SPACEDIM == 3)
+              amrex::Print() << "Cell has z-vels         " << wmac(i,j,k) << " " << wmac(i,j,k+1) << std::endl;
+#endif
               amrex::Abort(0);
            }
 
            // At lo-x or hi-x outflow face
-           if ( (i == domain.smallEnd(0) && !is_periodic_x && apx(i  ,j,k)*umac(i  ,j,k) < 0.) ||
-                (i == domain.bigEnd(0)   && !is_periodic_x && apx(i+1,j,k)*umac(i+1,j,k) > 0.) )
+           if ( (i == domain.smallEnd(0) && !is_periodic_x && apx(i  ,j,k)*umac(i  ,j,k) < -small_vel) ||
+                (i == domain.bigEnd(0)   && !is_periodic_x && apx(i+1,j,k)*umac(i+1,j,k) >  small_vel) )
            {
                if (vfrac(i,j-1,k) > 0.)
                {
@@ -193,8 +206,8 @@ redistribution::merge_redistribute_update (
                    dUdt_out(i,j+1,k,n) = avg_update;
                }
            }
-           else if ( (j == domain.smallEnd(1) && !is_periodic_y && apy(i,j  ,k)*vmac(i,j  ,k) < 0.) ||
-                     (j == domain.bigEnd(1)   && !is_periodic_y && apy(i,j+1,k)*vmac(i,j+1,k) > 0.) )
+           else if ( (j == domain.smallEnd(1) && !is_periodic_y && apy(i,j  ,k)*vmac(i,j  ,k) < -small_vel) ||
+                     (j == domain.bigEnd(1)   && !is_periodic_y && apy(i,j+1,k)*vmac(i,j+1,k) >  small_vel) )
            {
                if (vfrac(i-1,j,k) > 0.)
                {
@@ -207,8 +220,8 @@ redistribution::merge_redistribute_update (
                    dUdt_out(i+1,j,k,n) = avg_update;
                }
 #if (AMREX_SPACEDIM == 3)
-           } else if ( (k == domain.smallEnd(2) && !is_periodic_z && apz(i,j,k  )*wmac(i,j,k  ) < 0.) ||
-                       (k == domain.bigEnd(2)   && !is_periodic_z && apz(i,j,k+1)*wmac(i,j,k+1) > 0.) )
+           } else if ( (k == domain.smallEnd(2) && !is_periodic_z && apz(i,j,k  )*wmac(i,j,k  ) < -small_vel) ||
+                       (k == domain.bigEnd(2)   && !is_periodic_z && apz(i,j,k+1)*wmac(i,j,k+1) >  small_vel) )
            {
                if (vfrac(i,j,k-1) > 0.)
                {
@@ -223,28 +236,28 @@ redistribution::merge_redistribute_update (
 #endif
            } else {
 
-               if ( allow_lo_x && apx(i,j,k) > 0. && umac(i,j,k) < 0. &&
+               if ( allow_lo_x && apx(i,j,k) > 0. && umac(i,j,k) < -small_vel &&
                     std::abs(dUdt_in(i-1,j,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through left face
                {
                  dUdt_out(i  ,j,k,n) = avg_update;
                  dUdt_out(i-1,j,k,n) = avg_update;
                }
 
-               if (allow_hi_x && apx(i+1,j,k) > 0. && umac(i+1,j,k) > 0. &&
+               if (allow_hi_x && apx(i+1,j,k) > 0. && umac(i+1,j,k) > small_vel &&
                    std::abs(dUdt_in(i+1,j,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through right face
                {
                  dUdt_out(i  ,j,k,n) = avg_update;
                  dUdt_out(i+1,j,k,n) = avg_update;
                }
 
-               if (allow_lo_y && apy(i,j,k) > 0. && vmac(i,j,k) < 0. &&
+               if (allow_lo_y && apy(i,j,k) > 0. && vmac(i,j,k) < -small_vel &&
                     std::abs(dUdt_in(i,j-1,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through bottom face
                {
                  dUdt_out(i,j  ,k,n) = avg_update;
                  dUdt_out(i,j-1,k,n) = avg_update;
                }
 
-               if (allow_hi_y && apy(i,j+1,k) > 0. && vmac(i,j+1,k) > 0. &&
+               if (allow_hi_y && apy(i,j+1,k) > 0. && vmac(i,j+1,k) > small_vel &&
                     std::abs(dUdt_in(i,j+1,k,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through top face
                {
                   dUdt_out(i,j  ,k,n) = avg_update;
@@ -252,14 +265,14 @@ redistribution::merge_redistribute_update (
                }
 
 #if (AMREX_SPACEDIM == 3)
-               if (allow_lo_z && apz(i,j,k) > 0. && wmac(i,j,k) < 0. &&
+               if (allow_lo_z && apz(i,j,k) > 0. && wmac(i,j,k) < -small_vel &&
                     std::abs(dUdt_in(i,j,k-1,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through down face
                {
                  dUdt_out(i,j,k  ,n) = avg_update;
                  dUdt_out(i,j,k-1,n) = avg_update;
                }
 
-               if (allow_hi_z && apz(i,j,k+1) > 0. && wmac(i,j,k+1) > 0. &&
+               if (allow_hi_z && apz(i,j,k+1) > 0. && wmac(i,j,k+1) > small_vel &&
                     std::abs(dUdt_in(i,j,k+1,n)) < std::abs(dUdt_in(i,j,k,n)) ) // Outflow through up face
                {
                   dUdt_out(i,j,k  ,n) = avg_update;
