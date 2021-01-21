@@ -277,11 +277,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Imy(i, j, k, n) = fu*st + (1.0 - fu)*0.5*(hi + lo); // store yedge
         });
 
-    Array4<Real> divu = makeArray4(Ipx.dataPtr(), grow(bx,1), 1);
-    amrex::ParallelFor(Box(divu), [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
-        divu(i,j,k) = 0.0;
-    });
-
     // We can reuse the space in Ipy
 
     //
@@ -704,5 +699,4 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             qy(i,j,k) = 0.;
         }
     });
-
 }
