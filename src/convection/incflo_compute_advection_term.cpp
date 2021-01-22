@@ -137,7 +137,7 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
                          w_mac[lev]->FillBoundary(geom[lev].periodicity()););
         }
 
-        MultiFab divu(vel[lev]->boxArray(),vel[lev]->DistributionMap(),1,1);
+        MultiFab divu(vel[lev]->boxArray(),vel[lev]->DistributionMap(),1,2);
         divu.setVal(0.);
         Array<MultiFab const*, AMREX_SPACEDIM> u;
         u[0] = u_mac[lev];
@@ -285,8 +285,14 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
 #ifdef AMREX_USE_EB
         Box gbx = bx;
         if (!regular)  
-            gbx.grow(2);
-
+        {
+            if (m_advection_type == "MOL") 
+                gbx.grow(2);
+            else if (m_advection_type == "Godunov") 
+                gbx.grow(1);
+            else 
+                amrex::Abort("Huh??");
+        }
         // This one holds the convective term on a grown region so we can redistribute
         FArrayBox dUdt_tmpfab(gbx,nmaxcomp);
         Array4<Real> dUdt_tmp = dUdt_tmpfab.array();

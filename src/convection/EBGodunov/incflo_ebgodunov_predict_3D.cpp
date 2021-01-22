@@ -123,8 +123,8 @@ void ebgodunov::predict_godunov (Real time,
 
             make_trans_velocities(Box(u_ad), Box(v_ad), Box(w_ad),
                                   u_ad, v_ad, w_ad,
-                                  Imx, Imy, Imz, Ipx, Ipy, Ipz, a_vel, a_f, 
-                                  flagarr, domain, l_dt, d_bcrec);
+                                  Imx, Imy, Imz, Ipx, Ipy, Ipz, a_vel, 
+                                  flagarr, domain, d_bcrec);
 
             AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
                          Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
@@ -162,10 +162,8 @@ void ebgodunov::make_trans_velocities (Box const& xbx, Box const& ybx, Box const
                                        Array4<Real const> const& Ipy,
                                        Array4<Real const> const& Ipz,
                                        Array4<Real const> const& vel,
-                                       Array4<Real const> const& f,
                                        Array4<EBCellFlag const> const& flag,
                                        const Box& domain,
-                                       Real l_dt, 
                                        BCRec  const* pbc)
 {
     const Dim3 dlo = amrex::lbound(domain);

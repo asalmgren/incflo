@@ -66,6 +66,7 @@ namespace redistribution {
                                                   amrex::Array4<amrex::Real const> const& fcy,
                                                   amrex::Array4<amrex::Real const> const& fcz),
                                      amrex::Array4<amrex::Real const> const& ccent,
+                                     amrex::Array4<int> const& itracker,
                                      amrex::Geometry& geom);
 
     void merge_redistribute_full   ( amrex::Box const& bx, int ncomp,

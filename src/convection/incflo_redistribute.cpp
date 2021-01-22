@@ -34,6 +34,9 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
     else if (advection_type == "Godunov")
         redist_type = 3;   // merge_redistribute update
 
+    IArrayBox itracker(grow(bx,1),1);
+    itracker.setVal(0);
+
     if (redist_type == 1)
     {
         flux_redistribute_eb (bx, ncomp, dUdt_out, dUdt_in, scratch, flag, vfrac, lev_geom);
@@ -44,10 +47,12 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
                               AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 
     } else if (redist_type == 3) {
+        Array4<int> itr = itracker.array();
         merge_redistribute_update(bx, ncomp, dUdt_out, dUdt_in,
                               AMREX_D_DECL(umac, vmac, wmac), flag,
                               AMREX_D_DECL(apx, apy, apz), vfrac,
-                              AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
+                              AMREX_D_DECL(fcx, fcy, fcz), ccc, 
+                              itr, lev_geom);
 
     } else if (redist_type == 4) {
         merge_redistribute_full(bx, ncomp, dUdt_out, dUdt_in, U_in, 
