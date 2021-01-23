@@ -426,8 +426,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 // Tangential extrapolation in the x-direction at j+1/2
                 if (apy(i,j+1,k) == 1.0)
                 {
-                    v_tmp_jp1 = v_ad(i-1,j+1,k);
-                    y_hat_jp1 = yhat(i-1,j+1,k);
+                    v_tmp_jp1 = v_ad(i,j+1,k);
+                    y_hat_jp1 = yhat(i,j+1,k);
                 }
                 else if (fcy(i,j+1,k) <= 0.0) 
                 {
@@ -610,6 +610,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 
             Real trans_sth; 
 
+            sth = yhi(i,j,k,n);
+
             // If either x-face is covered, set the tranxverse term to zero
             if (apx(i,j,k) == 0.0 or apx(i+1,j,k) == 0.0) {
                 trans_sth = 0.0;
@@ -659,7 +661,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                     sth += 0.5 * l_dt * f(i,j  ,k,n);
             }
         }
-
 
         if (l_use_mac_phi_in_godunov)
         {
