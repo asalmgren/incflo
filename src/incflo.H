@@ -581,7 +581,7 @@ private:
     }
 
     int nghost_eb_full () const {
-        return (m_advection_type != "MOL") ? 3 : 2;
+        return 4;
     }
 #endif
 
@@ -769,7 +769,6 @@ private:
     void PrintMaxValues (amrex::Real time);
     void PrintMaxVel (int lev);
     void PrintMaxGp (int lev);
-    void CheckForNans (int lev);
 
 };
 
