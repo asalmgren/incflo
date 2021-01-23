@@ -34,7 +34,15 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
     else if (advection_type == "Godunov")
         redist_type = 3;   // merge_redistribute update
 
-    IArrayBox itracker(grow(bx,1),1);
+#if (AMREX_SPACEDIM == 2)
+    // We assume that in 2D a cell will only need at most 3 neighbors to merge with, and we  
+    //    use the first component of this for the number of neighbors
+    IArrayBox itracker(grow(bx,1),4);
+#else
+    // We assume that in 3D a cell will only need at most 7 neighbors to merge with, and we  
+    //    use the first component of this for the number of neighbors
+    IArrayBox itracker(grow(bx,1),8);
+#endif
     itracker.setVal(0);
 
     if (redist_type == 1)
