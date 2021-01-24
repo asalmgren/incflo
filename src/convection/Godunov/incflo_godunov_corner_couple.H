@@ -168,10 +168,6 @@ void Godunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
             - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
 //          + dt/(3.e0*dz)*s(i,j,k,n)*(mac(i,j,k+1) - mac(i,j,k));
 
-        if (n == 0 and i == 9 and j == 12 and k == -1) amrex::Print() << " CORNER COUPLE(-1) " << " " << hi1 << 
-           " " << hi << " " << s(i,j,k,n) << " " << divu_cc(i,j,k) << std::endl;
-        if (n == 0 and i == 9 and j == 12 and k ==  0) amrex::Print() << " CORNER COUPLE( 0) " << " " << hi1 <<
-           " " << hi << " " << s(i,j,k,n) << " " << divu_cc(i,j,k) << std::endl;
     } else {
         lo1 = lo - dt/(6.e0*dz)*(  mac(i,j-1,k+1)   +   mac(i,j-1,k))
                               * (state(i,j-1,k+1,n) - state(i,j-1,k,n));
