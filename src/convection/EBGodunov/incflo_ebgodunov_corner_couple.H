@@ -26,10 +26,12 @@ void EBGodunov_corner_couple_yx (amrex::Real& lo1, amrex::Real& hi1,
                                  amrex::Array4<amrex::Real const> const& umac,
                                  amrex::Array4<amrex::Real const> const& state)
 {
+    lo1 = lo;
+    hi1 = hi;
+
     // Modify state on z-faces with x-derivatives to be used for computing state on y-faces
     if (apz(i,j,k) > 0.)
     {
-        lo1 = lo;
         if (apx(i+1,j-1,k) > 0. && apx(i,j-1,k) > 0.)
         {
             lo1 += ( - dt/(3.e0*dx)*(apx(i+1,j-1,k)*state(i+1,j-1,k,n)*umac(i+1,j-1,k)
@@ -39,7 +41,6 @@ void EBGodunov_corner_couple_yx (amrex::Real& lo1, amrex::Real& hi1,
                      - dt/(3.e0)   *s(i,j-1,k,n)*divu_cc(i,j-1,k);
         }
 
-        hi1 = hi;
         if (apx(i+1,j,k) > 0. && apx(i,j,k) > 0.)
         {
             hi1 += ( - dt/(3.e0*dx)*(apx(i+1,j,k)*state(i+1,j,k,n)*umac(i+1,j,k)
@@ -64,10 +65,12 @@ void EBGodunov_corner_couple_zx (amrex::Real& lo1, amrex::Real& hi1,
                                  amrex::Array4<amrex::Real const> const& umac,
                                  amrex::Array4<amrex::Real const> const& state)
 {
+    lo1 = lo;
+    hi1 = hi;
+
     // Modify state on y-faces with x-derivatives to be used for computing state on z-faces
     if (apy(i,j,k) > 0.)
     {
-        lo1 = lo;
         if (apx(i+1,j,k-1) > 0. && apx(i,j,k-1) > 0.)
         {
             lo1 += ( - dt/(3.e0*dx)*(apx(i+1,j,k-1)*state(i+1,j,k-1,n)*umac(i+1,j,k-1)
@@ -76,8 +79,6 @@ void EBGodunov_corner_couple_zx (amrex::Real& lo1, amrex::Real& hi1,
                                                  -apx(i  ,j,k  )*umac(i  ,j,k-1)) ) / vfrac(i,j,k-1)
                      - dt/(3.e0)   *s(i,j,k-1,n)*divu_cc(i,j,k-1);
         }
-
-        hi1 = hi;
         if (apx(i+1,j,k-1) > 0. && apx(i,j,k-1) > 0.)
         {
             hi1 += ( - dt/(3.e0*dx)*(apx(i+1,j,k)*state(i+1,j,k,n)*umac(i+1,j,k)
@@ -102,10 +103,12 @@ void EBGodunov_corner_couple_xy (amrex::Real& lo1, amrex::Real& hi1,
                                  amrex::Array4<amrex::Real const> const& vmac,
                                  amrex::Array4<amrex::Real const> const& state)
 {
+    lo1 = lo;
+    hi1 = hi;
+
     // Modify state on z-faces with y-derivatives to be used for computing state on x-faces
     if (apz(i,j,k) > 0.)
     {
-        lo1 = lo;
         if (apy(i-1,j+1,k) > 0. && apy(i-1,j,k-1) > 0.)
         {
             lo1 += ( - dt/(3.e0*dy)*(apy(i-1,j+1,k)*state(i-1,j+1,k,n)*vmac(i-1,j+1,k)
@@ -115,7 +118,6 @@ void EBGodunov_corner_couple_xy (amrex::Real& lo1, amrex::Real& hi1,
                      - dt/3.e0     *s(i-1,j,k,n)*divu_cc(i-1,j,k);
         }
     
-        hi1 = hi;
         if (apy(i,j+1,k) > 0. && apy(i,j,k-1) > 0.)
         {
             hi1 += ( - dt/(3.e0*dy)*(apy(i,j+1,k)*state(i,j+1,k,n)*vmac(i,j+1,k)
@@ -140,10 +142,12 @@ void EBGodunov_corner_couple_zy (amrex::Real& lo1, amrex::Real& hi1,
                                  amrex::Array4<amrex::Real const> const& vmac,
                                  amrex::Array4<amrex::Real const> const& state)
 {
+    lo1 = lo;
+    hi1 = hi;
+
     // Modify state on x-faces with y-derivatives to be used for computing state on z-faces
     if (apx(i,j,k) > 0.)
     {
-        lo1 = lo;
         if (apy(i,j+1,k-1) > 0. && apy(i,j,k-1) > 0.)
         {
             lo1 += ( - dt/(3.e0*dy)*(apy(i,j+1,k-1)*state(i,j+1,k-1,n)*vmac(i,j+1,k-1)
@@ -153,7 +157,6 @@ void EBGodunov_corner_couple_zy (amrex::Real& lo1, amrex::Real& hi1,
                      - dt/(3.e0)   *s(i,j,k-1,n)*divu_cc(i,j,k-1);
         }
 
-        hi1 = hi;
         if (apy(i,j+1,k) > 0. && apy(i,j,k) > 0.)
         {
             hi1 += ( - dt/(3.e0*dy)*(apy(i,j+1,k)*state(i,j+1,k,n)*vmac(i,j+1,k)
@@ -179,9 +182,10 @@ void EBGodunov_corner_couple_xz (amrex::Real& lo1, amrex::Real& hi1,
                                  amrex::Array4<amrex::Real const> const& state)
 {
     // Modify state on y-faces with z-derivatives to be used for computing state on x-faces
+    lo1 = lo;
+    hi1 = hi;
     if (apy(i,j,k) > 0.)
     {
-        lo1 = lo;
         if (apz(i-1,j,k+1) > 0. && apz(i-1,j,k) > 0.)
         {
             lo1 += ( - dt/(3.e0*dz)*(apz(i-1,j,k+1)*state(i-1,j,k+1,n)*wmac(i-1,j,k+1)
@@ -191,7 +195,6 @@ void EBGodunov_corner_couple_xz (amrex::Real& lo1, amrex::Real& hi1,
                      - dt/(3.e0)   *s(i-1,j,k,n)*divu_cc(i-1,j,k);
         }
 
-        hi1 = hi;
         if (apz(i,j,k+1) > 0. && apz(i,j,k) > 0.)
         {
             hi1 += ( - dt/(3.e0*dz)*(apz(i,j,k+1)*state(i,j,k+1,n)*wmac(i,j,k+1)
@@ -217,9 +220,11 @@ void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
                                  amrex::Array4<amrex::Real const> const& state)
 {
     // Modify state on x-faces with z-derivatives to be used for computing state on y-faces
+    lo1 = lo;
+    hi1 = hi;
+
     if (apx(i,j,k) > 0.)
     {
-        lo1 = lo;
         if (apz(i,j-1,k+1) > 0. && apz(i,j-1,k) > 0.)
         {
             lo1 += ( - dt/(3.e0*dz)*(apz(i,j-1,k+1)*state(i,j-1,k+1,n)*wmac(i,j-1,k+1)
@@ -229,7 +234,6 @@ void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
                      - dt/(3.e0)   *s(i,j-1,k,n)*divu_cc(i,j-1,k);
         }
 
-        hi1 = hi;
         if (apz(i,j,k+1) > 0. && apz(i,j,k) > 0.)
         {
             hi1 += ( - dt/(3.e0*dz)*(apz(i,j,k+1)*state(i,j,k+1,n)*wmac(i,j,k+1)
@@ -242,4 +246,3 @@ void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
 
 }
 }
-#endif
