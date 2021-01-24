@@ -246,3 +246,4 @@ void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
 
 }
 }
+#endif
