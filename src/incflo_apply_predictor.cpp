@@ -348,18 +348,6 @@ void incflo::ApplyPredictor (bool incremental_projection)
                         AMREX_D_TERM(vel(i,j,k,0) += l_dt*(dvdt(i,j,k,0)+vel_f(i,j,k,0));,
                                      vel(i,j,k,1) += l_dt*(dvdt(i,j,k,1)+vel_f(i,j,k,1));,
                                      vel(i,j,k,2) += l_dt*(dvdt(i,j,k,2)+vel_f(i,j,k,2)););
-
-#if 0
-         if (std::abs(vel(i,j,k,2)) > 1.e-8) amrex::Print() << "LARGE Z-VEL " << IntVect(i,j,k) << 
-                " " << vel(i,j,k,2) << std::endl;
-         if (std::abs(vel(i,j,k,0)-vel(i,j,0,0)) > 1.e-8) amrex::Print() << "LARGE X-VEL " << IntVect(i,j,k) << 
-                " " << vel(i,j,k,0) << " " << vel(i,j,0,0) << std::endl;
-         if (std::abs(vel(i,j,k,1)-vel(i,j,0,1)) > 1.e-8) amrex::Print() << "LARGE Y-VEL " << IntVect(i,j,k) << 
-                " " << vel(i,j,k,1) << " " << vel(i,j,0,1) << std::endl;
-
-          if (i == 9 and j == 11) amrex::Print() << "MAKING XVEL " << k << " " << vel(i,j,k,0) << " " <<
-                           dvdt(i,j,k,0) << std::endl;
-#endif
                     });
                 }
             } 
@@ -402,11 +390,6 @@ void incflo::ApplyPredictor (bool incremental_projection)
         diffuse_velocity(get_velocity_new(), get_density_new(), GetVecOfConstPtrs(vel_eta), dt_diff);
     }
 
-#if 0
-    MultiFab& vel = (*m_leveldata[0]).velocity;
-    print_state(vel,IntVect(12,19,0));
-#endif
-
     // **********************************************************************************************
     // 
     // Project velocity field, update pressure
@@ -419,7 +402,8 @@ void incflo::ApplyPredictor (bool incremental_projection)
     // Over-write velocity in cells with vfrac < 1e-4
     // 
     // **********************************************************************************************
-    incflo_correct_small_cells(get_velocity_new(),
-                               AMREX_D_DECL(GetVecOfConstPtrs(u_mac), GetVecOfConstPtrs(v_mac),
-                               GetVecOfConstPtrs(w_mac)));
+    if (m_advection_type == "MOL")
+        incflo_correct_small_cells(get_velocity_new(),
+                                   AMREX_D_DECL(GetVecOfConstPtrs(u_mac), GetVecOfConstPtrs(v_mac),
+                                   GetVecOfConstPtrs(w_mac)));
 }
