@@ -240,6 +240,11 @@ void incflo::init_flow_in_box (Box const& vbx, Box const& gbx,
     pp.queryarr("Lo", boxLo, 0, AMREX_SPACEDIM);
     pp.queryarr("Hi", boxHi, 0, AMREX_SPACEDIM);
 
+#if (AMREX_SPACEDIM == 3)
+    int periodic_dir;
+    pp.get("periodic_dir", periodic_dir);
+#endif
+
     pp.query("offset", offset);
 
     Real xlo = boxLo[0] + offset;
@@ -248,21 +253,67 @@ void incflo::init_flow_in_box (Box const& vbx, Box const& gbx,
     Real ylo = boxLo[1] + offset;
     Real yhi = boxHi[1] - offset;
 
-    amrex::ParallelFor(vbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-        Real x = (i+0.5)*dx[0]*(xhi-xlo) + xlo;
-        Real y = (j+0.5)*dx[1]*(yhi-ylo) + ylo;
-        constexpr Real pi = 3.1415926535897932;
-        vel(i,j,k,0) =  std::sin(pi*x) * std::cos(pi*y);
-        vel(i,j,k,1) = -std::cos(pi*x) * std::sin(pi*y);
 #if (AMREX_SPACEDIM == 3)
-        vel(i,j,k,2) = 0.0;
+    Real zlo = boxLo[2] + offset;
+    Real zhi = boxHi[2] - offset;
 #endif
-        if (x < 0.5)
-            tracer(i,j,k) = 0.0;
-        else 
-            tracer(i,j,k) = 1.;
-    });
+
+#if (AMREX_SPACEDIM == 3)
+    if (periodic_dir == 0)
+    {
+        amrex::ParallelFor(vbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            Real x = (i+0.5)*dx[0]*(xhi-xlo) + xlo;
+            Real y = (j+0.5)*dx[1]*(yhi-ylo) + ylo;
+            Real z = (k+0.5)*dx[2]*(zhi-zlo) + zlo;
+            constexpr Real pi = 3.1415926535897932;
+            vel(i,j,k,1) =  std::sin(pi*y) * std::cos(pi*z);
+            vel(i,j,k,2) = -std::cos(pi*y) * std::sin(pi*z);
+            vel(i,j,k,0) = 1.0;
+            if (y < 0.5)
+                tracer(i,j,k) = 0.0;
+            else 
+                tracer(i,j,k) = 1.;
+        });
+    } else if (periodic_dir == 1)
+    {
+        amrex::ParallelFor(vbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            Real x = (i+0.5)*dx[0]*(xhi-xlo) + xlo;
+            Real y = (j+0.5)*dx[1]*(yhi-ylo) + ylo;
+            Real z = (k+0.5)*dx[2]*(zhi-zlo) + zlo;
+            constexpr Real pi = 3.1415926535897932;
+            vel(i,j,k,2) =  std::sin(pi*z) * std::cos(pi*x);
+            vel(i,j,k,0) = -std::cos(pi*z) * std::sin(pi*x);
+            vel(i,j,k,1) = 1.0;
+            if (z < 0.5)
+                tracer(i,j,k) = 0.0;
+            else 
+                tracer(i,j,k) = 1.;
+        });
+    } else if (periodic_dir == 2)
+#endif
+    {
+        amrex::ParallelFor(vbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+        {
+            Real x = (i+0.5)*dx[0]*(xhi-xlo) + xlo;
+            Real y = (j+0.5)*dx[1]*(yhi-ylo) + ylo;
+            constexpr Real pi = 3.1415926535897932;
+            vel(i,j,k,0) =  std::sin(pi*x) * std::cos(pi*y);
+            vel(i,j,k,1) = -std::cos(pi*x) * std::sin(pi*y);
+#if (AMREX_SPACEDIM == 3)
+            vel(i,j,k,2) = 1.0;
+#endif
+            if (x < 0.5)
+                tracer(i,j,k) = 0.0;
+            else 
+                tracer(i,j,k) = 1.;
+        });
+#if (AMREX_SPACEDIM == 3)
+    } else {
+       amrex::Error("flow_in_box assumes a periodic direction");
+#endif
+    }
 }
 
 void incflo::init_couette (Box const& vbx, Box const& gbx,
