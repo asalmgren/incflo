@@ -773,9 +773,10 @@ void ebgodunov::predict_plm_z (Box const& bx_in,
                    qpls = q(i,j,k,n) + delta_z * slopes_eb_hi[2]
                                      + delta_x * slopes_eb_hi[0]
                                      + delta_y * slopes_eb_hi[1];
-                   qpls = amrex::max(amrex::min(qpls, qcc_max), qcc_min);
 
+                   qpls = amrex::max(amrex::min(qpls, qcc_max), qcc_min);
                    qpls -= 0.5 * dtdz * ccvel(i,j,k,2) * slopes_eb_hi[2];
+
 
                 }  // end of making qpls
 
@@ -818,14 +819,12 @@ void ebgodunov::predict_plm_z (Box const& bx_in,
                                               AMREX_D_DECL(domain_jlo, domain_jlo, domain_klo),
                                               AMREX_D_DECL(domain_jhi, domain_jhi, domain_khi));
 
-
                    qmns = q(i,j,k-1,n) + delta_x * slopes_eb_lo[0]
                                        + delta_y * slopes_eb_lo[1]
                                        + delta_z * slopes_eb_lo[2];
 
                    qmns = amrex::max(amrex::min(qmns, qcc_max), qcc_min);
-
-                   qmns -= 0.5 * dtdz * ccvel(i,j,k,1-1) * slopes_eb_lo[2];
+                   qmns -= 0.5 * dtdz * ccvel(i,j,k-1,2) * slopes_eb_lo[2];
 
                 }  // end of making qmns
             }
