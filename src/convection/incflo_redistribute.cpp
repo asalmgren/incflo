@@ -62,12 +62,14 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
                               AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                               itr, lev_geom);
 
+#if 0
     } else if (redist_type == 4) {
         merge_redistribute_full(bx, ncomp, dUdt_out, dUdt_in, U_in, 
                               AMREX_D_DECL(umac, vmac, wmac), flag,
                               AMREX_D_DECL(apx, apy, apz), vfrac,
                               AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom, dt);
 
+#endif
     } else if (redist_type == 0) {
         amrex::ParallelFor(bx, ncomp,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
