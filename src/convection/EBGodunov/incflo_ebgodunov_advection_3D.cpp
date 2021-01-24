@@ -304,7 +304,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real sth = yhi(i,j,k,n);
 
             // If we can't compute good transverse terms, don't use any d/dt terms at all
-            if (apx(i+1,j-1,k) > 0. && apx(i,j-1,k) > 0. && apz(i,j-1,k+1) > 0. && apy(i,j-1,k) > 0.)
+            if (apx(i+1,j-1,k) > 0. && apx(i,j-1,k) > 0. && apz(i,j-1,k+1) > 0. && apz(i,j-1,k) > 0.)
             {
                 Real quyl = (apy(i,j,k)*v_mac(i,j,k) - apy(i,j-1,k)*v_mac(i,j-1,k)) * q(i,j-1,k,n);
                 stl += ( - (0.5*dtdy) * quyl
@@ -317,14 +317,14 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             }
 
             // If we can't compute good transverse terms, don't use any d/dt terms at all
-            if (apx(i+1,j,k) > 0. && apx(i,j,k) > 0. && apz(i,j,k+1) > 0. && apy(i,j,k) > 0.)
+            if (apx(i+1,j,k) > 0. && apx(i,j,k) > 0. && apz(i,j,k+1) > 0. && apz(i,j,k) > 0.)
             {
                 Real quyh = (apy(i,j+1,k)*v_mac(i,j+1,k) - apy(i,j,k)*v_mac(i,j,k)) * q(i,j,k,n);
-                sth += yhi(i,j,k,n) - (0.5*dtdy) * quyh
-                                    - (0.5*dtdx)*(apx(i+1,j,k  )*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
-                                                - apx(i  ,j,k  )*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  ))
-                                    - (0.5*dtdz)*(apz(i  ,j,k+1)*zxlo(i  ,j,k+1,n)*w_mac(i  ,j,k+1)
-                                                - apz(i  ,j,k  )*zxlo(i  ,j,k  ,n)*w_mac(i  ,j,k  )) / vfrac_arr(i,j,k);
+                sth += - (0.5*dtdy) * quyh
+                       - (0.5*dtdx)*(apx(i+1,j,k  )*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
+                                   - apx(i  ,j,k  )*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  ))
+                       - (0.5*dtdz)*(apz(i  ,j,k+1)*zxlo(i  ,j,k+1,n)*w_mac(i  ,j,k+1)
+                                   - apz(i  ,j,k  )*zxlo(i  ,j,k  ,n)*w_mac(i  ,j,k  )) / vfrac_arr(i,j,k);
                 if (fq && vfrac_arr(i,j  ,k) > 0.)
                     sth += 0.5*l_dt*fq(i,j  ,k,n);
             }
