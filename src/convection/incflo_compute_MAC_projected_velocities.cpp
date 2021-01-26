@@ -1,5 +1,4 @@
 #include <Godunov.H>
-#include <Hybrid.H>
 #include <MOL.H>
 #include <incflo.H>
 
@@ -142,15 +141,6 @@ incflo::compute_MAC_projected_velocities (
                                        ebfact,
 #endif
                                        geom); 
-        } else if (m_advection_type == "Hybrid") {
-
-            hybrid::predict_vels_on_faces(AMREX_D_DECL(*u_mac[lev], *v_mac[lev], *w_mac[lev]),
-                                          *vel[lev], *vel_forces[lev], 
-                                          get_velocity_bcrec(), get_velocity_bcrec_device_ptr(), 
-#ifdef AMREX_USE_EB
-                                          ebfact, 
-#endif
-                                          l_dt, geom[lev]); 
         } else {
             amrex::Abort("Dont know this advection type");
         }

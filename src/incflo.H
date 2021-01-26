@@ -559,7 +559,6 @@ private:
         return (m_advection_type != "MOL") ? 3 : 2;
     }
 
-    // For Hybrid , we need 2 ghost cells
     // For Godunov, we need 1 ghost cell 
     // For MOL    , we need 0 ghost cells
     int nghost_force () const { return (m_advection_type != "MOL") ? 3 : 0; }

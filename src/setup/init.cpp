@@ -56,7 +56,7 @@ void incflo::ReadParameters ()
         pp.query("advect_tracer"            , m_advect_tracer);
         pp.query("test_tracer_conservation" , m_test_tracer_conservation);
 
-        // Are we using MOL, Godunov or Hybrid?
+        // Are we using MOL or Godunov?
         pp.query("advection_type"                   , m_advection_type);
         pp.query("use_ppm"                          , m_godunov_ppm);
         pp.query("godunov_use_forces_in_trans"      , m_godunov_use_forces_in_trans);
@@ -65,8 +65,8 @@ void incflo::ReadParameters ()
 
         if (m_advection_type == "MOL") m_godunov_include_diff_in_forcing = false;
 
-        if (m_advection_type != "MOL" and m_advection_type != "Godunov" and m_advection_type != "Hybrid")
-            amrex::Abort("advection type must be MOL, Godunov or Hybrid");
+        if (m_advection_type != "MOL" and m_advection_type != "Godunov")
+            amrex::Abort("advection type must be MOL or Godunov");
 
         // The default for diffusion_type is 2, i.e. the default m_diff_type is DiffusionType::Implicit
         int diffusion_type = 2;

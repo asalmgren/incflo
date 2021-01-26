@@ -56,10 +56,12 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
 
     } else if (redist_type == 3) {
         Array4<int> itr = itracker.array();
+        make_itracker(bx,
+                      AMREX_D_DECL(apx, apy, apz), vfrac,
+                      itr, lev_geom);
+
         merge_redistribute_update(bx, ncomp, dUdt_out, dUdt_in,
-                              AMREX_D_DECL(umac, vmac, wmac), flag,
                               AMREX_D_DECL(apx, apy, apz), vfrac,
-                              AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                               itr, lev_geom);
 
 #if 0

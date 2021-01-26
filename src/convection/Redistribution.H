@@ -51,21 +51,22 @@ namespace redistribution {
                                               amrex::Array4<amrex::Real const> const& fcz),
                                  amrex::Array4<amrex::Real const> const& ccent,
                                  amrex::Geometry& geom);
-    void merge_redistribute_update ( amrex::Box const& bx, int ncomp,
-                                     amrex::Array4<amrex::Real>       const& dUdt_out,
-                                     amrex::Array4<amrex::Real const> const& dUdt_in,
-                                     AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
-                                                  amrex::Array4<amrex::Real const> const& vmac,
-                                                  amrex::Array4<amrex::Real const> const& wmac),
-                                     amrex::Array4<amrex::EBCellFlag const> const& flag,
+
+    void make_itracker             ( amrex::Box const& bx,
                                      AMREX_D_DECL(amrex::Array4<amrex::Real const> const& apx,
                                                   amrex::Array4<amrex::Real const> const& apy,
                                                   amrex::Array4<amrex::Real const> const& apz),
                                      amrex::Array4<amrex::Real const> const& vfrac,
-                                     AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
-                                                  amrex::Array4<amrex::Real const> const& fcy,
-                                                  amrex::Array4<amrex::Real const> const& fcz),
-                                     amrex::Array4<amrex::Real const> const& ccent,
+                                     amrex::Array4<int> const& itracker,
+                                     amrex::Geometry& geom);
+
+    void merge_redistribute_update ( amrex::Box const& bx, int ncomp,
+                                     amrex::Array4<amrex::Real>       const& dUdt_out,
+                                     amrex::Array4<amrex::Real const> const& dUdt_in,
+                                     AMREX_D_DECL(amrex::Array4<amrex::Real const> const& apx,
+                                                  amrex::Array4<amrex::Real const> const& apy,
+                                                  amrex::Array4<amrex::Real const> const& apz),
+                                     amrex::Array4<amrex::Real const> const& vfrac,
                                      amrex::Array4<int> const& itracker,
                                      amrex::Geometry& geom);
 

@@ -6,20 +6,13 @@
 using namespace amrex;
 
 #if (AMREX_SPACEDIM == 2)
+
 void
-redistribution::merge_redistribute_update (
-                       Box const& bx, int ncomp,
-                       Array4<Real>       const& dUdt_out,
-                       Array4<Real const> const& dUdt_in,
-                       Array4<Real const> const& umac,
-                       Array4<Real const> const& vmac,
-                       Array4<EBCellFlag const> const& flag,
+redistribution::make_itracker (
+                       Box const& bx,
                        Array4<Real const> const& apx,
                        Array4<Real const> const& apy,
                        Array4<Real const> const& vfrac,
-                       Array4<Real const> const& fcx,
-                       Array4<Real const> const& fcy,
-                       Array4<Real const> const& ccent,
                        Array4<int> const& itracker,
                        Geometry& lev_geom)
 {
@@ -36,7 +29,6 @@ redistribution::merge_redistribute_update (
     // |  4   5 
     // j  1 2 3
     //   i --->
-
  
     Array<int,9> imap{0,-1,0,1,-1,1,-1,0,1};
     Array<int,9> jmap{0,-1,-1,-1,0,0,1,1,1};
@@ -49,21 +41,7 @@ redistribution::merge_redistribute_update (
     const auto& is_periodic_y = lev_geom.isPeriodic(1);
 
     if (debug_print)
-        amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
-
-    amrex::ParallelFor(bx, 
-    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-        if (vfrac(i,j,k) > 0.0)
-        {
-            for (int n = 0; n < ncomp; n++)
-                dUdt_out(i,j,k,n) = dUdt_in(i,j,k,n);
-        } else {
-            // We shouldn't need to do this but just in case ...
-            for (int n = 0; n < ncomp; n++)
-                dUdt_out(i,j,k,n) = 1.e100;
-        } 
-    });
+        amrex::Print() << " IN MAKE_ITRACKER DOING BOX " << bx << std::endl;
 
     amrex::ParallelFor(bx, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -75,10 +53,14 @@ redistribution::merge_redistribute_update (
            const Real dapy = apy(i  ,j+1,k  ) - apy(i,j,k);
            apnorm = std::sqrt(dapx*dapx+dapy*dapy);
            apnorm_inv = 1.0/apnorm;
-           const Real nx = dapx * apnorm_inv;
-           const Real ny = dapy * apnorm_inv;
+           Real nx = dapx * apnorm_inv;
+           Real ny = dapy * apnorm_inv;
 
-           if (std::abs(nx) > std::abs(ny)+small_norm) 
+           // We use small_norm as an off just to break the tie when at 45 degrees ...
+           // Note that x-direction is preferred
+           ny -= small_norm;
+
+           if (std::abs(nx) > std::abs(ny)) 
            {
                if (nx > 0) 
                    itracker(i,j,k,1) = 5;
@@ -307,6 +289,52 @@ redistribution::merge_redistribute_update (
        }
     });
                
+}
+void
+redistribution::merge_redistribute_update (
+                       Box const& bx, int ncomp,
+                       Array4<Real>       const& dUdt_out,
+                       Array4<Real const> const& dUdt_in,
+                       Array4<Real const> const& apx,
+                       Array4<Real const> const& apy,
+                       Array4<Real const> const& vfrac,
+                       Array4<int> const& itracker,
+                       Geometry& lev_geom)
+{
+    bool debug_print = false; 
+
+    const Box domain = lev_geom.Domain();
+
+    // Note that itracker has 4 components and all are initialized to zero
+    // We will add to the first component every time this cell is included in a merged neighborhood, 
+    //    either by merging or being merged
+    // We identify the cells in the remaining three components with the following ordering
+    // 
+    // ^  6 7 8
+    // |  4   5 
+    // j  1 2 3
+    //   i --->
+
+    if (debug_print)
+        amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
+ 
+    Array<int,9> imap{0,-1,0,1,-1,1,-1,0,1};
+    Array<int,9> jmap{0,-1,-1,-1,0,0,1,1,1};
+
+    amrex::ParallelFor(bx, 
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+        if (vfrac(i,j,k) > 0.0)
+        {
+            for (int n = 0; n < ncomp; n++)
+                dUdt_out(i,j,k,n) = dUdt_in(i,j,k,n);
+        } else {
+            // We shouldn't need to do this but just in case ...
+            for (int n = 0; n < ncomp; n++)
+                dUdt_out(i,j,k,n) = 1.e100;
+        } 
+    });
+
     amrex::ParallelFor(bx, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {

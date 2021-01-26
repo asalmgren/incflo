@@ -153,7 +153,7 @@ void incflo::ApplyPredictor (bool incremental_projection)
     }
 
     // *************************************************************************************
-    // if (advection_type == "Godunov" or "Hybrid") 
+    // if (advection_type == "Godunov")
     //      Compute the explicit advective terms R_u^(n+1/2), R_s^(n+1/2) and R_t^(n+1/2)
     // if (advection_type == "MOL"                ) 
     //      Compute the explicit advective terms R_u^n      , R_s^n       and R_t^n

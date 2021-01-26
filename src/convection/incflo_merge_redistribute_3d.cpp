@@ -7,22 +7,12 @@ using namespace amrex;
 
 #if (AMREX_SPACEDIM == 3)
 void
-redistribution::merge_redistribute_update (
-                       Box const& bx, int ncomp,
-                       Array4<Real>       const& dUdt_out,
-                       Array4<Real const> const& dUdt_in,
-                       Array4<Real const> const& umac,
-                       Array4<Real const> const& vmac,
-                       Array4<Real const> const& wmac,
-                       Array4<EBCellFlag const> const& flag,
+redistribution::make_itracker (
+                       Box const& bx, 
                        Array4<Real const> const& apx,
                        Array4<Real const> const& apy,
                        Array4<Real const> const& apz,
                        Array4<Real const> const& vfrac,
-                       Array4<Real const> const& fcx,
-                       Array4<Real const> const& fcy,
-                       Array4<Real const> const& fcz,
-                       Array4<Real const> const& ccent,
                        Array4<int> const& itracker,
                        Geometry& lev_geom)
 {
@@ -48,7 +38,6 @@ redistribution::merge_redistribute_update (
     Array<int,27>    kmap{0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
     Array<int,27> inv_map{0, 8, 7, 6, 5, 4, 3, 2, 1,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10, 9};
 
-    // We will use small_norm as an off just to break the tie when at 45 degrees ...
     const Real small_norm = 1.e-8;
 
     const auto& is_periodic_x = lev_geom.isPeriodic(0);
@@ -56,21 +45,7 @@ redistribution::merge_redistribute_update (
     const auto& is_periodic_z = lev_geom.isPeriodic(2);
 
     if (debug_print)
-        amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
-
-    amrex::ParallelFor(bx, 
-    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-    {
-        if (vfrac(i,j,k) > 0.0)
-        {
-            for (int n = 0; n < ncomp; n++)
-                dUdt_out(i,j,k,n) = dUdt_in(i,j,k,n);
-        } else {
-            // We shouldn't need to do this but just in case ...
-            for (int n = 0; n < ncomp; n++)
-                dUdt_out(i,j,k,n) = 1.e100;
-        } 
-    });
+        amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << std::endl;
 
     amrex::ParallelFor(bx, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -83,9 +58,14 @@ redistribution::merge_redistribute_update (
            const Real dapz = apz(i  ,j  ,k+1) - apz(i,j,k);
            apnorm = std::sqrt(dapx*dapx+dapy*dapy+dapz*dapz);
            apnorm_inv = 1.0/apnorm;
-           const Real nx = dapx * apnorm_inv;
-           const Real ny = dapy * apnorm_inv;
-           const Real nz = dapz * apnorm_inv;
+           Real nx = dapx * apnorm_inv;
+           Real ny = dapy * apnorm_inv;
+           Real nz = dapz * apnorm_inv;
+
+           // We use small_norm as an offset just to break the tie when at 45 degrees ...
+           // Note that x-direction is preferred, followed by y-direction
+           nz -= 2.*small_norm;
+           ny -= small_norm;
 
            bool xdir_ok = is_periodic_x || (i != domain.smallEnd(0) && i != domain.bigEnd(0)) ;
            bool ydir_ok = is_periodic_y || (j != domain.smallEnd(1) && j != domain.bigEnd(1)) ;
@@ -123,7 +103,7 @@ redistribution::merge_redistribute_update (
            // Override above logic if at a domain boundary (and non-periodic)
            if (!xdir_ok)
            {
-               if ( (std::abs(ny) > std::abs(nz)+small_norm) )
+               if ( (std::abs(ny) > std::abs(nz)) )
                {
                    if (ny > 0) 
                        itracker(i,j,k,1) = 7;
@@ -138,7 +118,7 @@ redistribution::merge_redistribute_update (
            }
            if (!ydir_ok)
            {
-               if ( (std::abs(nx) > std::abs(nz)+small_norm) )
+               if ( (std::abs(nx) > std::abs(nz)) )
                {
                    if (nx > 0) 
                        itracker(i,j,k,1) = 5;
@@ -153,7 +133,7 @@ redistribution::merge_redistribute_update (
            }
            if (!zdir_ok)
            {
-               if ( (std::abs(nx) > std::abs(ny)+small_norm) )
+               if ( (std::abs(nx) > std::abs(ny)) )
                {
                    if (nx > 0) 
                        itracker(i,j,k,1) = 5;
@@ -193,7 +173,7 @@ redistribution::merge_redistribute_update (
                // Original offset was in x-direction
                if (joff == 0 and koff == 0)
                {
-                   if ( (std::abs(ny) > std::abs(nz)+small_norm) )
+                   if ( (std::abs(ny) > std::abs(nz)) )
                    {
                        if (ny > 0) 
                            itracker(i,j,k,2) = 7;
@@ -209,7 +189,7 @@ redistribution::merge_redistribute_update (
                // Original offset was in y-direction
                } else if (ioff == 0 and koff == 0)
                {
-                   if ( (std::abs(nx) > std::abs(nz)+small_norm) )
+                   if ( (std::abs(nx) > std::abs(nz)) )
                    {
                        if (nx > 0) 
                            itracker(i,j,k,2) = 5;
@@ -225,7 +205,7 @@ redistribution::merge_redistribute_update (
                // Original offset was in z-direction
                } else if (ioff == 0 and joff == 0)
                {
-                   if ( (std::abs(nx) > std::abs(ny)+small_norm) )
+                   if ( (std::abs(nx) > std::abs(ny)) )
                    {
                        if (nx > 0) 
                            itracker(i,j,k,2) = 5;
@@ -459,6 +439,63 @@ redistribution::merge_redistribute_update (
                }
           }
        }
+    });
+}
+
+void
+redistribution::merge_redistribute_update (
+                       Box const& bx, int ncomp,
+                       Array4<Real>       const& dUdt_out,
+                       Array4<Real const> const& dUdt_in,
+                       Array4<Real const> const& apx,
+                       Array4<Real const> const& apy,
+                       Array4<Real const> const& apz,
+                       Array4<Real const> const& vfrac,
+                       Array4<int> const& itracker,
+                       Geometry& lev_geom)
+{
+    bool debug_print = true;
+
+    const Box domain = lev_geom.Domain();
+
+    // Note that itracker has 8 components and all are initialized to zero
+    // We will add to the first component every time this cell is included in a merged neighborhood, 
+    //    either by merging or being merged
+    // We identify the cells in the remaining three components with the following ordering
+    // 
+    //    at k-1   |   at k  |   at k+1 
+    // 
+    // ^  15 16 17 |  6 7 8  |  24 25 26
+    // |  12 13 14 |  4   5  |  21 22 23
+    // j  9  10 11 |  1 2 3  |  18 19 20
+    //   i --->
+    // 
+    // Note the first component of each of these arrays should never be used
+    Array<int,27>    imap{0,-1, 0, 1,-1, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1};
+    Array<int,27>    jmap{0,-1,-1,-1, 0, 0, 1, 1, 1,-1,-1,-1, 0, 0, 0, 1, 1, 1,-1,-1,-1, 0, 0, 0, 1, 1, 1};
+    Array<int,27>    kmap{0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1,-1,-1,-1,-1,-1,-1,-1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+    const Real small_norm = 1.e-8;
+
+    const auto& is_periodic_x = lev_geom.isPeriodic(0);
+    const auto& is_periodic_y = lev_geom.isPeriodic(1);
+    const auto& is_periodic_z = lev_geom.isPeriodic(2);
+
+    if (debug_print)
+        amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
+
+    amrex::ParallelFor(bx, 
+    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+    {
+        if (vfrac(i,j,k) > 0.0)
+        {
+            for (int n = 0; n < ncomp; n++)
+                dUdt_out(i,j,k,n) = dUdt_in(i,j,k,n);
+        } else {
+            // We shouldn't need to do this but just in case ...
+            for (int n = 0; n < ncomp; n++)
+                dUdt_out(i,j,k,n) = 1.e100;
+        } 
     });
                
     amrex::ParallelFor(bx, 
