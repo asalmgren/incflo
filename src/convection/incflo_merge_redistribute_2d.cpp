@@ -23,6 +23,8 @@ redistribution::merge_redistribute_update (
                        Array4<int> const& itracker,
                        Geometry& lev_geom)
 {
+    bool debug_print = false; 
+
     const Box domain = lev_geom.Domain();
 
     // Note that itracker has 4 components and all are initialized to zero
@@ -46,7 +48,8 @@ redistribution::merge_redistribute_update (
     const auto& is_periodic_x = lev_geom.isPeriodic(0);
     const auto& is_periodic_y = lev_geom.isPeriodic(1);
 
-    amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
+    if (debug_print)
+        amrex::Print() << " IN MERGE_REDISTRIBUTE DOING BOX " << bx << " with ncomp " << ncomp << std::endl;
 
     amrex::ParallelFor(bx, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -88,16 +91,19 @@ redistribution::merge_redistribute_update (
                else
                    itracker(i,j,k,1) = 2;
            }
+
+           bool xdir_ok = is_periodic_x || (i != domain.smallEnd(0) && i != domain.bigEnd(0)) ;
+           bool ydir_ok = is_periodic_y || (j != domain.smallEnd(1) && j != domain.bigEnd(1)) ;
     
            // Override above logic if at a domain boundary (and non-periodic)
-           if ( !is_periodic_x && (i == domain.smallEnd(0) || i == domain.bigEnd(0)) )
+           if (!xdir_ok)
            {
                if (ny > 0) 
                    itracker(i,j,k,1) = 7;
                else 
                    itracker(i,j,k,1) = 2;
            }
-           if ( !is_periodic_y && (j == domain.smallEnd(1) || j == domain.bigEnd(1)) )
+           if (!ydir_ok)
            {
                if (nx > 0) 
                    itracker(i,j,k,1) = 5;
@@ -118,12 +124,13 @@ redistribution::merge_redistribute_update (
 
            Real sum_vol = vfrac(i,j,k) + vfrac(i+ioff,j+joff,k);
 
-           amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
-                             " trying to merge with " << IntVect(i+ioff,j+joff) <<
-                             " with volfrac " << vfrac(i+ioff,j+joff,k) << 
-                             " to get new sum_vol " <<  sum_vol << std::endl;
+           if (debug_print)
+               amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
+                                 " trying to merge with " << IntVect(i+ioff,j+joff) <<
+                                 " with volfrac " << vfrac(i+ioff,j+joff,k) << 
+                                 " to get new sum_vol " <<  sum_vol << std::endl;
 
-           // We can merge in the other direction
+           // If the merged cell isn't large enough, we can merge in the other direction
            if (sum_vol < 0.5)
            {
                // Original offset was in y-direction, so we will add to the x-direction
@@ -150,10 +157,11 @@ redistribution::merge_redistribute_update (
                int joff = jmap[itracker(i,j,k,2)];
 
                sum_vol += vfrac(i+ioff,j+joff,k);
-               amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
-                                 " trying to ALSO merge with " << IntVect(i+ioff,j+joff) <<
-                                 " with volfrac " << vfrac(i+ioff,j+joff,k) << 
-                                  " to get new sum_vol " <<  sum_vol << std::endl;
+               if (debug_print)
+                   amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
+                                     " trying to ALSO merge with " << IntVect(i+ioff,j+joff) <<
+                                     " with volfrac " << vfrac(i+ioff,j+joff,k) << 
+                                      " to get new sum_vol " <<  sum_vol << std::endl;
            }
         
            // Now we merge in the corner direction
@@ -172,14 +180,15 @@ redistribution::merge_redistribute_update (
                else 
                    itracker(i,j,k,3) = 1;
 
-               // (i,j) merges with at least two cells now
+               // (i,j) merges with at least three cells now
                itracker(i,j,k,0) += 1;
 
                sum_vol += vfrac(i+ioff,j+joff,k);
-               // amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
-               //                   " trying to ALSO merge with " << IntVect(i+ioff,j+joff) <<
-               //                   " with volfrac " << vfrac(i+ioff,j+joff,k) << 
-               //                   " to get new sum_vol " <<  sum_vol << std::endl;
+               if (debug_print)
+                   amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
+                                     " trying to ALSO merge with " << IntVect(i+ioff,j+joff) <<
+                                     " with volfrac " << vfrac(i+ioff,j+joff,k) << 
+                                     " to get new sum_vol " <<  sum_vol << std::endl;
            }
        }
     });
@@ -214,12 +223,14 @@ redistribution::merge_redistribute_update (
                    // My neigbor didn't know about me so add me to my nbor's list of neighbors
                    itracker(i+ioff,j+joff,k,0) += 1;
                    itracker(i+ioff,j+joff,k,n_of_nbor+1) = inv_map[itracker(i,j,k,ipair)];
-                   // amrex::Print() << "Cell   " << IntVect(i,j) << " had nbor " << IntVect(i+ioff,j+joff) 
-                   //                << " in its nbor list by taking inverse of " << itracker(i,j,k,ipair) 
-                   //                << " which gave " << inv_map[itracker(i,j,k,ipair)] << std::endl;
-                   // amrex::Print() << "Adding " << IntVect(i+ioff+imap[itracker(i+ioff,j+joff,k,n_of_nbor+1)],
-                   //                                        j+joff+jmap[itracker(i+ioff,j+joff,k,n_of_nbor+1)])
-                   //                << " to the nbor list of " << IntVect(i+ioff,j+joff) << std::endl;
+                   if (debug_print)
+                       amrex::Print() << "Cell   " << IntVect(i,j) << " had nbor " << IntVect(i+ioff,j+joff) 
+                                      << " in its nbor list by taking inverse of " << itracker(i,j,k,ipair) 
+                                      << " which gave " << inv_map[itracker(i,j,k,ipair)] << std::endl;
+                   if (debug_print)
+                       amrex::Print() << "Adding " << IntVect(i+ioff+imap[itracker(i+ioff,j+joff,k,n_of_nbor+1)],
+                                                              j+joff+jmap[itracker(i+ioff,j+joff,k,n_of_nbor+1)])
+                                      << " to the nbor list of " << IntVect(i+ioff,j+joff) << std::endl;
                }
           }
        }
@@ -241,7 +252,6 @@ redistribution::merge_redistribute_update (
 
                // Loop over the neighbors of my neighbors
                // If any of these aren't already my neighbor, make them my neighbor
-               // for (int ipair_n = 1; ipair_n <= itracker(i_n,j_n,k,0); ipair_n++)
                int ipair_n = 1;
                while (ipair_n <= itracker(i_n,j_n,k,0))
                {
@@ -260,12 +270,15 @@ redistribution::merge_redistribute_update (
                         if ( (i_nn == i_n2 && j_nn == j_n2) or (i_nn == i && j_nn == j) )
                             found = true;
                     }
-                    if (!found)
-                    // amrex::Print() << "DOING CELL " << IntVect(i,j) << " who has nbor " << IntVect(i_n,j_n) << 
-                    //                   " who has nbor " << IntVect(i_nn,j_nn) << " which was NOT found " << std::endl;
-                    // else
-                    //    amrex::Print() << "DOING CELL " << IntVect(i,j) << " who has nbor " << IntVect(i_n,j_n) << 
-                    //                      " who has nbor " << IntVect(i_nn,j_nn) << " which was found " << std::endl;
+                    if (debug_print)
+                    {
+                        if (!found)
+                            amrex::Print() << "DOING CELL " << IntVect(i,j) << " who has nbor " << IntVect(i_n,j_n) << 
+                                              " who has nbor " << IntVect(i_nn,j_nn) << " which was NOT found " << std::endl;
+                        else
+                            amrex::Print() << "DOING CELL " << IntVect(i,j) << " who has nbor " << IntVect(i_n,j_n) << 
+                                              " who has nbor " << IntVect(i_nn,j_nn) << " which was found " << std::endl;
+                    }
 
                     if (!found)
                     {
@@ -281,10 +294,12 @@ redistribution::merge_redistribute_update (
                         else 
                            itracker(i,j,k,n_nbor) = 4;
 
-                        // amrex::Print() << "Adding " << IntVect(i_nn,j_nn) << " to the nbor list of " << IntVect(i,j) << 
-                        //                   " in component " << n_nbor << std::endl;
-                        // amrex::Print() << "Sanity check -- these should be the same: " << IntVect(i_nn,j_nn) << " " << 
-                        //     IntVect(i+imap[itracker(i,j,k,n_nbor)],j+jmap[itracker(i,j,k,n_nbor)]) << std::endl;
+                        if (debug_print)
+                            amrex::Print() << "Adding " << IntVect(i_nn,j_nn) << " to the nbor list of " << IntVect(i,j) << 
+                                              " in component " << n_nbor << std::endl;
+                        if (debug_print)
+                            amrex::Print() << "Sanity check -- these should be the same: " << IntVect(i_nn,j_nn) << " " << 
+                                IntVect(i+imap[itracker(i,j,k,n_nbor)],j+jmap[itracker(i,j,k,n_nbor)]) << std::endl;
                     }
                     ipair_n++; 
                }
