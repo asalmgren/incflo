@@ -174,7 +174,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zylo, l_zyhi;
         EBGodunov_corner_couple_zy(l_zylo, l_zyhi,
-                                   i, j, k, n, l_dt, dy,
+                                   i, j, k, n, l_dt, dy, true, 
                                    zlo(i,j,k,n), zhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, v_mac, yedge);
 
@@ -191,7 +191,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yzlo, l_yzhi;
         EBGodunov_corner_couple_yz(l_yzlo, l_yzhi,
-                                   i, j, k, n, l_dt, dz,
+                                   i, j, k, n, l_dt, dz, true, 
                                    ylo(i,j,k,n), yhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, w_mac, zedge);
 
@@ -264,7 +264,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xzlo, l_xzhi;
         EBGodunov_corner_couple_xz(l_xzlo, l_xzhi,
-                                   i, j, k, n, l_dt, dz,
+                                   i, j, k, n, l_dt, dz, true, 
                                    xlo(i,j,k,n),  xhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, w_mac, zedge);
 
@@ -281,7 +281,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zxlo, l_zxhi;
         EBGodunov_corner_couple_zx(l_zxlo, l_zxhi,
-                                   i, j, k, n, l_dt, dx,
+                                   i, j, k, n, l_dt, dx, true, 
                                    zlo(i,j,k,n), zhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, u_mac, xedge);
 
@@ -355,7 +355,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xylo, l_xyhi;
         EBGodunov_corner_couple_xy(l_xylo, l_xyhi,
-                                   i, j, k, n, l_dt, dy,
+                                   i, j, k, n, l_dt, dy, true, 
                                    xlo(i,j,k,n), xhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, v_mac, yedge);
 
@@ -372,7 +372,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yxlo, l_yxhi;
         EBGodunov_corner_couple_yx(l_yxlo, l_yxhi,
-                                   i, j, k, n, l_dt, dx,
+                                   i, j, k, n, l_dt, dx, true, 
                                    ylo(i,j,k,n), yhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, u_mac, xedge);
 
@@ -442,5 +442,24 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                    apy(i,j+1,k)*v_mac(i,j+1,k)*qy(i,j+1,k,n) )
             +           dxinv[2]*( apz(i,j,k  )*w_mac(i,j,k  )*qz(i,j,k  ,n) -
                                    apz(i,j,k+1)*w_mac(i,j,k+1)*qz(i,j,k+1,n) );
+
+#if 0
+        if ( (n == 2 and i == 0 and j == 14 and k == 26) ||  
+             (n == 2 and i == 0 and j == 17 and k ==  5) ) 
+        {
+           amrex::Print() << "DQDT FOR V " << IntVect(i,j,k) << " " << dqdt(i,j,k,n) << std::endl;
+           amrex::Print() << "QX         " << qx(i,j,k,n) << " " << qx(i+1,j,k,n) << std::endl;
+           amrex::Print() << "QY         " << qy(i,j,k,n) << " " << qy(i,j+1,k,n) << std::endl;
+           amrex::Print() << "QZ         " << qz(i,j,k,n) << " " << qz(i,j,k+1,n) << std::endl;
+           amrex::Print() << "UMAC       " << u_mac(i,j,k) << " " << u_mac(i+1,j,k) << std::endl;
+           amrex::Print() << "VMAC       " << v_mac(i,j,k) << " " << v_mac(i,j+1,k) << std::endl;
+           amrex::Print() << "WMAC       " << w_mac(i,j,k) << " " << w_mac(i,j,k+1) << std::endl;
+
+           amrex::Print() << "DIVU " << 
+                        dxinv[0]*( apx(i  ,j,k)*u_mac(i  ,j,k) - apx(i+1,j,k)*u_mac(i+1,j,k) )
+            +           dxinv[1]*( apy(i,j  ,k)*v_mac(i,j  ,k) - apy(i,j+1,k)*v_mac(i,j+1,k) )
+            +           dxinv[2]*( apz(i,j,k  )*w_mac(i,j,k  ) - apz(i,j,k+1)*w_mac(i,j,k+1) ) << std::endl;
+        }
+#endif
     });
 }

@@ -358,7 +358,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         const auto bc = pbc[n]; 
         Real l_zylo, l_zyhi;
         EBGodunov_corner_couple_zy(l_zylo, l_zyhi,
-                                   i, j, k, n, l_dt, dy,
+                                   i, j, k, n, l_dt, dy, false,
                                    zlo(i,j,k,n), zhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, v_ad, yedge);
 
@@ -376,7 +376,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yzlo, l_yzhi;
         EBGodunov_corner_couple_yz(l_yzlo, l_yzhi,
-                                   i, j, k, n, l_dt, dz,
+                                   i, j, k, n, l_dt, dz, false,
                                    ylo(i,j,k,n), yhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, w_ad, zedge);
 
@@ -484,7 +484,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xzlo, l_xzhi;
         EBGodunov_corner_couple_xz(l_xzlo, l_xzhi,
-                                   i, j, k, n, l_dt, dz,
+                                   i, j, k, n, l_dt, dz, false,
                                    xlo(i,j,k,n),  xhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, w_ad, zedge);
 
@@ -502,7 +502,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_zxlo, l_zxhi;
         EBGodunov_corner_couple_zx(l_zxlo, l_zxhi,
-                                   i, j, k, n, l_dt, dx,
+                                   i, j, k, n, l_dt, dx, false,
                                    zlo(i,j,k,n), zhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, u_ad, xedge);
 
@@ -610,7 +610,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_xylo, l_xyhi;
         EBGodunov_corner_couple_xy(l_xylo, l_xyhi,
-                                   i, j, k, n, l_dt, dy,
+                                   i, j, k, n, l_dt, dy, false,
                                    xlo(i,j,k,n), xhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, v_ad, yedge);
 
@@ -632,7 +632,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         const auto bc = pbc[n];
         Real l_yxlo, l_yxhi;
         EBGodunov_corner_couple_yx(l_yxlo, l_yxhi,
-                                   i, j, k, n, l_dt, dx,
+                                   i, j, k, n, l_dt, dx, false,
                                    ylo(i,j,k,n), yhi(i,j,k,n),
                                    q, divu, apx, apy, apz, vfrac_arr, u_ad, xedge);
 

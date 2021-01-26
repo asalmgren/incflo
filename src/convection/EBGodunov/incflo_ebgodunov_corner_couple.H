@@ -16,7 +16,7 @@ namespace {
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void EBGodunov_corner_couple_yx (amrex::Real& lo1, amrex::Real& hi1,
                                  int i, int j, int k, int n, amrex::Real dt, amrex::Real dx,
-                                 amrex::Real lo, amrex::Real hi,
+                                 bool iconserv, amrex::Real lo, amrex::Real hi,
                                  amrex::Array4<amrex::Real const> const& s,
                                  amrex::Array4<amrex::Real const> const& divu_cc,
                                  amrex::Array4<amrex::Real const> const& apx,
@@ -34,20 +34,34 @@ void EBGodunov_corner_couple_yx (amrex::Real& lo1, amrex::Real& hi1,
     {
         if (apx(i+1,j-1,k) > 0. && apx(i,j-1,k) > 0.)
         {
-            lo1 += ( - dt/(3.e0*dx)*(apx(i+1,j-1,k)*state(i+1,j-1,k,n)*umac(i+1,j-1,k)
-                                   - apx(i  ,j-1,k)*state(i  ,j-1,k,n)*umac(i  ,j-1,k))
-                     + dt/(3.e0*dx)*s(i,j-1,k,n)*(apx(i+1,j-1,k)*umac(i+1,j-1,k)
-                                                 -apx(i  ,j-1,k)*umac(i  ,j-1,k)) ) / vfrac(i,j-1,k)
-                     - dt/(3.e0)   *s(i,j-1,k,n)*divu_cc(i,j-1,k);
+            if (iconserv)
+            {
+                lo1 += ( - dt/(3.0*dx)*(apx(i+1,j-1,k)*state(i+1,j-1,k,n)*umac(i+1,j-1,k)
+                                      - apx(i  ,j-1,k)*state(i  ,j-1,k,n)*umac(i  ,j-1,k))
+                         + dt/(3.0*dx)*s(i,j-1,k,n)*(apx(i+1,j-1,k)*umac(i+1,j-1,k)
+                                                    -apx(i  ,j-1,k)*umac(i  ,j-1,k)) ) / vfrac(i,j-1,k)
+                         - dt/(3.0)   *s(i,j-1,k,n)*divu_cc(i,j-1,k);
+            } else {
+
+                lo1 += - dt/(6.0*dx)*( umac(i+1,j-1,k)   +  umac(i,j-1,k))
+                                    *(state(i+1,j-1,k,n) - state(i,j-1,k,n));
+            }
         }
 
         if (apx(i+1,j,k) > 0. && apx(i,j,k) > 0.)
         {
-            hi1 += ( - dt/(3.e0*dx)*(apx(i+1,j,k)*state(i+1,j,k,n)*umac(i+1,j,k)
-                                   - apx(i  ,j,k)*state(i  ,j,k,n)*umac(i  ,j,k))
-                     + dt/(3.e0*dx)*s(i,j,k,n)*(apx(i+1,j,k)*umac(i+1,j,k) - 
-                                                apx(i  ,j,k)*umac(i  ,j,k)) ) / vfrac(i,j,k)
-                     - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            if (iconserv)
+            {
+                hi1 += ( - dt/(3.0*dx)*(apx(i+1,j,k)*state(i+1,j,k,n)*umac(i+1,j,k)
+                                      - apx(i  ,j,k)*state(i  ,j,k,n)*umac(i  ,j,k))
+                         + dt/(3.0*dx)*s(i,j,k,n)*(apx(i+1,j,k)*umac(i+1,j,k) - 
+                                                   apx(i  ,j,k)*umac(i  ,j,k)) ) / vfrac(i,j,k)
+                         - dt/(3.0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            } else {
+
+                hi1 += - dt/(6.0*dx)*( umac(i+1,j  ,k)   +  umac(i,j  ,k))
+                                    *(state(i+1,j  ,k,n) - state(i,j  ,k,n));
+            }
         }
     }
 }
@@ -55,7 +69,7 @@ void EBGodunov_corner_couple_yx (amrex::Real& lo1, amrex::Real& hi1,
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void EBGodunov_corner_couple_zx (amrex::Real& lo1, amrex::Real& hi1,
                                  int i, int j, int k, int n, amrex::Real dt, amrex::Real dx,
-                                 amrex::Real lo, amrex::Real hi,
+                                 bool iconserv, amrex::Real lo, amrex::Real hi,
                                  amrex::Array4<amrex::Real const> const& s,
                                  amrex::Array4<amrex::Real const> const& divu_cc,
                                  amrex::Array4<amrex::Real const> const& apx,
@@ -73,19 +87,34 @@ void EBGodunov_corner_couple_zx (amrex::Real& lo1, amrex::Real& hi1,
     {
         if (apx(i+1,j,k-1) > 0. && apx(i,j,k-1) > 0.)
         {
-            lo1 += ( - dt/(3.e0*dx)*(apx(i+1,j,k-1)*state(i+1,j,k-1,n)*umac(i+1,j,k-1)
-                                   - apx(i  ,j,k-1)*state(i  ,j,k-1,n)*umac(i  ,j,k-1))
-                     + dt/(3.e0*dx)*s(i,j,k-1,n)*(apx(i+1,j,k-1)*umac(i+1,j,k-1)
-                                                 -apx(i  ,j,k-1)*umac(i  ,j,k-1)) ) / vfrac(i,j,k-1);
-                     - dt/(3.e0)   *s(i,j,k-1,n)*divu_cc(i,j,k-1);
+            if (iconserv)
+            {
+                lo1 += ( - dt/(3.0*dx)*(apx(i+1,j,k-1)*state(i+1,j,k-1,n)*umac(i+1,j,k-1)
+                                      - apx(i  ,j,k-1)*state(i  ,j,k-1,n)*umac(i  ,j,k-1))
+                         + dt/(3.0*dx)*s(i,j,k-1,n)*(apx(i+1,j,k-1)*umac(i+1,j,k-1)
+                                                    -apx(i  ,j,k-1)*umac(i  ,j,k-1)) ) / vfrac(i,j,k-1) 
+                         - dt/(3.0)   *s(i,j,k-1,n)*divu_cc(i,j,k-1);
+            } else {
+
+                lo1 += - dt/(6.0*dx)*( umac(i+1,j,k-1)   +  umac(i,j,k-1))
+                                    *(state(i+1,j,k-1,n) - state(i,j,k-1,n));
+
+            }
         }
         if (apx(i+1,j,k) > 0. && apx(i,j,k) > 0.)
         {
-            hi1 += ( - dt/(3.e0*dx)*(apx(i+1,j,k)*state(i+1,j,k,n)*umac(i+1,j,k)
-                                   - apx(i  ,j,k)*state(i  ,j,k,n)*umac(i  ,j,k))
-                     + dt/(3.e0*dx)*s(i,j,k,n)*(apx(i+1,j,k)*umac(i+1,j,k) 
-                                               -apx(i  ,j,k)*umac(i  ,j,k)) ) / vfrac(i,j,k)
-                     - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            if (iconserv)
+            {
+                hi1 += ( - dt/(3.0*dx)*(apx(i+1,j,k)*state(i+1,j,k,n)*umac(i+1,j,k)
+                                      - apx(i  ,j,k)*state(i  ,j,k,n)*umac(i  ,j,k))
+                         + dt/(3.0*dx)*s(i,j,k,n)*(apx(i+1,j,k)*umac(i+1,j,k) 
+                                                  -apx(i  ,j,k)*umac(i  ,j,k)) ) / vfrac(i,j,k)
+                         - dt/(3.0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            } else {
+
+                hi1 += - dt/(6.0*dx)*( umac(i+1,j,k  )   +  umac(i,j,k))
+                                    *(state(i+1,j,k  ,n) - state(i,j,k  ,n));
+            }
         }
     }
 }
@@ -93,7 +122,7 @@ void EBGodunov_corner_couple_zx (amrex::Real& lo1, amrex::Real& hi1,
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void EBGodunov_corner_couple_xy (amrex::Real& lo1, amrex::Real& hi1,
                                  int i, int j, int k, int n, amrex::Real dt, amrex::Real dy,
-                                 amrex::Real lo, amrex::Real hi,
+                                 bool iconserv, amrex::Real lo, amrex::Real hi,
                                  amrex::Array4<amrex::Real const> const& s,
                                  amrex::Array4<amrex::Real const> const& divu_cc,
                                  amrex::Array4<amrex::Real const> const& apx,
@@ -111,20 +140,34 @@ void EBGodunov_corner_couple_xy (amrex::Real& lo1, amrex::Real& hi1,
     {
         if (apy(i-1,j+1,k) > 0. && apy(i-1,j,k) > 0.)
         {
-            lo1 += ( - dt/(3.e0*dy)*(apy(i-1,j+1,k)*state(i-1,j+1,k,n)*vmac(i-1,j+1,k)
-                                   - apy(i-1,j  ,k)*state(i-1,j  ,k,n)*vmac(i-1,j  ,k))
-                     + dt/(3.e0*dy)*s(i-1,j,k,n)*(apy(i-1,j+1,k)*vmac(i-1,j+1,k)
-                                                 -apy(i-1,j  ,k)*vmac(i-1,j  ,k)) ) /vfrac(i-1,j,k)
-                     - dt/3.e0     *s(i-1,j,k,n)*divu_cc(i-1,j,k);
+            if (iconserv)
+            {
+                lo1 += ( - dt/(3.0*dy)*(apy(i-1,j+1,k)*state(i-1,j+1,k,n)*vmac(i-1,j+1,k)
+                                      - apy(i-1,j  ,k)*state(i-1,j  ,k,n)*vmac(i-1,j  ,k))
+                         + dt/(3.0*dy)*s(i-1,j,k,n)*(apy(i-1,j+1,k)*vmac(i-1,j+1,k)
+                                                    -apy(i-1,j  ,k)*vmac(i-1,j  ,k)) ) /vfrac(i-1,j,k)
+                         - dt/3.0     *s(i-1,j,k,n)*divu_cc(i-1,j,k);
+            } else {
+
+                lo1 += - dt/(6.0*dy)*( vmac(i-1,j+1,k)   +  vmac(i-1,j,k))
+                                    *(state(i-1,j+1,k,n) - state(i-1,j,k,n));
+            }
         }
     
         if (apy(i,j+1,k) > 0. && apy(i,j,k) > 0.)
         {
-            hi1 += ( - dt/(3.e0*dy)*(apy(i,j+1,k)*state(i,j+1,k,n)*vmac(i,j+1,k)
-                                    -apy(i,j  ,k)*state(i,j  ,k,n)*vmac(i,j  ,k))
-                     + dt/(3.e0*dy)*s(i,j,k,n)*(apy(i,j+1,k)*vmac(i,j+1,k)
-                                               -apy(i,j  ,k)*vmac(i,j  ,k)) ) /vfrac(i,j,k)
-                     - dt/3.e0     *s(i,j,k,n)*divu_cc(i,j,k);
+            if (iconserv)
+            {
+                hi1 += ( - dt/(3.0*dy)*(apy(i,j+1,k)*state(i,j+1,k,n)*vmac(i,j+1,k)
+                                       -apy(i,j  ,k)*state(i,j  ,k,n)*vmac(i,j  ,k))
+                         + dt/(3.0*dy)*s(i,j,k,n)*(apy(i,j+1,k)*vmac(i,j+1,k)
+                                                  -apy(i,j  ,k)*vmac(i,j  ,k)) ) /vfrac(i,j,k)
+                         - dt/3.0     *s(i,j,k,n)*divu_cc(i,j,k);
+            } else {
+
+                hi1 += - dt/(6.0*dy)*( vmac(i  ,j+1,k)   +  vmac(i  ,j,k))
+                                    *(state(i  ,j+1,k,n) - state(i  ,j,k,n));
+            }
         }
     }
 }
@@ -132,7 +175,7 @@ void EBGodunov_corner_couple_xy (amrex::Real& lo1, amrex::Real& hi1,
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void EBGodunov_corner_couple_zy (amrex::Real& lo1, amrex::Real& hi1,
                                  int i, int j, int k, int n, amrex::Real dt, amrex::Real dy,
-                                 amrex::Real lo, amrex::Real hi,
+                                 bool iconserv, amrex::Real lo, amrex::Real hi,
                                  amrex::Array4<amrex::Real const> const& s,
                                  amrex::Array4<amrex::Real const> const& divu_cc,
                                  amrex::Array4<amrex::Real const> const& apx,
@@ -150,20 +193,34 @@ void EBGodunov_corner_couple_zy (amrex::Real& lo1, amrex::Real& hi1,
     {
         if (apy(i,j+1,k-1) > 0. && apy(i,j,k-1) > 0.)
         {
-            lo1 += ( - dt/(3.e0*dy)*(apy(i,j+1,k-1)*state(i,j+1,k-1,n)*vmac(i,j+1,k-1)
-                                   - apy(i,j  ,k-1)*state(i,j  ,k-1,n)*vmac(i,j  ,k-1))
-                     + dt/(3.e0*dy)*s(i,j,k-1,n)*(apy(i,j+1,k-1)*vmac(i,j+1,k-1)
-                                                 -apy(i,j  ,k-1)*vmac(i,j  ,k-1)) ) /vfrac(i,j,k-1)
-                     - dt/(3.e0)   *s(i,j,k-1,n)*divu_cc(i,j,k-1);
+            if (iconserv)
+            {
+                lo1 += ( - dt/(3.0*dy)*(apy(i,j+1,k-1)*state(i,j+1,k-1,n)*vmac(i,j+1,k-1)
+                                      - apy(i,j  ,k-1)*state(i,j  ,k-1,n)*vmac(i,j  ,k-1))
+                         + dt/(3.0*dy)*s(i,j,k-1,n)*(apy(i,j+1,k-1)*vmac(i,j+1,k-1)
+                                                    -apy(i,j  ,k-1)*vmac(i,j  ,k-1)) ) /vfrac(i,j,k-1)
+                         - dt/(3.0)   *s(i,j,k-1,n)*divu_cc(i,j,k-1);
+            } else {
+
+                lo1 += - dt/(6.0*dy)*( vmac(i,j+1,k-1)   +  vmac(i,j,k-1))
+                                    *(state(i,j+1,k-1,n) - state(i,j,k-1,n));
+            }
         }
 
         if (apy(i,j+1,k) > 0. && apy(i,j,k) > 0.)
         {
-            hi1 += ( - dt/(3.e0*dy)*(apy(i,j+1,k)*state(i,j+1,k,n)*vmac(i,j+1,k)
-                                   - apy(i,j  ,k)*state(i,j  ,k,n)*vmac(i,j  ,k))
-                     + dt/(3.e0*dy)*s(i,j,k,n)*(apy(i,j+1,k)*vmac(i,j+1,k) 
-                                               -apy(i,j  ,k)*vmac(i,j  ,k)) ) /vfrac(i,j,k)
-                     - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            if (iconserv)
+            {
+                hi1 += ( - dt/(3.0*dy)*(apy(i,j+1,k)*state(i,j+1,k,n)*vmac(i,j+1,k)
+                                      - apy(i,j  ,k)*state(i,j  ,k,n)*vmac(i,j  ,k))
+                         + dt/(3.0*dy)*s(i,j,k,n)*(apy(i,j+1,k)*vmac(i,j+1,k) 
+                                                  -apy(i,j  ,k)*vmac(i,j  ,k)) ) /vfrac(i,j,k)
+                         - dt/(3.0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            } else {
+
+                hi1 += - dt/(6.0*dy)*( vmac(i,j+1,k)     +  vmac(i,j,k))
+                                    *(state(i,j+1,k  ,n) - state(i,j,k  ,n));
+            }
         }
     }
 }
@@ -171,7 +228,7 @@ void EBGodunov_corner_couple_zy (amrex::Real& lo1, amrex::Real& hi1,
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void EBGodunov_corner_couple_xz (amrex::Real& lo1, amrex::Real& hi1,
                                  int i, int j, int k, int n, amrex::Real dt, amrex::Real dz,
-                                 amrex::Real lo, amrex::Real hi,
+                                 bool iconserv, amrex::Real lo, amrex::Real hi,
                                  amrex::Array4<amrex::Real const> const& s,
                                  amrex::Array4<amrex::Real const> const& divu_cc,
                                  amrex::Array4<amrex::Real const> const& apx,
@@ -189,20 +246,34 @@ void EBGodunov_corner_couple_xz (amrex::Real& lo1, amrex::Real& hi1,
     {
         if (apz(i-1,j,k+1) > 0. && apz(i-1,j,k) > 0.)
         {
-            lo1 += ( - dt/(3.e0*dz)*(apz(i-1,j,k+1)*state(i-1,j,k+1,n)*wmac(i-1,j,k+1)
-                                   - apz(i-1,j,k  )*state(i-1,j,k  ,n)*wmac(i-1,j,k  ))
-                     + dt/(3.e0*dz)*s(i-1,j,k,n)*(apz(i-1,j,k+1)*wmac(i-1,j,k+1) 
-                                                 -apz(i-1,j,k  )*wmac(i-1,j,k  )) ) / vfrac(i-1,j,k)
-                     - dt/(3.e0)   *s(i-1,j,k,n)*divu_cc(i-1,j,k);
+            if (iconserv)
+            {
+                lo1 += ( - dt/(3.0*dz)*(apz(i-1,j,k+1)*state(i-1,j,k+1,n)*wmac(i-1,j,k+1)
+                                      - apz(i-1,j,k  )*state(i-1,j,k  ,n)*wmac(i-1,j,k  ))
+                         + dt/(3.0*dz)*s(i-1,j,k,n)*(apz(i-1,j,k+1)*wmac(i-1,j,k+1) 
+                                                    -apz(i-1,j,k  )*wmac(i-1,j,k  )) ) / vfrac(i-1,j,k)
+                         - dt/(3.0)   *s(i-1,j,k,n)*divu_cc(i-1,j,k);
+            } else {
+
+                lo1 += - dt/(6.0*dz)*( wmac(i-1,j,k+1)   +  wmac(i-1,j,k))
+                                    *(state(i-1,j,k+1,n) - state(i-1,j,k,n));
+            }
         }
 
         if (apz(i,j,k+1) > 0. && apz(i,j,k) > 0.)
         {
-            hi1 += ( - dt/(3.e0*dz)*(apz(i,j,k+1)*state(i,j,k+1,n)*wmac(i,j,k+1)
-                                   - apz(i,j,k  )*state(i,j,k  ,n)*wmac(i,j,k  ))
-                     + dt/(3.e0*dz)*s(i,j,k,n)*(apz(i,j,k+1)*wmac(i,j,k+1) 
-                                               -apz(i,j,k  )*wmac(i,j,k  )) ) / vfrac(i,j,k)
-                     - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            if (iconserv)
+            {
+                hi1 += ( - dt/(3.0*dz)*(apz(i,j,k+1)*state(i,j,k+1,n)*wmac(i,j,k+1)
+                                      - apz(i,j,k  )*state(i,j,k  ,n)*wmac(i,j,k  ))
+                         + dt/(3.0*dz)*s(i,j,k,n)*(apz(i,j,k+1)*wmac(i,j,k+1) 
+                                                  -apz(i,j,k  )*wmac(i,j,k  )) ) / vfrac(i,j,k)
+                         - dt/(3.0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            } else {
+
+                hi1 += - dt/(6.0*dz)*( wmac(i  ,j,k+1)   +  wmac(i  ,j,k))
+                                    *(state(i  ,j,k+1,n) - state(i  ,j,k,n));
+            }
         }
     }
 }
@@ -210,7 +281,7 @@ void EBGodunov_corner_couple_xz (amrex::Real& lo1, amrex::Real& hi1,
 AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
 void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
                                  int i, int j, int k, int n, amrex::Real dt, amrex::Real dz,
-                                 amrex::Real lo, amrex::Real hi,
+                                 bool iconserv, amrex::Real lo, amrex::Real hi,
                                  amrex::Array4<amrex::Real const> const& s,
                                  amrex::Array4<amrex::Real const> const& divu_cc,
                                  amrex::Array4<amrex::Real const> const& apx,
@@ -228,20 +299,35 @@ void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
     {
         if (apz(i,j-1,k+1) > 0. && apz(i,j-1,k) > 0.)
         {
-            lo1 += ( - dt/(3.e0*dz)*(apz(i,j-1,k+1)*state(i,j-1,k+1,n)*wmac(i,j-1,k+1)
-                                   - apz(i,j-1,k  )*state(i,j-1,k  ,n)*wmac(i,j-1,k))
-                     + dt/(3.e0*dz)*s(i,j-1,k,n)*(apz(i,j-1,k+1)*wmac(i,j-1,k+1)- 
-                                                  apz(i,j-1,k  )*wmac(i,j-1,k  )) ) /vfrac(i,j-1,k)
-                     - dt/(3.e0)   *s(i,j-1,k,n)*divu_cc(i,j-1,k);
+            if (iconserv)
+            {
+                lo1 += ( - dt/(3.0*dz)*(apz(i,j-1,k+1)*state(i,j-1,k+1,n)*wmac(i,j-1,k+1)
+                                      - apz(i,j-1,k  )*state(i,j-1,k  ,n)*wmac(i,j-1,k))
+                         + dt/(3.0*dz)*s(i,j-1,k,n)*(apz(i,j-1,k+1)*wmac(i,j-1,k+1)- 
+                                                     apz(i,j-1,k  )*wmac(i,j-1,k  )) ) /vfrac(i,j-1,k)
+                         - dt/(3.0)   *s(i,j-1,k,n)*divu_cc(i,j-1,k);
+            } else {
+
+                lo1 += - dt/(6.0*dz)*( wmac(i,j-1,k+1)   +  wmac(i,j-1,k))
+                                    *(state(i,j-1,k+1,n) - state(i,j-1,k,n));
+            }
         }
 
         if (apz(i,j,k+1) > 0. && apz(i,j,k) > 0.)
         {
-            hi1 += ( - dt/(3.e0*dz)*(apz(i,j,k+1)*state(i,j,k+1,n)*wmac(i,j,k+1)
-                                   - apz(i,j,k  )*state(i,j,k  ,n)*wmac(i,j,k))
-                     + dt/(3.e0*dz)*s(i,j,k,n)*(apz(i,j,k+1)*wmac(i,j,k+1) 
-                                               -apz(i,j,k)*wmac(i,j,k)) ) / vfrac(i,j,k) 
-                     - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
+            if (iconserv)
+            {
+                hi1 += ( - dt/(3.0*dz)*(apz(i,j,k+1)*state(i,j,k+1,n)*wmac(i,j,k+1)
+                                      - apz(i,j,k  )*state(i,j,k  ,n)*wmac(i,j,k))
+                         + dt/(3.0*dz)*s(i,j,k,n)*(apz(i,j,k+1)*wmac(i,j,k+1) 
+                                                  -apz(i,j,k)*wmac(i,j,k)) ) / vfrac(i,j,k) 
+                         - dt/(3.0)   *s(i,j,k,n)*divu_cc(i,j,k);
+
+            } else {
+
+                hi1 += - dt/(6.0*dz)*( wmac(i,j  ,k+1)   +  wmac(i,j  ,k))
+                                    *(state(i,j  ,k+1,n) - state(i,j  ,k,n));
+            }
         }
     }
 
