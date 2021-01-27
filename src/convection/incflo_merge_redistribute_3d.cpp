@@ -342,7 +342,6 @@ redistribution::make_itracker (
        if (itracker(i,j,k,0) > 0 && itracker(i,j,k,0) < 7)
        {
           // Loop over my neighbors
-          amrex::Print() << "CELL " << IntVect(i,j,k) << " HAS " << itracker(i,j,k,0) << " NEIGHBORS " << std::endl;
           for (int ipair = 1; ipair <= itracker(i,j,k,0); ipair++)
           {
                // (i_n,j_n,k_n) is in the nbhd of (i,j,k)
