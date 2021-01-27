@@ -146,8 +146,8 @@ redistribution::make_itracker (
                                       " to get new sum_vol " <<  sum_vol << std::endl;
            }
         
-           // Now we merge in the corner direction
-           if (sum_vol < 0.5)
+           // Now we merge in the corner direction if we have already claimed two 
+           if (itracker(i,j,k,0) == 2)
            {
                // We already have two offsets, and we know they are in different directions 
                ioff = imap[itracker(i,j,k,1)] + imap[itracker(i,j,k,2)];
