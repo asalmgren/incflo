@@ -16,7 +16,7 @@ redistribution::make_itracker (
                        Array4<int> const& itracker,
                        Geometry& lev_geom)
 {
-    bool debug_print = true;
+    bool debug_print = false;
 
     const Box domain = lev_geom.Domain();
 
