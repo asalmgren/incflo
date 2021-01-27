@@ -71,9 +71,6 @@ redistribution::make_itracker (
            bool ydir_ok = is_periodic_y || (j != domain.smallEnd(1) && j != domain.bigEnd(1)) ;
            bool zdir_ok = is_periodic_z || (k != domain.smallEnd(2) && k != domain.bigEnd(2)) ;
 
-           if (debug_print)
-               amrex::Print() << "NORMAL OF " << IntVect(i,j,k) << " has normal " << RealVect(nx,ny,nz) << std::endl;
-
            // x-component of normal is greatest
            if ( (std::abs(nx) > std::abs(ny)) &&
                 (std::abs(nx) > std::abs(nz)) )
@@ -235,8 +232,8 @@ redistribution::make_itracker (
                                       " to get new sum_vol " <<  sum_vol << std::endl;
            }
         
-           // If the merged cell still isn't large enough, we can merge in the corner direction within the current plane
-           if (sum_vol < 0.5)
+           // If the merged cell has merged in two directions, we now merge in the corner direction within the current plane
+           if (itracker(i,j,k,0) >= 2)
            {
                // We already have two offsets, and we know they are in different directions 
                ioff = imap[itracker(i,j,k,1)] + imap[itracker(i,j,k,2)];
@@ -269,13 +266,13 @@ redistribution::make_itracker (
                // Both nbors are in the ioff=0 plane
                } else {
                    if (joff > 0 and koff > 0)
-                       itracker(i,j,k,3) = 24;
+                       itracker(i,j,k,3) = 25;
                    else if (joff < 0 and koff > 0)
-                       itracker(i,j,k,3) = 18;
+                       itracker(i,j,k,3) = 19;
                    else if (joff > 0 and koff < 0)
-                       itracker(i,j,k,3) = 15;
+                       itracker(i,j,k,3) = 16;
                    else 
-                       itracker(i,j,k,3) = 9;
+                       itracker(i,j,k,3) = 10;
                }
 
                // (i,j,k) merges with at least three cells now
@@ -361,7 +358,7 @@ redistribution::make_itracker (
                int ipair_n = 1;
                while (ipair_n <= itracker(i_n,j_n,k_n,0))
                {
-                    amrex::Print() << " IPAIR_N IS " << ipair_n << std::endl;
+                    // amrex::Print() << " IPAIR_N IS " << ipair_n << std::endl;
                     // (i_nn,j_nn,k_nn) is in the nbhd of (i_n,j_n,k_n)
                     int i_nn = i_n + imap[itracker(i_n,j_n,k_n,ipair_n)];
                     int j_nn = j_n + jmap[itracker(i_n,j_n,k_n,ipair_n)];
@@ -372,7 +369,7 @@ redistribution::make_itracker (
                     // Is this nbor of my nbor already my nbor (or me)??
                     for (int ipair_2 = 1; ipair_2 <= itracker(i,j,k,0); ipair_2++)
                     {
-                    amrex::Print() << " IPAIR_2 IS " << ipair_2 << std::endl;
+                    // amrex::Print() << " IPAIR_2 IS " << ipair_2 << std::endl;
                         // (i_n2,j_n2,k_n2) is in the nbhd of (i,j,k)
                         int i_n2 = i + imap[itracker(i,j,k,ipair_2)];
                         int j_n2 = j + jmap[itracker(i,j,k,ipair_2)];
@@ -513,10 +510,16 @@ redistribution::merge_redistribute_update (
                    Real sum_vol = vfrac(i,j,k);
                    Real sum_upd = vfrac(i,j,k) * dUdt_in(i,j,k,n);
                    for (int i_nbor = 1; i_nbor <= itracker(i,j,k,0); i_nbor++)
-                   { 
-                       sum_upd +=   vfrac(i+imap[itracker(i,j,k,i_nbor)],j+jmap[itracker(i,j,k,i_nbor)],k) *
-                                  dUdt_in(i+imap[itracker(i,j,k,i_nbor)],j+jmap[itracker(i,j,k,i_nbor)],k,n);
-                       sum_vol +=   vfrac(i+imap[itracker(i,j,k,i_nbor)],j+jmap[itracker(i,j,k,i_nbor)],k);
+                   {
+                       sum_upd +=   vfrac(i+imap[itracker(i,j,k,i_nbor)],
+                                          j+jmap[itracker(i,j,k,i_nbor)],
+                                          k+kmap[itracker(i,j,k,i_nbor)]) *
+                                  dUdt_in(i+imap[itracker(i,j,k,i_nbor)], 
+                                          j+jmap[itracker(i,j,k,i_nbor)],
+                                          k+kmap[itracker(i,j,k,i_nbor)],n);
+                       sum_vol +=   vfrac(i+imap[itracker(i,j,k,i_nbor)],
+                                          j+jmap[itracker(i,j,k,i_nbor)],
+                                          k+kmap[itracker(i,j,k,i_nbor)]); 
                    } 
 
                    if (sum_vol < 0.5)
@@ -554,12 +557,12 @@ redistribution::merge_redistribute_update (
               }
             }
           }
-          if (std::abs(sum1-sum2) > 1.e-8 * sum1 && std::abs(sum1-sum2) > 1.e-8)
-          {
+         }
+         if (std::abs(sum1-sum2) > 1.e-8 * sum1 && std::abs(sum1-sum2) > 1.e-8)
+         {
             amrex::Print() << " TESTING COMPONENT " << n << std::endl; 
             amrex::Print() << " SUMS DO NOT MATCH " << sum1 << " " << sum2 << std::endl;
             amrex::Abort(0);
-          }
          }
         }
     } //  END:SUM OF FINAL DUDT
