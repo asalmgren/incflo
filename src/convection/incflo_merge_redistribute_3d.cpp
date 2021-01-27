@@ -393,7 +393,6 @@ redistribution::make_itracker (
                         itracker(i,j,k,0) += 1;
                         int n_nbor = itracker(i,j,k,0);
 
-                    amrex::Print() << " N_NBOR OF CELL " << IntVect(i,j,k) << " IS " << n_nbor << std::endl;
                         if (k_nn == k) // The new neighbor is in the k-plane of the original cell
                         {
                             if (j_nn-j < 0) 
