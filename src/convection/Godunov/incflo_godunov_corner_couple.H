@@ -165,8 +165,8 @@ void Godunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
 
         hi1 = hi - dt/(3.e0*dz)*(state(i,j,k+1,n)*mac(i,j,k+1)
                                - state(i,j,k  ,n)*mac(i,j,k)) 
-            - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k);
-//          + dt/(3.e0*dz)*s(i,j,k,n)*(mac(i,j,k+1) - mac(i,j,k));
+            - dt/(3.e0)   *s(i,j,k,n)*divu_cc(i,j,k) 
+            + dt/(3.e0*dz)*s(i,j,k,n)*(mac(i,j,k+1) - mac(i,j,k));
 
     } else {
         lo1 = lo - dt/(6.e0*dz)*(  mac(i,j-1,k+1)   +   mac(i,j-1,k))
