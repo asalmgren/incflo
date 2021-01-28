@@ -484,8 +484,8 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
-                                              AMREX_D_DECL(domain_jlo, domain_jlo, domain_klo),
-                                              AMREX_D_DECL(domain_jhi, domain_jhi, domain_khi));
+                                              AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
+                                              AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
 
 #if (AMREX_SPACEDIM == 3)
@@ -766,8 +766,8 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
                                               AMREX_D_DECL(fcx,fcy,fcz), flag,
                                               AMREX_D_DECL(extdir_or_ho_ilo, extdir_or_ho_jlo, extdir_or_ho_klo),
                                               AMREX_D_DECL(extdir_or_ho_ihi, extdir_or_ho_jhi, extdir_or_ho_khi),
-                                              AMREX_D_DECL(domain_jlo, domain_jlo, domain_klo),
-                                              AMREX_D_DECL(domain_jhi, domain_jhi, domain_khi));
+                                              AMREX_D_DECL(domain_ilo, domain_jlo, domain_klo),
+                                              AMREX_D_DECL(domain_ihi, domain_jhi, domain_khi));
 
 
                    qmns = q(i,j,k-1,n) + delta_x * slopes_eb_lo[0]
