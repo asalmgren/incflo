@@ -320,11 +320,11 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             if (apx(i+1,j,k) > 0. && apx(i,j,k) > 0. && apz(i,j,k+1) > 0. && apz(i,j,k) > 0.)
             {
                 Real quyh = (apy(i,j+1,k)*v_mac(i,j+1,k) - apy(i,j,k)*v_mac(i,j,k)) * q(i,j,k,n);
-                sth += - (0.5*dtdy) * quyh
-                       - (0.5*dtdx)*(apx(i+1,j,k  )*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
-                                   - apx(i  ,j,k  )*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  ))
-                       - (0.5*dtdz)*(apz(i  ,j,k+1)*zxlo(i  ,j,k+1,n)*w_mac(i  ,j,k+1)
-                                   - apz(i  ,j,k  )*zxlo(i  ,j,k  ,n)*w_mac(i  ,j,k  )) / vfrac_arr(i,j,k);
+                sth += ( - (0.5*dtdy) * quyh
+                         - (0.5*dtdx)*(apx(i+1,j,k  )*xzlo(i+1,j,k  ,n)*u_mac(i+1,j,k  )
+                                     - apx(i  ,j,k  )*xzlo(i  ,j,k  ,n)*u_mac(i  ,j,k  ))
+                         - (0.5*dtdz)*(apz(i  ,j,k+1)*zxlo(i  ,j,k+1,n)*w_mac(i  ,j,k+1)
+                                     - apz(i  ,j,k  )*zxlo(i  ,j,k  ,n)*w_mac(i  ,j,k  )) ) / vfrac_arr(i,j,k);
                 if (fq && vfrac_arr(i,j  ,k) > 0.)
                     sth += 0.5*l_dt*fq(i,j  ,k,n);
             }
@@ -336,7 +336,6 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
             Real temp = (v_mac(i,j,k) >= 0.) ? stl : sth;
             temp = (amrex::Math::abs(v_mac(i,j,k)) < small_vel) ? 0.5*(stl + sth) : temp;
             qy(i,j,k,n) = temp;
-
         } else {
             qy(i,j,k,n) = 0.;
         }
@@ -444,8 +443,7 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                    apz(i,j,k+1)*w_mac(i,j,k+1)*qz(i,j,k+1,n) );
 
 #if 0
-        if ( (n == 2 and i == 0 and j == 14 and k == 26) ||  
-             (n == 2 and i == 0 and j == 17 and k ==  5) ) 
+        if ( n == 0 and i == 2 and (j ==  3 or j == 28) and (k == 3 or k == 28) ) 
         {
            amrex::Print() << "DQDT FOR V " << IntVect(i,j,k) << " " << dqdt(i,j,k,n) << std::endl;
            amrex::Print() << "QX         " << qx(i,j,k,n) << " " << qx(i+1,j,k,n) << std::endl;
