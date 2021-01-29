@@ -248,9 +248,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
     Array4<Real> rhotrac;
     if (m_advect_tracer) {
         rhotracfab.resize(rhotrac_box, m_ntrac);
-        if (m_advection_type != "MOL") {
-            eli_rt = rhotracfab.elixir();
-        }
+        eli_rt  = rhotracfab.elixir();
         rhotrac = rhotracfab.array();
         amrex::ParallelFor(rhotrac_box, m_ntrac,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
