@@ -79,7 +79,8 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                  AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz),
+                                          is_velocity]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -153,6 +154,14 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 
                 }  // end of making qpls
 
+                // Only over-write normal velocity with Dirichlet bc at lo face
+                if (i == domain_ilo && (bc.lo(0) == BCType::ext_dir))
+                    if (is_velocity && n == 0) qpls = q(i-1,j,k,n);
+
+                // Over-write all with Dirichlet bc at hi face
+                if (i == domain_ihi+1 && (bc.hi(0) == BCType::ext_dir)) 
+                    qpls = q(i,j,k,n);
+
                 // *************************************************
                 // Making qmns
                 // *************************************************
@@ -202,6 +211,13 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                    qmns -= 0.5 * dtdx * umac(i,j,k) * slopes_eb_lo[0];
                 }  // end of making qmns
 
+                // Over-write all with Dirichlet bc at lo face
+                if (i == domain_ilo && (bc.lo(0) == BCType::ext_dir))
+                    qmns = q(i-1,j,k,n);
+
+                // Only over-write normal velocity with Dirichlet bc at hi face
+                if (i == domain_ihi+1 && (bc.hi(0) == BCType::ext_dir)) 
+                    if (is_velocity && n == 0) qmns = q(i,j,k,n);
             }
 
             Ipx(i-1,j,k,n) = qmns;
@@ -212,7 +228,8 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(xebox, ncomp, [q,umac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imx,Ipx,dtdx,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz),
+                                          is_velocity]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -376,7 +393,8 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(yebox, ncomp, [q,vmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imy,Ipy,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imy,Ipy,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz),
+                                          is_velocity]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -450,6 +468,14 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
 
                 }  // end of making qpls
 
+                // Only over-write normal velocity with Dirichlet bc at lo face
+                if (j == domain_jlo && (bc.lo(1) == BCType::ext_dir))
+                    if (is_velocity && n == 1) qpls = q(i,j-1,k,n);
+
+                // Over-write all with Dirichlet bc at hi face
+                if (j == domain_jhi+1 && (bc.hi(1) == BCType::ext_dir)) 
+                    qpls = q(i,j,k,n);
+
                 // *************************************************
                 // Making qmns
                 // *************************************************
@@ -499,6 +525,14 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
                    qmns -= 0.5 * dtdy * vmac(i,j,k) * slopes_eb_lo[1];
 
                 }  // end of making qmns
+
+                // Over-write all with Dirichlet bc at lo face
+                if (j == domain_jlo && (bc.lo(1) == BCType::ext_dir))
+                    qmns = q(i,j-1,k,n);
+
+                // Only over-write normal velocity with Dirichlet bc at hi face
+                if (j == domain_jhi+1 && (bc.hi(1) == BCType::ext_dir)) 
+                    if (is_velocity && n == 1) qmns = q(i,j,k,n);
             }
 
             Ipy(i,j-1,k,n) = qmns;
@@ -509,7 +543,8 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(yebox, ncomp, [q,vmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                 AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imy,Ipy,dt,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imy,Ipy,dt,dtdy,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz),
+                                          is_velocity]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -666,7 +701,8 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(zebox, ncomp, [q,wmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                  AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imz,Ipz,dtdz,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imz,Ipz,dtdz,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz),
+                                          is_velocity]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
@@ -733,6 +769,14 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
 
                 }  // end of making qpls
 
+                // Only over-write normal velocity with Dirichlet bc at lo face
+                if (k == domain_klo && (bc.lo(2) == BCType::ext_dir))
+                    if (is_velocity && n == 2) qpls = q(i,j,k-1,n);
+
+                // Over-write all with Dirichlet bc at hi face
+                if (k == domain_khi+1 && (bc.hi(2) == BCType::ext_dir)) 
+                    qpls = q(i,j,k,n);
+
                 // *************************************************
                 // Making qmns
                 // *************************************************
@@ -777,6 +821,14 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
                    qmns -= 0.5 * dtdz * wmac(i,j,k) * slopes_eb_lo[2];
 
                 }  // end of making qmns
+
+                // Over-write all with Dirichlet bc at lo face
+                if (k == domain_klo && (bc.lo(2) == BCType::ext_dir))
+                    qmns = q(i,j,k-1,n);
+
+                // Only over-write normal velocity with Dirichlet bc at hi face
+                if (k == domain_khi+1 && (bc.hi(2) == BCType::ext_dir)) 
+                    if (is_velocity && n == 2) qmns = q(i,j,k,n);
             }
 
             Ipz(i,j,k-1,n) = qmns;
@@ -787,7 +839,8 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
     {
         amrex::ParallelFor(zebox, ncomp, [q,wmac,AMREX_D_DECL(domain_ilo,domain_jlo,domain_klo),
                                                  AMREX_D_DECL(domain_ihi,domain_jhi,domain_khi),
-                                          Imz,Ipz,dt,dtdz,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz)]
+                                          Imz,Ipz,dt,dtdz,pbc,flag,vfrac,ccc,AMREX_D_DECL(fcx,fcy,fcz),
+                                          is_velocity]
         AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real qpls(0.);
