@@ -5,6 +5,16 @@
 
 using namespace amrex;
 
+AMREX_GPU_HOST_DEVICE AMREX_INLINE
+Real
+linear_interp (Real xout,
+               Real x1in, Real val1,
+               Real x2in, Real val2)
+{
+   Real val_out =  val1 + (xout-x1in)/(x2in-x1in) * (val2-val1);
+   return val_out;
+}
+
 void ebgodunov::predict_godunov (Real /*time*/, 
                                  MultiFab& u_mac, MultiFab& v_mac,
                                  MultiFab const& vel, 
@@ -350,13 +360,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcy(i-1,j,k) <= 0.0) 
                 {
-                    v_tmp_j = v_ad(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i-1,j,k) - fcy(i-2,j,k)) * (v_ad(i-1,j,k) - v_ad(i-2,j,k));
-                    y_hat_j = yhat(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i-1,j,k) - fcy(i-2,j,k)) * (yhat(i-1,j,k) - yhat(i-2,j,k));
+                    // Interp to face center from face centroids
+                    v_tmp_j = linear_interp(0.0, fcy(i-1,j,k), v_ad(i-1,j,k), (-1.+fcy(i-2,j,k)), v_ad(i-2,j,k));
+                    y_hat_j = linear_interp(0.0, fcy(i-1,j,k), yhat(i-1,j,k), (-1.+fcy(i-2,j,k)), yhat(i-2,j,k));
                 }
                 else if (fcy(i-1,j,k) > 0.0) 
                 {
-                    v_tmp_j = v_ad(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i  ,j,k) - fcy(i-1,j,k)) * (v_ad(i  ,j,k) - v_ad(i-1,j,k));
-                    y_hat_j = yhat(i-1,j,k) - fcy(i-1,j,k) / (1.0 + fcy(i  ,j,k) - fcy(i-1,j,k)) * (yhat(i  ,j,k) - yhat(i-1,j,k));
+                    // Interp to face center from face centroids
+                    v_tmp_j = linear_interp(0.0, fcy(i-1,j,k), v_ad(i-1,j,k), ( 1.+fcy(i  ,j,k)), v_ad(i  ,j,k));
+                    y_hat_j = linear_interp(0.0, fcy(i-1,j,k), yhat(i-1,j,k), ( 1.+fcy(i  ,j,k)), yhat(i  ,j,k));
                 }
 
                 // Tangential extrapolation in the x-direction at j+1/2
@@ -367,13 +379,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcy(i-1,j+1,k) <= 0.0) 
                 {
-                    v_tmp_jp1 = v_ad(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i-1,j+1,k) - fcy(i-2,j+1,k)) * (v_ad(i-1,j+1,k) - v_ad(i-2,j+1,k));
-                    y_hat_jp1 = yhat(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i-1,j+1,k) - fcy(i-2,j+1,k)) * (yhat(i-1,j+1,k) - yhat(i-2,j+1,k));
+                    // Interp to face center from face centroids
+                    v_tmp_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), v_ad(i-1,j+1,k), (-1.+fcy(i-2,j+1,k)), v_ad(i-2,j+1,k));
+                    y_hat_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), yhat(i-1,j+1,k), (-1.+fcy(i-2,j+1,k)), yhat(i-2,j+1,k));
                 }
                 else if (fcy(i-1,j+1,k) > 0.0) 
                 {
-                    v_tmp_jp1 = v_ad(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i  ,j+1,k) - fcy(i-1,j+1,k)) * (v_ad(i  ,j+1,k) - v_ad(i-1,j+1,k));
-                    y_hat_jp1 = yhat(i-1,j+1,k) - fcy(i-1,j+1,k) / (1.0 + fcy(i  ,j+1,k) - fcy(i-1,j+1,k)) * (yhat(i  ,j+1,k) - yhat(i-1,j+1,k));
+                    // Interp to face center from face centroids
+                    v_tmp_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), v_ad(i-1,j+1,k), ( 1.+fcy(i  ,j+1,k)), v_ad(i  ,j+1,k));
+                    y_hat_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), yhat(i-1,j+1,k), ( 1.+fcy(i  ,j+1,k)), yhat(i  ,j+1,k));
                 }
 
                 v_tmp_l = 0.5 * (v_tmp_jp1 + v_tmp_j);
@@ -386,7 +400,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 if (vfrac_arr(i-1,j,k) > 0.)
                     stl += 0.5 * l_dt * f(i-1,j,k,n);
             }
-
         }
 
         // Right side of interface
@@ -414,13 +427,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcy(i,j,k) <= 0.0) 
                 {
-                    v_tmp_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i,j,k) - fcy(i-1,j,k)) * (v_ad(i,j,k) - v_ad(i-1,j,k));
-                    y_hat_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i,j,k) - fcy(i-1,j,k)) * (v_ad(i,j,k) - v_ad(i-1,j,k));
+                    // Interp to face center from face centroids
+                    v_tmp_j = linear_interp(0.0, fcy(i,j,k), v_ad(i,j,k), (-1.+fcy(i-1,j,k)), v_ad(i-1,j,k));
+                    y_hat_j = linear_interp(0.0, fcy(i,j,k), yhat(i,j,k), (-1.+fcy(i-1,j,k)), yhat(i-1,j,k));
                 }
                 else if (fcy(i,j,k) > 0.0) 
                 {
-                    v_tmp_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i+1,j,k) - fcy(i,j,k)) * (v_ad(i+1,j,k) - v_ad(i  ,j,k));
-                    y_hat_j = v_ad(i,j,k) - fcy(i,j,k) / (1.0 + fcy(i+1,j,k) - fcy(i,j,k)) * (v_ad(i+1,j,k) - v_ad(i  ,j,k));
+                    // Interp to face center from face centroids
+                    v_tmp_j = linear_interp(0.0, fcy(i,j,k), v_ad(i,j,k), ( 1.+fcy(i+1,j,k)), v_ad(i+1,j,k));
+                    y_hat_j = linear_interp(0.0, fcy(i,j,k), yhat(i,j,k), ( 1.+fcy(i+1,j,k)), yhat(i+1,j,k));
                 }
 
                 // Tangential extrapolation in the x-direction at j+1/2
@@ -431,13 +446,14 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcy(i,j+1,k) <= 0.0) 
                 {
-                    v_tmp_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i,j+1,k) - fcy(i-1,j+1,k)) * (v_ad(i,j+1,k) - v_ad(i-1,j+1,k));
-                    y_hat_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i,j+1,k) - fcy(i-1,j+1,k)) * (v_ad(i,j+1,k) - v_ad(i-1,j+1,k));
+                    v_tmp_jp1 = linear_interp(0.0, fcy(i,j+1,k), v_ad(i,j+1,k), (-1.+fcy(i-1,j+1,k)), v_ad(i-1,j+1,k));
+                    y_hat_jp1 = linear_interp(0.0, fcy(i,j+1,k), yhat(i,j+1,k), (-1.+fcy(i-1,j+1,k)), yhat(i-1,j+1,k));
                 }
                 else if (fcy(i,j+1,k) > 0.0) 
                 {
-                    v_tmp_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i+1,j+1,k) - fcy(i,j+1,k)) * (v_ad(i+1,j+1,k) - v_ad(i  ,j+1,k));
-                    y_hat_jp1 = v_ad(i,j+1,k) - fcy(i,j+1,k) / (1.0 + fcy(i+1,j+1,k) - fcy(i,j+1,k)) * (v_ad(i+1,j+1,k) - v_ad(i  ,j+1,k));
+                    // Interp to face center from face centroids
+                    v_tmp_jp1 = linear_interp(0.0, fcy(i,j+1,k), v_ad(i,j+1,k), ( 1.+fcy(i+1,j+1,k)), v_ad(i+1,j+1,k));
+                    y_hat_jp1 = linear_interp(0.0, fcy(i,j+1,k), yhat(i,j+1,k), ( 1.+fcy(i+1,j+1,k)), yhat(i+1,j+1,k));
                 }
 
                 v_tmp_h = 0.5 * (v_tmp_jp1 + v_tmp_j);
@@ -559,13 +575,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcx(i,j-1,k) <= 0.0) 
                 {
-                    u_tmp_i = u_ad(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j-1,k) - fcx(i,j-2,k)) * (u_ad(i,j-1,k) - u_ad(i,j-2,k));
-                    x_hat_i = xhat(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j-1,k) - fcx(i,j-2,k)) * (xhat(i,j-1,k) - xhat(i,j-2,k));
+                    // Interp to face center from face centroids
+                    u_tmp_i = linear_interp(0.0, fcx(i,j-1,k), u_ad(i,j-1,k), (-1.+fcx(i,j-2,k)), u_ad(i,j-2,k));
+                    x_hat_i = linear_interp(0.0, fcx(i,j-1,k), xhat(i,j-1,k), (-1.+fcx(i,j-2,k)), xhat(i,j-2,k));
                 }
                 else if (fcx(i,j-1,k) > 0.0) 
                 {
-                    u_tmp_i = u_ad(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j  ,k) - fcx(i,j-1,k)) * (u_ad(i,j  ,k) - u_ad(i,j-1,k));
-                    x_hat_i = xhat(i,j-1,k) - fcx(i,j-1,k) / (1.0 + fcx(i,j  ,k) - fcx(i,j-1,k)) * (xhat(i,j,  k) - xhat(i,j-1,k));
+                    // Interp to face center from face centroids
+                    u_tmp_i = linear_interp(0.0, fcx(i,j-1,k), u_ad(i,j-1,k), ( 1.+fcx(i,j,k)), u_ad(i,j,k));
+                    x_hat_i = linear_interp(0.0, fcx(i,j-1,k), xhat(i,j-1,k), ( 1.+fcx(i,j,k)), xhat(i,j,k));
                 }
 
                 // Tangential extrapolation in the y-direction at i+1/2
@@ -576,13 +594,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcx(i+1,j-1,k) <= 0.0) 
                 {
-                    u_tmp_ip1 = u_ad(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j-1,k) - fcx(i+1,j-2,k)) * (u_ad(i+1,j-1,k) - u_ad(i+1,j-2,k));
-                    x_hat_ip1 = xhat(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j-1,k) - fcx(i+1,j-2,k)) * (xhat(i+1,j-1,k) - xhat(i+1,j-2,k));
+                    // Interp to face center from face centroids
+                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), u_ad(i+1,j-1,k), (-1.+fcx(i+1,j-2,k)), u_ad(i+1,j-2,k));
+                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), xhat(i+1,j-1,k), (-1.+fcx(i+1,j-2,k)), xhat(i+1,j-2,k));
                 }
                 else if (fcx(i+1,j-1,k) > 0.0) 
                 {
-                    u_tmp_ip1 = u_ad(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j  ,k) - fcx(i+1,j-1,k)) * (u_ad(i+1,j  ,k) - v_ad(i+1,j-1,k));
-                    x_hat_ip1 = xhat(i+1,j-1,k) - fcx(i+1,j-1,k) / (1.0 + fcx(i+1,j  ,k) - fcx(i+1,j-1,k)) * (xhat(i+1,j  ,k) - xhat(i+1,j-1,k));
+                    // Interp to face center from face centroids
+                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), u_ad(i+1,j-1,k), ( 1.+fcx(i+1,j,k)), u_ad(i+1,j,k));
+                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), xhat(i+1,j-1,k), ( 1.+fcx(i+1,j,k)), xhat(i+1,j,k));
                 }
 
                 u_tmp_l = 0.5 * (u_tmp_ip1 + u_tmp_i);
@@ -624,13 +644,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcx(i,j,k) <= 0.0) 
                 {
-                    u_tmp_i = u_ad(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j,k) - fcx(i,j-1,k)) * (u_ad(i,j,k) - u_ad(i,j-1,k));
-                    x_hat_i = xhat(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j,k) - fcx(i,j-1,k)) * (xhat(i,j,k) - xhat(i,j-1,k));
+                    // Interp to face center from face centroids
+                    u_tmp_i = linear_interp(0.0, fcx(i,j,k), u_ad(i,j,k), (-1.+fcx(i,j-1,k)), u_ad(i,j-1,k));
+                    x_hat_i = linear_interp(0.0, fcx(i,j,k), xhat(i,j,k), (-1.+fcx(i,j-1,k)), xhat(i,j-1,k));
                 }
                 else if (fcx(i,j-1,k) > 0.0) 
                 {
-                    u_tmp_i = u_ad(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j+1,k) - fcx(i,j,k)) * (u_ad(i,j+1,k) - u_ad(i,j,k));
-                    x_hat_i = xhat(i,j,k) - fcx(i,j,k) / (1.0 + fcx(i,j+1,k) - fcx(i,j,k)) * (xhat(i,j+1,k) - xhat(i,j,k));
+                    // Interp to face center from face centroids
+                    u_tmp_i = linear_interp(0.0, fcx(i,j,k), u_ad(i,j,k), ( 1.+fcx(i,j+1,k)), u_ad(i,j+1,k));
+                    x_hat_i = linear_interp(0.0, fcx(i,j,k), xhat(i,j,k), ( 1.+fcx(i,j+1,k)), xhat(i,j+1,k));
                 }
 
                 // Tangential extrapolation in the y-direction at i+1/2
@@ -641,13 +663,15 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 }
                 else if (fcx(i+1,j,k) <= 0.0) 
                 {
-                    u_tmp_ip1 = u_ad(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j,k) - fcx(i+1,j-1,k)) * (u_ad(i+1,j,k) - u_ad(i+1,j-1,k));
-                    x_hat_ip1 = xhat(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j,k) - fcx(i+1,j-1,k)) * (xhat(i+1,j,k) - xhat(i+1,j-1,k));
+                    // Interp to face center from face centroids
+                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j,k), u_ad(i+1,j,k), (-1.+fcx(i+1,j-1,k)), u_ad(i+1,j-1,k));
+                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j,k), xhat(i+1,j,k), (-1.+fcx(i+1,j-1,k)), xhat(i+1,j-1,k));
                 }
                 else if (fcx(i+1,j-1,k) > 0.0) 
                 {
-                    u_tmp_ip1 = u_ad(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j+1,k) - fcx(i+1,j,k)) * (u_ad(i+1,j+1,k) - v_ad(i+1,j,k));
-                    x_hat_ip1 = xhat(i+1,j,k) - fcx(i+1,j,k) / (1.0 + fcx(i+1,j+1,k) - fcx(i+1,j,k)) * (xhat(i+1,j+1,k) - xhat(i+1,j,k));
+                    // Interp to face center from face centroids
+                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j,k), u_ad(i+1,j,k), ( 1.+fcx(i+1,j+1,k)), u_ad(i+1,j+1,k));
+                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j,k), xhat(i+1,j,k), ( 1.+fcx(i+1,j+1,k)), xhat(i+1,j+1,k));
                 }
 
                 u_tmp_h = 0.5 * (u_tmp_ip1 + u_tmp_i);
@@ -672,6 +696,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 
         Godunov_cc_ybc_lo(i, j, k, n, q, stl, sth, bc.lo(1), dlo.y, true);
         Godunov_cc_ybc_hi(i, j, k, n, q, stl, sth, bc.hi(1), dhi.y, true);
+
 
         // Prevent backflow
         if ( (j==dlo.y) and (bc.lo(1) == BCType::foextrap || bc.lo(1) == BCType::hoextrap) )
