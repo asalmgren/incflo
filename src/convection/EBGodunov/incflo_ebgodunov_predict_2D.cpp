@@ -1,19 +1,10 @@
 #include <incflo_godunov_trans_bc.H>
+#include <incflo_ebgodunov_transverse_2D_K.H>
 
 #include <Godunov.H>
 #include <EBGodunov.H>
 
 using namespace amrex;
-
-AMREX_GPU_HOST_DEVICE AMREX_INLINE
-Real
-linear_interp (Real xout,
-               Real x1in, Real val1,
-               Real x2in, Real val2)
-{
-   Real val_out =  val1 + (xout-x1in)/(x2in-x1in) * (val2-val1);
-   return val_out;
-}
 
 void ebgodunov::predict_godunov (Real /*time*/, 
                                  MultiFab& u_mac, MultiFab& v_mac,
@@ -329,142 +320,60 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         constexpr int n = 0;
         auto bc = pbc[n];
 
-        // stl is on the left  side of the lo-x side of cell (i,j)
-        // sth is on the right side of the lo-x side of cell (i,j)
-        Real stl, sth;
         Real v_tmp_j, v_tmp_jp1;
         Real y_hat_j, y_hat_jp1;
 
+        // stl is on the left  side of the lo-x side of cell (i,j)
+        // sth is on the right side of the lo-x side of cell (i,j)
+        Real stl = xlo(i,j,k,n);
+        Real sth = xhi(i,j,k,n);
+
+        Real trans_y;
+
         // Left side of interface
-        if (flag(i-1,j,k).isRegular())
         {
-            // For full cells this is the transverse term
-            stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
-                                                (yhat(i-1,j+1,k  )-yhat(i-1,j,k));
-
-        } else { // should be single-valued since it is connected across this face
-
-            Real dudy_l;  //  (yhat(i-1,j+1,k)-yhat(i-1,j,k)) if regular
-            Real v_tmp_l; //  0.5 * (v_ad(i-1,j+1,k)+v_ad(i-1,j,k)) if regular
-
-            stl = xlo(i,j,k,n);
-
-            // If either y-face is covered, set the tranxverse term to zero
-            if (apy(i-1,j,k) > 0.0 && apy(i-1,j+1,k) > 0.0) 
+            int ic = i-1;
+            if (flag(ic,j,k).isRegular())
             {
-                // Tangential extrapolation in the x-direction at j-1/2
-                if (apy(i-1,j,k) == 1.0)
+                // For full cells this is the transverse term
+                stl += - (0.25*l_dt/dy)*(v_ad(ic,j+1,k)+v_ad(ic,j,k))*
+                                        (yhat(ic,j+1,k)-yhat(ic,j,k));
+                stl += 0.5 * l_dt * f(ic,j,k,n);
+    
+            } else {
+    
+                // If either y-face is covered then don't include any dt-based terms
+                if (apy(ic,j,k) > 0.0 && apy(ic,j+1,k) > 0.0) 
                 {
-                    v_tmp_j = v_ad(i-1,j,k);
-                    y_hat_j = yhat(i-1,j,k);
+                    create_transverse_terms_for_xface(ic,j,k,v_ad,yhat,apy,fcy,trans_y,l_dt,dy);
+    
+                    stl += -0.5 * l_dt * trans_y;
+                    stl +=  0.5 * l_dt * f(i-1,j,k,n);
                 }
-                else if (fcy(i-1,j,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_j = linear_interp(0.0, fcy(i-1,j,k), v_ad(i-1,j,k), (-1.+fcy(i-2,j,k)), v_ad(i-2,j,k));
-                    y_hat_j = linear_interp(0.0, fcy(i-1,j,k), yhat(i-1,j,k), (-1.+fcy(i-2,j,k)), yhat(i-2,j,k));
-                }
-                else if (fcy(i-1,j,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_j = linear_interp(0.0, fcy(i-1,j,k), v_ad(i-1,j,k), ( 1.+fcy(i  ,j,k)), v_ad(i  ,j,k));
-                    y_hat_j = linear_interp(0.0, fcy(i-1,j,k), yhat(i-1,j,k), ( 1.+fcy(i  ,j,k)), yhat(i  ,j,k));
-                }
-
-                // Tangential extrapolation in the x-direction at j+1/2
-                if (apy(i-1,j+1,k) == 1.0)
-                {
-                    v_tmp_jp1 = v_ad(i-1,j+1,k);
-                    y_hat_jp1 = yhat(i-1,j+1,k);
-                }
-                else if (fcy(i-1,j+1,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), v_ad(i-1,j+1,k), (-1.+fcy(i-2,j+1,k)), v_ad(i-2,j+1,k));
-                    y_hat_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), yhat(i-1,j+1,k), (-1.+fcy(i-2,j+1,k)), yhat(i-2,j+1,k));
-                }
-                else if (fcy(i-1,j+1,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), v_ad(i-1,j+1,k), ( 1.+fcy(i  ,j+1,k)), v_ad(i  ,j+1,k));
-                    y_hat_jp1 = linear_interp(0.0, fcy(i-1,j+1,k), yhat(i-1,j+1,k), ( 1.+fcy(i  ,j+1,k)), yhat(i  ,j+1,k));
-                }
-
-                v_tmp_l = 0.5 * (v_tmp_jp1 + v_tmp_j);
-                 dudy_l =       (y_hat_jp1 - y_hat_j);
-
-                Real trans_stl = v_tmp_l * dudy_l / dy;
-
-                stl += -0.5 * l_dt * trans_stl;
-
-                if (vfrac_arr(i-1,j,k) > 0.)
-                    stl += 0.5 * l_dt * f(i-1,j,k,n);
             }
         }
 
         // Right side of interface
-        if (flag(i,j,k).isRegular())
         {
-            // For full cells this is the transverse term
-            sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
-                                                (yhat(i  ,j+1,k  )-yhat(i  ,j,k));
-
-        } else { // should be single-valued since it is connected across this face
-
-            Real dudy_h;  //       (yhat(i,j+1,k)-yhat(i,j,k)) if regular
-            Real v_tmp_h; // 0.5 * (v_ad(i,j+1,k)+v_ad(i,j,k)) if regular
-
-            sth = xhi(i,j,k,n);
-
-            // If either face is covered, use the cell-centered y-velocity
-            if (apy(i,j,k) > 0.0 && apy(i,j+1,k) > 0.0) 
+            int ic = i;
+            if (flag(ic,j,k).isRegular())
             {
-                // Tangential extrapolation in the x-direction at j-1/2
-                if (apy(i,j,k) == 1.0)
-                {
-                    v_tmp_j = v_ad(i,j,k);
-                    y_hat_j = yhat(i,j,k);
-                }
-                else if (fcy(i,j,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_j = linear_interp(0.0, fcy(i,j,k), v_ad(i,j,k), (-1.+fcy(i-1,j,k)), v_ad(i-1,j,k));
-                    y_hat_j = linear_interp(0.0, fcy(i,j,k), yhat(i,j,k), (-1.+fcy(i-1,j,k)), yhat(i-1,j,k));
-                }
-                else if (fcy(i,j,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_j = linear_interp(0.0, fcy(i,j,k), v_ad(i,j,k), ( 1.+fcy(i+1,j,k)), v_ad(i+1,j,k));
-                    y_hat_j = linear_interp(0.0, fcy(i,j,k), yhat(i,j,k), ( 1.+fcy(i+1,j,k)), yhat(i+1,j,k));
-                }
 
-                // Tangential extrapolation in the x-direction at j+1/2
-                if (apy(i,j+1,k) == 1.0)
+                // For full cells this is the transverse term
+                sth += - (0.25*l_dt/dy)*(v_ad(ic,j+1,k)+v_ad(ic,j,k))*
+                                        (yhat(ic,j+1,k)-yhat(ic,j,k));
+                sth +=  0.5 * l_dt * f(ic,j,k,n);
+
+            } else {
+
+                // If either y-face is covered then don't include any dt-based terms
+                if (apy(ic,j,k) > 0.0 && apy(ic,j+1,k) > 0.0) 
                 {
-                    v_tmp_jp1 = v_ad(i,j+1,k);
-                    y_hat_jp1 = yhat(i,j+1,k);
+                    create_transverse_terms_for_xface(ic,j,k,v_ad,yhat,apy,fcy,trans_y,l_dt,dy);
+
+                    sth += -0.5 * l_dt * trans_y;
+                    sth +=  0.5 * l_dt * f(ic,j,k,n);
                 }
-                else if (fcy(i,j+1,k) <= 0.0) 
-                {
-                    v_tmp_jp1 = linear_interp(0.0, fcy(i,j+1,k), v_ad(i,j+1,k), (-1.+fcy(i-1,j+1,k)), v_ad(i-1,j+1,k));
-                    y_hat_jp1 = linear_interp(0.0, fcy(i,j+1,k), yhat(i,j+1,k), (-1.+fcy(i-1,j+1,k)), yhat(i-1,j+1,k));
-                }
-                else if (fcy(i,j+1,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    v_tmp_jp1 = linear_interp(0.0, fcy(i,j+1,k), v_ad(i,j+1,k), ( 1.+fcy(i+1,j+1,k)), v_ad(i+1,j+1,k));
-                    y_hat_jp1 = linear_interp(0.0, fcy(i,j+1,k), yhat(i,j+1,k), ( 1.+fcy(i+1,j+1,k)), yhat(i+1,j+1,k));
-                }
-
-                v_tmp_h = 0.5 * (v_tmp_jp1 + v_tmp_j);
-                 dudy_h =       (y_hat_jp1 - y_hat_j);
-
-                Real trans_sth = v_tmp_h * dudy_h / dy;
-
-                sth += -0.5 * l_dt * trans_sth;
-
-                if (vfrac_arr(i,j,k) > 0.)
-                    sth += 0.5 * l_dt * f(i  ,j,k,n);
             }
         }
 
@@ -545,144 +454,59 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         constexpr int n = 1;
         auto bc = pbc[n];
 
-        // stl is on the low  side of the lo-y side of cell (i,j)
-        // sth is on the high side of the lo-y side of cell (i,j)
-        Real stl, sth;
         Real u_tmp_i, u_tmp_ip1;
         Real x_hat_i, x_hat_ip1;
 
-        // Bottom side of interface
-        if (flag(i,j-1,k).isRegular())
+        // stl is on the low  side of the lo-y side of cell (i,j)
+        // sth is on the high side of the lo-y side of cell (i,j)
+        Real stl = ylo(i,j,k,n);
+        Real sth = yhi(i,j,k,n);
+
+        Real trans_x;
+
+        // d/dx computed in (i,j-1)
         {
-            stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
-                                                (xhat(i+1,j-1,k  )-xhat(i,j-1,k));
-
-        } else { // should be single-valued since it is connected across this face
-
-            Real dvdx_l;  //  (xhat(i+1,j-1,k  )-xhat(i,j-1,k)) if regular
-            Real u_tmp_l; //  0.5 * (u_ad(i+1,j-1,k  )+u_ad(i,j-1,k)) if regular
-
-            stl = ylo(i,j,k,n);
-
-            // If either x-face is covered, set the tranxverse term to zero
-            if (apx(i,j-1,k) > 0.0 && apx(i+1,j-1,k) > 0.0) 
+            int jc = j-1;
+            if (flag(i,j,k).isRegular())
             {
-                // Tangential extrapolation in the y-direction at i-1/2
-                if (apx(i,j-1,k) == 1.0)
-                {
-                    u_tmp_i = u_ad(i,j-1,k);
-                    x_hat_i = xhat(i,j-1,k);
-                }
-                else if (fcx(i,j-1,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_i = linear_interp(0.0, fcx(i,j-1,k), u_ad(i,j-1,k), (-1.+fcx(i,j-2,k)), u_ad(i,j-2,k));
-                    x_hat_i = linear_interp(0.0, fcx(i,j-1,k), xhat(i,j-1,k), (-1.+fcx(i,j-2,k)), xhat(i,j-2,k));
-                }
-                else if (fcx(i,j-1,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_i = linear_interp(0.0, fcx(i,j-1,k), u_ad(i,j-1,k), ( 1.+fcx(i,j,k)), u_ad(i,j,k));
-                    x_hat_i = linear_interp(0.0, fcx(i,j-1,k), xhat(i,j-1,k), ( 1.+fcx(i,j,k)), xhat(i,j,k));
-                }
+                // For full cells this is the transverse term
+                stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k)+u_ad(i,jc,k))*
+                                        (xhat(i+1,jc,k)-xhat(i,jc,k));
+                stl += 0.5 * l_dt * f(i,jc,k,n);
 
-                // Tangential extrapolation in the y-direction at i+1/2
-                if (apx(i+1,j-1,k) == 1.0)
+            } else {
+
+                // If either x-face is covered then don't include any dt-based terms
+                if (apx(i,jc,k) > 0.0 && apx(i+1,jc,k) > 0.0)
                 {
-                    u_tmp_ip1 = u_ad(i+1,j-1,k);
-                    x_hat_ip1 = xhat(i+1,j-1,k);
+                    create_transverse_terms_for_yface(i,jc,k,u_ad,xhat,apx,fcx,trans_x,l_dt,dx);
+
+                    stl += -0.5 * l_dt * trans_x;
+                    stl +=  0.5 * l_dt * f(i,jc,k,n);
                 }
-                else if (fcx(i+1,j-1,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), u_ad(i+1,j-1,k), (-1.+fcx(i+1,j-2,k)), u_ad(i+1,j-2,k));
-                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), xhat(i+1,j-1,k), (-1.+fcx(i+1,j-2,k)), xhat(i+1,j-2,k));
-                }
-                else if (fcx(i+1,j-1,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), u_ad(i+1,j-1,k), ( 1.+fcx(i+1,j,k)), u_ad(i+1,j,k));
-                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j-1,k), xhat(i+1,j-1,k), ( 1.+fcx(i+1,j,k)), xhat(i+1,j,k));
-                }
-
-                u_tmp_l = 0.5 * (u_tmp_ip1 + u_tmp_i);
-                 dvdx_l =       (x_hat_ip1 - x_hat_i);
-
-                Real trans_stl = u_tmp_l * dvdx_l / dx;
-
-                stl += - 0.5 * l_dt * trans_stl;
-
-                if (vfrac_arr(i,j-1,k) > 0.)
-                    stl += 0.5 * l_dt * f(i,j-1,k,n);
             }
         }
 
-        // Top side of interface
-        if (flag(i,j,k).isRegular())
+        // d/dx computed in (i,j)
         {
-            sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
-                                                (xhat(i+1,j  ,k  )-xhat(i,j  ,k));
+            int jc = j;
+            if (flag(i,jc,k).isRegular())
+            {
+                // For full cells this is the transverse term
+                stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k)+u_ad(i,jc,k))*
+                                        (xhat(i+1,jc,k)-xhat(i,jc,k));
+                stl += 0.5 * l_dt * f(i,jc,k,n);
 
-        } else { // should be single-valued since it is connected across this face
-
-            Real dvdx_h;  //  (xhat(i+1,j,k  )-xhat(i,j,k)) if regular
-            Real u_tmp_h; //  0.5 * (u_ad(i+1,j,k  )+u_ad(i,j,k)) if regular
-
-            Real trans_sth; 
-
-            sth = yhi(i,j,k,n);
-
-            // If either x-face is covered, set the tranxverse term to zero
-            if (apx(i,j,k) == 0.0 or apx(i+1,j,k) == 0.0) {
-                trans_sth = 0.0;
             } else {
-                // Tangential extrapolation in the y-direction at i-1/2
-                if (apx(i,j,k) == 1.0)
-                {
-                    u_tmp_i = u_ad(i,j,k);
-                    x_hat_i = xhat(i,j,k);
-                }
-                else if (fcx(i,j,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_i = linear_interp(0.0, fcx(i,j,k), u_ad(i,j,k), (-1.+fcx(i,j-1,k)), u_ad(i,j-1,k));
-                    x_hat_i = linear_interp(0.0, fcx(i,j,k), xhat(i,j,k), (-1.+fcx(i,j-1,k)), xhat(i,j-1,k));
-                }
-                else if (fcx(i,j-1,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_i = linear_interp(0.0, fcx(i,j,k), u_ad(i,j,k), ( 1.+fcx(i,j+1,k)), u_ad(i,j+1,k));
-                    x_hat_i = linear_interp(0.0, fcx(i,j,k), xhat(i,j,k), ( 1.+fcx(i,j+1,k)), xhat(i,j+1,k));
-                }
 
-                // Tangential extrapolation in the y-direction at i+1/2
-                if (apx(i+1,j,k) == 1.0)
+                // If either x-face is covered then don't include any dt-based terms
+                if (apx(i,jc,k) > 0.0 && apx(i+1,jc,k) > 0.0)
                 {
-                    u_tmp_ip1 = u_ad(i+1,j,k);
-                    x_hat_ip1 = xhat(i+1,j,k);
+                    create_transverse_terms_for_yface(i,jc,k,u_ad,xhat,apx,fcx,trans_x,l_dt,dx);
+
+                    stl += -0.5 * l_dt * trans_x;
+                    stl +=  0.5 * l_dt * f(i,jc,k,n);
                 }
-                else if (fcx(i+1,j,k) <= 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j,k), u_ad(i+1,j,k), (-1.+fcx(i+1,j-1,k)), u_ad(i+1,j-1,k));
-                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j,k), xhat(i+1,j,k), (-1.+fcx(i+1,j-1,k)), xhat(i+1,j-1,k));
-                }
-                else if (fcx(i+1,j-1,k) > 0.0) 
-                {
-                    // Interp to face center from face centroids
-                    u_tmp_ip1 = linear_interp(0.0, fcx(i+1,j,k), u_ad(i+1,j,k), ( 1.+fcx(i+1,j+1,k)), u_ad(i+1,j+1,k));
-                    x_hat_ip1 = linear_interp(0.0, fcx(i+1,j,k), xhat(i+1,j,k), ( 1.+fcx(i+1,j+1,k)), xhat(i+1,j+1,k));
-                }
-
-                u_tmp_h = 0.5 * (u_tmp_ip1 + u_tmp_i);
-                 dvdx_h =       (x_hat_ip1 - x_hat_i);
-
-                trans_sth = u_tmp_h * dvdx_h / dx;
-
-                sth +=  - 0.5 * l_dt * trans_sth;
-
-                if (vfrac_arr(i,j  ,k) > 0.)
-                    sth += 0.5 * l_dt * f(i,j  ,k,n);
             }
         }
 

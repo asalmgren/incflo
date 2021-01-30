@@ -1,5 +1,6 @@
 #include <incflo_ebgodunov_corner_couple.H>
 #include <incflo_godunov_trans_bc.H>
+#include <incflo_ebgodunov_transverse_3D_K.H>
 
 #include <Godunov.H>
 #include <EBGodunov.H>
@@ -396,38 +397,64 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         constexpr int n = 0;
         auto bc = pbc[n];
 
-        // stl is on the left  side of the lo-x side of cell (i,j)
-        // sth is on the right side of the lo-x side of cell (i,j)
-        Real stl, sth;
-        Real v_tmp_j, v_tmp_jp1;
-        Real y_hat_j, y_hat_jp1;
+        // stl is on the lo side of the lo-x side of cell (i,j,k)
+        // sth is on the hi side of the lo-x side of cell (i,j,k)
+        Real stl = xlo(i,j,k,n);
+        Real sth = xhi(i,j,k,n);
 
+        Real trans_y, trans_z;
+
+        //
         // Left side of interface
-        if (flag(i-1,j,k).isRegular())
+        //
         {
-            stl = xlo(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i-1,j+1,k  )+v_ad(i-1,j,k))*
-                                                (yzlo(i-1,j+1,k  )-yzlo(i-1,j,k))
-                               - (0.25*l_dt/dz)*(w_ad(i-1,j  ,k+1)+w_ad(i-1,j,k))*
-                                                (zylo(i-1,j  ,k+1)-zylo(i-1,j,k));
-        } else {
-            stl = xlo(i,j,k,n);
+        int ic = i-1;
+        if (flag(ic,j,k).isRegular())
+        {
+            stl += - (0.25*l_dt/dy)*(v_ad(ic,j+1,k  )+v_ad(ic,j,k))*
+                                    (yzlo(ic,j+1,k  )-yzlo(ic,j,k))
+                   - (0.25*l_dt/dz)*(w_ad(ic,j  ,k+1)+w_ad(ic,j,k))*
+                                    (zylo(ic,j  ,k+1)-zylo(ic,j,k));
+
+        // Only add dt-based terms if we can construct all transverse terms
+        //    using non-covered faces
+        } else if (apy(ic,j+1,k) > 0. && apy(ic,j,k) > 0. && 
+                   apz(ic,j,k+1) > 0. && apz(ic,j,k) > 0.) 
+        {
+            create_transverse_terms_for_xface(ic, j, k, v_ad, w_ad, yzlo, zylo, 
+                                              apy, apz, fcy, fcz, trans_y, trans_z,
+                                              l_dt, dy, dz); 
+
+            stl += -0.5 * l_dt * (trans_y + trans_z);
+            stl +=  0.5 * l_dt * f(ic,j,k,n);
+        }
         }
 
+        //
         // Right side of interface
-        if (flag(i,j,k).isRegular())
+        //
         {
-             sth = xhi(i,j,k,n) - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i  ,j,k))*
-                                                 (yzlo(i  ,j+1,k  )-yzlo(i  ,j,k))
-                                - (0.25*l_dt/dz)*(w_ad(i  ,j  ,k+1)+w_ad(i  ,j,k))*
-                                                 (zylo(i  ,j  ,k+1)-zylo(i  ,j,k));
-        } else {
-            sth = xhi(i,j,k,n);
-        }
+        int ic = i;
+        if (flag(ic,j,k).isRegular())
+        {
+             sth += - (0.25*l_dt/dy)*(v_ad(ic,j+1,k  )+v_ad(ic,j,k))*
+                                     (yzlo(ic,j+1,k  )-yzlo(ic,j,k))
+                    - (0.25*l_dt/dz)*(w_ad(ic,j  ,k+1)+w_ad(ic,j,k))*
+                                     (zylo(ic,j  ,k+1)-zylo(ic,j,k));
 
-        if (vfrac_arr(i-1,j,k) > 0.)
-            stl += 0.5 * l_dt * f(i-1,j,k,n);
-        if (vfrac_arr(i,j,k) > 0.)
-            sth += 0.5 * l_dt * f(i  ,j,k,n);
+        // Only add dt-based terms if we can construct all transverse terms
+        //    using non-covered faces
+        } else if (apy(ic,j+1,k) > 0. && apy(ic,j,k) > 0. && 
+                   apz(ic,j,k+1) > 0. && apz(ic,j,k) > 0.) 
+        {
+            create_transverse_terms_for_xface(ic, j, k, v_ad, w_ad, yzlo, zylo,
+                                              apy, apz, fcy, fcz, trans_y, trans_z,
+                                              l_dt, dy, dz); 
+
+            sth += -0.5 * l_dt * (trans_y + trans_z);
+            sth +=  0.5 * l_dt * f(ic,j,k,n);
+        }
+        }
 
         Real gphi_x;
 
@@ -522,38 +549,64 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         constexpr int n = 1;
         auto bc = pbc[n];
 
-        // stl is on the left  side of the lo-x side of cell (i,j)
-        // sth is on the right side of the lo-x side of cell (i,j)
-        Real stl, sth;
-        Real v_tmp_j, v_tmp_jp1;
-        Real y_hat_j, y_hat_jp1;
+        // stl is on the lo side of the lo-y side of cell (i,j,k)
+        // sth is on the hi side of the lo-y side of cell (i,j,k)
+        Real stl = ylo(i,j,k,n);
+        Real sth = yhi(i,j,k,n);
 
-        // Low side of interface
-        if (flag(i,j-1,k).isRegular())
+        Real trans_x, trans_z;
+
+        //
+        // Left side of interface
+        //
         {
-            stl = ylo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j-1,k  )+u_ad(i,j-1,k))*
-                                                (xzlo(i+1,j-1,k  )-xzlo(i,j-1,k))
-                               - (0.25*l_dt/dz)*(w_ad(i  ,j-1,k+1)+w_ad(i,j-1,k))*
-                                                (zxlo(i  ,j-1,k+1)-zxlo(i,j-1,k));
-        } else {
-            stl = ylo(i,j,k,n);
+        int jc = j-1;
+        if (flag(i,jc,k).isRegular())
+        {
+            stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k  )+u_ad(i,jc,k))*
+                                    (xzlo(i+1,jc,k  )-xzlo(i,jc,k))
+                   - (0.25*l_dt/dz)*(w_ad(i  ,jc,k+1)+w_ad(i,jc,k))*
+                                    (zxlo(i  ,jc,k+1)-zxlo(i,jc,k));
+
+        // Only add dt-based terms if we can construct all transverse terms
+        //    using non-covered faces
+        } else if (apx(i+1,jc,k  ) > 0. && apx(i,jc,k) > 0. && 
+                   apz(i  ,jc,k+1) > 0. && apz(i,jc,k) > 0.) 
+        {
+            create_transverse_terms_for_yface(i, jc, k, u_ad, w_ad, xzlo, zxlo, 
+                                              apx, apz, fcx, fcz, trans_x, trans_z,
+                                              l_dt, dx, dz); 
+
+            stl += -0.5 * l_dt * (trans_x + trans_z);
+            stl +=  0.5 * l_dt * f(i,jc,k,n);
+        }
         }
 
-        // High side of interface
-        if (flag(i,j,k).isRegular())
+        //
+        // Right side of interface
+        //
         {
-            sth = yhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j  ,k))*
-                                                (xzlo(i+1,j  ,k  )-xzlo(i,j  ,k))
-                               - (0.25*l_dt/dz)*(w_ad(i  ,j  ,k+1)+w_ad(i,j  ,k))*
-                                                (zxlo(i  ,j  ,k+1)-zxlo(i,j  ,k));
-        } else {
-            sth = yhi(i,j,k,n);
-        }
+        int jc = j;
+        if (flag(i,jc,k).isRegular())
+        {
+            stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k  )+u_ad(i,jc,k))*
+                                    (xzlo(i+1,jc,k  )-xzlo(i,jc,k))
+                   - (0.25*l_dt/dz)*(w_ad(i  ,jc,k+1)+w_ad(i,jc,k))*
+                                    (zxlo(i  ,jc,k+1)-zxlo(i,jc,k));
 
-        if (vfrac_arr(i,j-1,k) > 0.)
-            stl += 0.5 * l_dt * f(i,j-1,k,n);
-        if (vfrac_arr(i,j,k) > 0.)
-            sth += 0.5 * l_dt * f(i,j  ,k,n);
+        // Only add dt-based terms if we can construct all transverse terms
+        //    using non-covered faces
+        } else if (apx(i+1,jc,k  ) > 0. && apx(i,jc,k) > 0. && 
+                   apz(i  ,jc,k+1) > 0. && apz(i,jc,k) > 0.) 
+        {
+            create_transverse_terms_for_yface(i, jc, k, u_ad, w_ad, xzlo, zxlo,
+                                              apy, apz, fcy, fcz, trans_x, trans_z,
+                                              l_dt, dx, dz); 
+
+            sth += -0.5 * l_dt * (trans_x + trans_z);
+            sth +=  0.5 * l_dt * f(i,jc,k,n);
+        }
+        }
 
         Real gphi_y;
 
@@ -652,37 +705,64 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         constexpr int n = 2;
         auto bc = pbc[n];
 
-        // stl is on the left  side of the lo-x side of cell (i,j)
-        // sth is on the right side of the lo-x side of cell (i,j)
-        Real stl, sth;
-        Real v_tmp_j, v_tmp_jp1;
-        Real y_hat_j, y_hat_jp1;
+        // stl is on the lo side of the lo-z side of cell (i,j,k)
+        // sth is on the hi side of the lo-z side of cell (i,j,k)
+        Real stl = zlo(i,j,k,n);
+        Real sth = zhi(i,j,k,n);
 
-        // Low side of interface
-        if (flag(i,j,k-1).isRegular())
+        Real trans_x, trans_y;
+
+        //
+        // Lo side of interface
+        //
         {
-            stl = zlo(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k-1)+u_ad(i,j,k-1))*
-                                                (xylo(i+1,j  ,k-1)-xylo(i,j,k-1))
-                               - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k-1)+v_ad(i,j,k-1))*
-                                                (yxlo(i  ,j+1,k-1)-yxlo(i,j,k-1));
-        } else {
-            stl = zlo(i,j,k,n);
+        int kc = k-1;
+        if (flag(i,j,kc).isRegular())
+        {
+            stl += - (0.25*l_dt/dx)*(u_ad(i+1,j  ,kc)+u_ad(i,j,kc))*
+                                    (xylo(i+1,j  ,kc)-xylo(i,j,kc))
+                   - (0.25*l_dt/dy)*(v_ad(i  ,j+1,kc)+v_ad(i,j,kc))*
+                                    (yxlo(i  ,j+1,kc)-yxlo(i,j,kc));
+
+        // Only add dt-based terms if we can construct all transverse terms
+        //    using non-covered faces
+        } else if (apx(i+1,j  ,kc) > 0. && apx(i,j,kc) > 0. && 
+                   apy(i  ,j+1,kc) > 0. && apy(i,j,kc) > 0.) 
+        {
+            create_transverse_terms_for_zface(i, j, kc, u_ad, v_ad, xylo, zylo, 
+                                              apx, apy, fcx, fcy, trans_x, trans_y,
+                                              l_dt, dx, dy); 
+
+            stl += -0.5 * l_dt * (trans_x + trans_y);
+            stl +=  0.5 * l_dt * f(i,j,kc,n);
+        }
         }
 
-        if (flag(i,j,k).isRegular())
+        //
+        // Right side of interface
+        //
         {
-            sth = zhi(i,j,k,n) - (0.25*l_dt/dx)*(u_ad(i+1,j  ,k  )+u_ad(i,j,k  ))*
-                                                (xylo(i+1,j  ,k  )-xylo(i,j,k  ))
-                               - (0.25*l_dt/dy)*(v_ad(i  ,j+1,k  )+v_ad(i,j,k  ))*
-                                                (yxlo(i  ,j+1,k  )-yxlo(i,j,k  ));
-        } else {
-            sth = zhi(i,j,k,n);
-        }
+        int kc = k;
+        if (flag(i,j,kc).isRegular())
+        {
+            stl += - (0.25*l_dt/dx)*(u_ad(i+1,j  ,kc)+u_ad(i,j,kc))*
+                                    (xylo(i+1,j  ,kc)-xylo(i,j,kc))
+                   - (0.25*l_dt/dy)*(v_ad(i  ,j+1,kc)+v_ad(i,j,kc))*
+                                    (yxlo(i  ,j+1,kc)-yxlo(i,j,kc));
 
-        if (vfrac_arr(i,j,k-1) > 0.)
-            stl += 0.5 * l_dt * f(i,j,k-1,n);
-        if (vfrac_arr(i,j,k  ) > 0.)
-            sth += 0.5 * l_dt * f(i,j,k  ,n);
+        // Only add dt-based terms if we can construct all transverse terms
+        //    using non-covered faces
+        } else if (apx(i+1,j  ,kc) > 0. && apx(i,j,kc) > 0. && 
+                   apy(i  ,j+1,kc) > 0. && apy(i,j,kc) > 0.) 
+        {
+            create_transverse_terms_for_zface(i, j, kc, u_ad, v_ad, xylo, zylo, 
+                                              apx, apy, fcx, fcy, trans_x, trans_y,
+                                              l_dt, dx, dy); 
+
+            sth += -0.5 * l_dt * (trans_x + trans_y);
+            sth +=  0.5 * l_dt * f(i,j,kc,n);
+        }
+        }
 
         Real gphi_z;
 
