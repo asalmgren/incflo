@@ -729,7 +729,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         } else if (apx(i+1,j  ,kc) > 0. && apx(i,j,kc) > 0. && 
                    apy(i  ,j+1,kc) > 0. && apy(i,j,kc) > 0.) 
         {
-            create_transverse_terms_for_zface(i, j, kc, u_ad, v_ad, xylo, zylo, 
+            create_transverse_terms_for_zface(i, j, kc, u_ad, v_ad, xylo, yxlo, 
                                               apx, apy, fcx, fcy, trans_x, trans_y,
                                               l_dt, dx, dy); 
 
@@ -755,7 +755,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         } else if (apx(i+1,j  ,kc) > 0. && apx(i,j,kc) > 0. && 
                    apy(i  ,j+1,kc) > 0. && apy(i,j,kc) > 0.) 
         {
-            create_transverse_terms_for_zface(i, j, kc, u_ad, v_ad, xylo, zylo, 
+            create_transverse_terms_for_zface(i, j, kc, u_ad, v_ad, xylo, yxlo, 
                                               apx, apy, fcx, fcy, trans_x, trans_y,
                                               l_dt, dx, dy); 
 
