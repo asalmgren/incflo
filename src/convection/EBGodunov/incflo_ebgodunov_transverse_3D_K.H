@@ -43,21 +43,21 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcy(ic,jc,kc,0); 
+        Real x0 =  fcy(ic,jc,kc,0);
         Real z0 =  fcy(ic,jc,kc,1);
-        Real v0 = v_ad(ic,jc,kc  ); Real h0 = yzlo(ic,jc,kc  );
+        Real v0 = v_ad(ic,jc,kc  ); Real h0 = yzlo(ic,jc,kc);
 
-        Real x1 =  fcy(ii,jc,kc,0)+xoff; 
+        Real x1 =  fcy(ii,jc,kc,0)+xoff;
         Real z1 =  fcy(ii,jc,kc,1);
-        Real v1 = v_ad(ii,jc,kc  ); Real h1 = yzlo(ii,jc,k   );
+        Real v1 = v_ad(ii,jc,kc  ); Real h1 = yzlo(ii,jc,kc);
 
-        Real x2 =  fcy(ic,jc,kk,0); 
+        Real x2 =  fcy(ic,jc,kk,0);
         Real z2 =  fcy(ic,jc,kk,1)+zoff;
-        Real v2 = v_ad(ic,jc,kk  ); Real h2 = yzlo(ic,jc,kk  );
+        Real v2 = v_ad(ic,jc,kk  ); Real h2 = yzlo(ic,jc,kk);
 
-        Real x3 =  fcy(ii,jc,kk,0)+xoff; 
+        Real x3 =  fcy(ii,jc,kk,0)+xoff;
         Real z3 =  fcy(ii,jc,kk,1)+zoff;
-        Real v3 = v_ad(ii,jc,kk  ); Real h3 = yzlo(ii,jc,kk  );
+        Real v3 = v_ad(ii,jc,kk  ); Real h3 = yzlo(ii,jc,kk);
 
         v_tmp_j = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,z0,x1,z1,x2,z2,x3,z3);
         y_hat_j = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,z0,x1,z1,x2,z2,x3,z3);
@@ -80,21 +80,21 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcy(ic,jc,kc,0); 
-        Real z0 =  fcy(ic,jc,kc,1); 
-        Real v0 = v_ad(ic,jc,kc  ); Real h0 = yzlo(ic,jc,kc  );
+        Real x0 =  fcy(ic,jc,kc,0);
+        Real z0 =  fcy(ic,jc,kc,1);
+        Real v0 = v_ad(ic,jc,kc  ); Real h0 = yzlo(ic,jc,kc);
 
-        Real x1 =  fcy(ii,jc,kc,0)+xoff; 
-        Real z1 =  fcy(ii,jc,kc,1); 
-        Real v1 = v_ad(ii,jc,kc  ); Real h1 = yzlo(ii,jc,kc  );
+        Real x1 =  fcy(ii,jc,kc,0)+xoff;
+        Real z1 =  fcy(ii,jc,kc,1);
+        Real v1 = v_ad(ii,jc,kc  ); Real h1 = yzlo(ii,jc,kc);
 
-        Real x2 =  fcy(ic,jc,kk,0); 
-        Real z2 =  fcy(ic,jc,kk,1)+zoff; 
-        Real v2 = v_ad(ic,jc,kk  ); Real h2 = yzlo(ic,jc,kk  );
+        Real x2 =  fcy(ic,jc,kk,0);
+        Real z2 =  fcy(ic,jc,kk,1)+zoff;
+        Real v2 = v_ad(ic,jc,kk  ); Real h2 = yzlo(ic,jc,kk);
 
-        Real x3 =  fcy(ii,jc,kk,0)+xoff; 
-        Real z3 =  fcy(ii,jc,kk,1)+zoff; 
-        Real v3 = v_ad(ii,jc,kk  ); Real h3 = yzlo(ii,jc,kk  );
+        Real x3 =  fcy(ii,jc,kk,0)+xoff;
+        Real z3 =  fcy(ii,jc,kk,1)+zoff;
+        Real v3 = v_ad(ii,jc,kk  ); Real h3 = yzlo(ii,jc,kk);
 
         v_tmp_jp1 = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,z0,x1,z1,x2,z2,x3,z3);
         y_hat_jp1 = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,z0,x1,z1,x2,z2,x3,z3);
@@ -117,21 +117,21 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcz(ic,jc,kc,0); 
-        Real y0 =  fcz(ic,jc,kc,1); 
-        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zylo(ic,jc,kc  );
+        Real x0 =  fcz(ic,jc,kc,0);
+        Real y0 =  fcz(ic,jc,kc,1);
+        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zylo(ic,jc,kc);
 
-        Real x1 =  fcz(ii,jc,kc,0)+xoff; ; 
-        Real y1 =  fcz(ii,jc,kc,1); 
-        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zylo(ii,jc,kc  );
+        Real x1 =  fcz(ii,jc,kc,0)+xoff;
+        Real y1 =  fcz(ii,jc,kc,1);
+        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zylo(ii,jc,kc);
 
-        Real x2 =  fcz(ic,jj,kc,0); 
-        Real y2 =  fcz(ic,jj,kc,1)+yoff; 
-        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zylo(ic,jj,kc  );
+        Real x2 =  fcz(ic,jj,kc,0);
+        Real y2 =  fcz(ic,jj,kc,1)+yoff;
+        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zylo(ic,jj,kc);
 
         Real x3 =  fcz(ii,jj,kc,0)+xoff;
-        Real y3 =  fcz(ii,jj,kc,1)+yoff; 
-        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zylo(ii,jj,kc  );
+        Real y3 =  fcz(ii,jj,kc,1)+yoff;
+        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zylo(ii,jj,kc);
 
         w_tmp_k = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,y0,x1,y1,x2,y2,x3,y3);
         z_hat_k = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,y0,x1,y1,x2,y2,x3,y3);
@@ -154,21 +154,21 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcz(ic,j ,kc,0); 
-        Real y0 =  fcz(ic,j ,kc,1); 
-        Real v0 = w_ad(ic,j ,kc  ); Real h0 = zylo(ic,j ,kc  );
+        Real x0 =  fcz(ic,jc,kc,0);
+        Real y0 =  fcz(ic,jc,kc,1);
+        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zylo(ic,jc,kc);
 
-        Real x1 =  fcz(ii,j ,kc,0)+xoff;
-        Real y1 =  fcz(ii,j ,kc,1);
-        Real v1 = w_ad(ii,j ,kc  ); Real h1 = zylo(ii,j ,kc  );
+        Real x1 =  fcz(ii,jc,kc,0)+xoff;
+        Real y1 =  fcz(ii,jc,kc,1);
+        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zylo(ii,jc,kc);
 
         Real x2 =  fcz(ic,jj,kc,0);
         Real y2 =  fcz(ic,jj,kc,1)+yoff;
-        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zylo(ic,jj,kc  );
+        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zylo(ic,jj,kc);
 
-        Real x3 =  fcz(ii,jj,kc,0)+xoff; 
-        Real y3 =  fcz(ii,jj,kc,1)+yoff; 
-        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zylo(ii,jj,kc  );
+        Real x3 =  fcz(ii,jj,kc,0)+xoff;
+        Real y3 =  fcz(ii,jj,kc,1)+yoff;
+        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zylo(ii,jj,kc);
 
         w_tmp_kp1 = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,y0,x1,y1,x2,y2,x3,y3);
         z_hat_kp1 = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,y0,x1,y1,x2,y2,x3,y3);
@@ -221,21 +221,21 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real y0 =  fcx(ic,jc,kc,0); 
-        Real z0 =  fcx(ic,jc,kc,1); 
-        Real v0 = u_ad(ic,jc,kc  ); Real h0 = xzlo(ic,jc,kc  );
+        Real y0 =  fcx(ic,jc,kc,0);
+        Real z0 =  fcx(ic,jc,kc,1);
+        Real v0 = u_ad(ic,jc,kc  ); Real h0 = xzlo(ic,jc,kc);
 
         Real y1 =  fcx(ic,jj,kc,0)+yoff;
         Real z1 =  fcx(ic,jj,kc,1);
-        Real v1 = u_ad(ic,jj,kc  ); Real h1 = xzlo(ic,jj,k   );
+        Real v1 = u_ad(ic,jj,kc  ); Real h1 = xzlo(ic,jj,kc);
 
         Real y2 =  fcx(ic,jc,kk,0);
         Real z2 =  fcx(ic,jc,kk,1)+zoff;
-        Real v2 = u_ad(ic,jc,kk  ); Real h2 = xzlo(ic,jc,kk  );
+        Real v2 = u_ad(ic,jc,kk  ); Real h2 = xzlo(ic,jc,kk);
 
         Real y3 =  fcx(ic,jj,kk,0)+yoff;
         Real z3 =  fcx(ic,jj,kk,1)+zoff;
-        Real v3 = u_ad(ic,jj,kk  ); Real h3 = xzlo(ic,jj,kk  );
+        Real v3 = u_ad(ic,jj,kk  ); Real h3 = xzlo(ic,jj,kk);
 
         u_tmp_i = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,y0,z0,y1,z1,y2,z2,y3,z3);
         x_hat_i = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,y0,z0,y1,z1,y2,z2,y3,z3);
@@ -258,21 +258,21 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real y0 =  fcx(ic,jc,kc,0); 
-        Real z0 =  fcx(ic,jc,kc,1); 
-        Real v0 = u_ad(ic,jc,kc  ); Real h0 = xzlo(ic,jc,kc  );
+        Real y0 =  fcx(ic,jc,kc,0);
+        Real z0 =  fcx(ic,jc,kc,1);
+        Real v0 = u_ad(ic,jc,kc  ); Real h0 = xzlo(ic,jc,kc);
 
         Real y1 =  fcx(ic,jj,kc,0)+yoff;
         Real z1 =  fcx(ic,jj,kc,1);
-        Real v1 = u_ad(ic,jj,kc  ); Real h1 = xzlo(ic,jj,k   );
+        Real v1 = u_ad(ic,jj,kc  ); Real h1 = xzlo(ic,jj,kc);
 
         Real y2 =  fcx(ic,jc,kk,0);
         Real z2 =  fcx(ic,jc,kk,1)+zoff;
-        Real v2 = u_ad(ic,jc,kk  ); Real h2 = xzlo(ic,jc,kk  );
+        Real v2 = u_ad(ic,jc,kk  ); Real h2 = xzlo(ic,jc,kk);
 
         Real y3 =  fcx(ic,jj,kk,0)+yoff;
         Real z3 =  fcx(ic,jj,kk,1)+zoff;
-        Real v3 = u_ad(ic,jj,kk  ); Real h3 = xzlo(ic,jj,kk  );
+        Real v3 = u_ad(ic,jj,kk  ); Real h3 = xzlo(ic,jj,kk);
 
         u_tmp_ip1 = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,y0,z0,y1,z1,y2,z2,y3,z3);
         x_hat_ip1 = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,y0,z0,y1,z1,y2,z2,y3,z3);
@@ -295,21 +295,21 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcz(ic,jc,kc,0); 
-        Real y0 =  fcz(ic,jc,kc,1); 
-        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zxlo(ic,jc,kc  );
+        Real x0 =  fcz(ic,jc,kc,0);
+        Real y0 =  fcz(ic,jc,kc,1);
+        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zxlo(ic,jc,kc);
 
         Real x1 =  fcz(ii,jc,kc,0)+xoff;
         Real y1 =  fcz(ii,jc,kc,1);
-        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zxlo(ii,jc,kc  );
+        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zxlo(ii,jc,kc);
 
         Real x2 =  fcz(ic,jj,kc,0);
         Real y2 =  fcz(ic,jj,kc,1)+yoff;
-        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zxlo(ic,jj,kc  );
+        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zxlo(ic,jj,kc);
 
         Real x3 =  fcz(ii,jj,kc,0)+xoff;
         Real y3 =  fcz(ii,jj,kc,1)+yoff;
-        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zxlo(ii,jj,kc  );
+        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zxlo(ii,jj,kc);
 
         w_tmp_k = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,y0,x1,y1,x2,y2,x3,y3);
         z_hat_k = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,y0,x1,y1,x2,y2,x3,y3);
@@ -332,21 +332,21 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcz(ic,jc,kc,0); 
-        Real y0 =  fcz(ic,jc,kc,1); 
-        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zxlo(ic,jc,kc  );
+        Real x0 =  fcz(ic,jc,kc,0);
+        Real y0 =  fcz(ic,jc,kc,1);
+        Real v0 = w_ad(ic,jc,kc  ); Real h0 = zxlo(ic,jc,kc);
 
         Real x1 =  fcz(ii,jc,kc,0)+xoff;
         Real y1 =  fcz(ii,jc,kc,1);
-        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zxlo(ii,jc,kc  );
+        Real v1 = w_ad(ii,jc,kc  ); Real h1 = zxlo(ii,jc,kc);
 
         Real x2 =  fcz(ic,jj,kc,0);
         Real y2 =  fcz(ic,jj,kc,1)+yoff;
-        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zxlo(ic,jj,kc  );
+        Real v2 = w_ad(ic,jj,kc  ); Real h2 = zxlo(ic,jj,kc);
 
         Real x3 =  fcz(ii,jj,kc,0)+xoff;
         Real y3 =  fcz(ii,jj,kc,1)+yoff;
-        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zxlo(ii,jj,kc  );
+        Real v3 = w_ad(ii,jj,kc  ); Real h3 = zxlo(ii,jj,kc);
 
         w_tmp_kp1 = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,y0,x1,y1,x2,y2,x3,y3);
         z_hat_kp1 = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,y0,x1,y1,x2,y2,x3,y3);
@@ -473,21 +473,21 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
 
-        Real x0 =  fcy(ic,jc,kc,0); 
-        Real z0 =  fcy(ic,jc,kc,1); 
-        Real v0 = v_ad(ic,jc,kc  ); Real h0 = xylo(ic,jc,kc  );
+        Real x0 =  fcy(ic,jc,kc,0);
+        Real z0 =  fcy(ic,jc,kc,1);
+        Real v0 = v_ad(ic,jc,kc  ); Real h0 = yxlo(ic,jc,kc);
 
         Real x1 =  fcy(ii,jc,kc,0)+xoff;
         Real z1 =  fcy(ii,jc,kc,1);
-        Real v1 = v_ad(ii,jc,kc  ); Real h1 = xylo(ii,jc,kc  );
+        Real v1 = v_ad(ii,jc,kc  ); Real h1 = yxlo(ii,jc,kc);
 
         Real x2 =  fcy(ic,jc,kk,0);
         Real z2 =  fcy(ic,jc,kk,1)+zoff;
-        Real v2 = v_ad(ic,jc,kk  ); Real h2 = xylo(ic,jc,kk  );
+        Real v2 = v_ad(ic,jc,kk  ); Real h2 = yxlo(ic,jc,kk);
 
         Real x3 =  fcy(ii,jc,kk,0)+xoff;
         Real z3 =  fcy(ii,jc,kk,1)+zoff;
-        Real v3 = v_ad(ii,jc,kk  ); Real h3 = xylo(ii,jc,kk  );
+        Real v3 = v_ad(ii,jc,kk  ); Real h3 = yxlo(ii,jc,kk);
 
         v_tmp_j = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,z0,x1,z1,x2,z2,x3,z3);
         y_hat_j = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,z0,x1,z1,x2,z2,x3,z3);
@@ -512,19 +512,19 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
 
         Real x0 =  fcy(ic,jc,kc,0);
         Real z0 =  fcy(ic,jc,kc,1);
-        Real v0 = v_ad(ic,jc,kc  ); Real h0 = xylo(ic,jc,kc  );
+        Real v0 = v_ad(ic,jc,kc  ); Real h0 = yxlo(ic,jc,kc);
 
         Real x1 =  fcy(ii,jc,kc,0)+xoff;
         Real z1 =  fcy(ii,jc,kc,1);
-        Real v1 = v_ad(ii,jc,kc  ); Real h1 = xylo(ii,jc,kc  );
+        Real v1 = v_ad(ii,jc,kc  ); Real h1 = yxlo(ii,jc,kc);
 
         Real x2 =  fcy(ic,jc,kk,0);
         Real z2 =  fcy(ic,jc,kk,1)+zoff;
-        Real v2 = v_ad(ic,jc,kk  ); Real h2 = xylo(ic,jj,kc  );
+        Real v2 = v_ad(ic,jc,kk  ); Real h2 = yxlo(ic,jc,kk);
 
         Real x3 =  fcy(ii,jc,kk,0)+xoff;
         Real z3 =  fcy(ii,jc,kk,1)+zoff;
-        Real v3 = v_ad(ii,jc,kk  ); Real h3 = xylo(ii,jj,kc  );
+        Real v3 = v_ad(ii,jc,kk  ); Real h3 = yxlo(ii,jc,kk);
 
         v_tmp_jp1 = EB_interp_in_quad(0.,0.,v0,v1,v2,v3,x0,z0,x1,z1,x2,z2,x3,z3);
         y_hat_jp1 = EB_interp_in_quad(0.,0.,h0,h1,h2,h3,x0,z0,x1,z1,x2,z2,x3,z3);
