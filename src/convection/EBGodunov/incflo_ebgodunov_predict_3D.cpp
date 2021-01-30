@@ -589,7 +589,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         int jc = j;
         if (flag(i,jc,k).isRegular())
         {
-            stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k  )+u_ad(i,jc,k))*
+            sth += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k  )+u_ad(i,jc,k))*
                                     (xzlo(i+1,jc,k  )-xzlo(i,jc,k))
                    - (0.25*l_dt/dz)*(w_ad(i  ,jc,k+1)+w_ad(i,jc,k))*
                                     (zxlo(i  ,jc,k+1)-zxlo(i,jc,k));
@@ -745,7 +745,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         int kc = k;
         if (flag(i,j,kc).isRegular())
         {
-            stl += - (0.25*l_dt/dx)*(u_ad(i+1,j  ,kc)+u_ad(i,j,kc))*
+            sth += - (0.25*l_dt/dx)*(u_ad(i+1,j  ,kc)+u_ad(i,j,kc))*
                                     (xylo(i+1,j  ,kc)-xylo(i,j,kc))
                    - (0.25*l_dt/dy)*(v_ad(i  ,j+1,kc)+v_ad(i,j,kc))*
                                     (yxlo(i  ,j+1,kc)-yxlo(i,j,kc));
