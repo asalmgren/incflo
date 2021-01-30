@@ -346,9 +346,9 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 if (apy(ic,j,k) > 0.0 && apy(ic,j+1,k) > 0.0) 
                 {
                     create_transverse_terms_for_xface(ic,j,k,v_ad,yhat,apy,fcy,trans_y,l_dt,dy);
-    
+
                     stl += -0.5 * l_dt * trans_y;
-                    stl +=  0.5 * l_dt * f(i-1,j,k,n);
+                    stl +=  0.5 * l_dt * f(ic,j,k,n);
                 }
             }
         }
@@ -467,7 +467,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
         // d/dx computed in (i,j-1)
         {
             int jc = j-1;
-            if (flag(i,j,k).isRegular())
+            if (flag(i,jc,k).isRegular())
             {
                 // For full cells this is the transverse term
                 stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k)+u_ad(i,jc,k))*
@@ -493,9 +493,9 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             if (flag(i,jc,k).isRegular())
             {
                 // For full cells this is the transverse term
-                stl += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k)+u_ad(i,jc,k))*
+                sth += - (0.25*l_dt/dx)*(u_ad(i+1,jc,k)+u_ad(i,jc,k))*
                                         (xhat(i+1,jc,k)-xhat(i,jc,k));
-                stl += 0.5 * l_dt * f(i,jc,k,n);
+                sth += 0.5 * l_dt * f(i,jc,k,n);
 
             } else {
 
@@ -504,8 +504,8 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                 {
                     create_transverse_terms_for_yface(i,jc,k,u_ad,xhat,apx,fcx,trans_x,l_dt,dx);
 
-                    stl += -0.5 * l_dt * trans_x;
-                    stl +=  0.5 * l_dt * f(i,jc,k,n);
+                    sth += -0.5 * l_dt * trans_x;
+                    sth +=  0.5 * l_dt * f(i,jc,k,n);
                 }
             }
         }
