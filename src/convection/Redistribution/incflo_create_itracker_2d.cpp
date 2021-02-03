@@ -122,7 +122,7 @@ redistribution::make_itracker (
 
            Real sum_vol = vfrac(i,j,k) + vfrac(i+ioff,j+joff,k);
 
-             if (debug_verbose > 0)
+           if (debug_verbose > 0)
                amrex::Print() << "Cell " << IntVect(i,j) << " with volfrac " << vfrac(i,j,k) << 
                                  " trying to merge with " << IntVect(i+ioff,j+joff) <<
                                  " with volfrac " << vfrac(i+ioff,j+joff,k) << 

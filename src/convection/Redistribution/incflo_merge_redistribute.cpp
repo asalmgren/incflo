@@ -270,7 +270,7 @@ redistribution::merge_redistribute_full (
 
                    Real avg_update = sum_upd / sum_vol;
     
-                   dUdt_out(i,j,k,n) = avg_update - U_in(i,j,k,n);
+                   dUdt_out(i,j,k,n) = avg_update - U_in(i,j,k,n)/l_dt;
                }
            }
        }
