@@ -108,7 +108,7 @@ redistribution::state_redistribute_update (
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        if (!flag(i,j,k).isCovered() && bx_per_grown.contains(IntVect(i,j)))
+        if (!flag(i,j,k).isCovered() && bx_per_grown.contains(IntVect(AMREX_D_DECL(i,j,k))))
         {
           // Always include the cell itself
           nbor(i,j,k,4) = 1;
@@ -529,7 +529,7 @@ redistribution::state_redistribute_full (
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        if (!flag(i,j,k).isCovered() && bx_per_grown.contains(IntVect(i,j)))
+        if (!flag(i,j,k).isCovered() && bx_per_grown.contains(IntVect(AMREX_D_DECL(i,j,k))))
         {
           // Always include the cell itself
           nbor(i,j,k,4) = 1;
