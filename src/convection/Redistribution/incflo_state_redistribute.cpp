@@ -38,6 +38,13 @@ redistribution::state_redistribute_update (
     Box const& bxg1 = amrex::grow(bx,1);
     Box const& bxg2 = amrex::grow(bx,2);
 
+    Box bx_per_grown = bx;
+    if (is_periodic_x) bx_per_grown.grow(0,1);
+    if (is_periodic_y) bx_per_grown.grow(1,1);
+#if (AMREX_SPACEDIM == 3)
+    if (is_periodic_z) bx_per_grown.grow(2,1);
+#endif
+
     // Set to 1 if cell is in my nbhd, otherwise 0
 #if (AMREX_SPACEDIM == 2)
     IArrayBox nbor_fab(bxg1,9);
@@ -87,17 +94,21 @@ redistribution::state_redistribute_update (
             cent_hat(i,j,k,n) = 0.;
             slopes_hat(i,j,k,n) = 0.;
 	}
+	for (int n = 0; n < ncomp; n++)
+	{
+            soln_hat(i,j,k,n) = 0.;
+	}
     });
 
     // It is essential that only one of these be true;
     bool vertical_only   = false;
-    bool horizontal_only = false;
-    bool all_four        = true;
+    bool horizontal_only = true;
+    bool all_four        = false;
 
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        if (!flag(i,j,k).isCovered())
+        if (!flag(i,j,k).isCovered() && bx_per_grown.contains(IntVect(i,j)))
         {
           // Always include the cell itself
           nbor(i,j,k,4) = 1;
@@ -117,7 +128,7 @@ redistribution::state_redistribute_update (
             {
                 if (all_four)
                 {
-                        if (fcx(i,j,k,0) <= 0. && allow_lo_y)
+                    if (fcx(i,j,k,0) <= 0. && allow_lo_y)
                     {
                         if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
                         if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
@@ -196,9 +207,7 @@ redistribution::state_redistribute_update (
 #endif
             if (nbor(i,j,k,index) == 1)
             {
-                int r = i+ii;
-                int s = j+jj;
-                int t = k+kk;
+                int r = i+ii; int s = j+jj; int t = k+kk;
                 nrs(r,s,t) += 1.;
             }
         }
@@ -218,27 +227,20 @@ redistribution::state_redistribute_update (
             {
 #if (AMREX_SPACEDIM == 2)
                 int kk = 0;
-#else
-                for (int kk = -1; kk <= 1; kk++)  
-#endif
                 for (int jj = -1; jj <= 1; jj++)  
                 for (int ii = -1; ii <= 1; ii++)  
                 {
-#if (AMREX_SPACEDIM == 2)
-                   int index = (jj+1)*3 + (ii+1);
+                    int index = (jj+1)*3 + (ii+1);
 #else
-                   int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
+                for (int kk = -1; kk <= 1; kk++)  
+                for (int jj = -1; jj <= 1; jj++)  
+                for (int ii = -1; ii <= 1; ii++)  
+                {
+                    int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                     if (nbor(i,j,k,index) == 1)
                     {
-                        int r = i+ii;
-                        int s = j+jj;
-                        int t = k+kk;
-                        if ( ( (r >= domain.smallEnd(0) && r <= domain.bigEnd(0)) || is_periodic_x ) &&
-#if (AMREX_SPACEDIM == 3)
-                             ( (t >= domain.smallEnd(2) && t <= domain.bigEnd(2)) || is_periodic_z ) &&
-#endif
-                             ( (s >= domain.smallEnd(1) && s <= domain.bigEnd(1)) || is_periodic_y ) )
+                        int r = i+ii; int s = j+jj; int t = k+kk;
                         nbhd_vol(i,j,k) += vfrac(r,s,t) / nrs(r,s,t);
                     }
                 }
@@ -256,26 +258,29 @@ redistribution::state_redistribute_update (
                          cent_hat(i,j,k,1) = ccent(i,j,k,1);,
                          cent_hat(i,j,k,2) = ccent(i,j,k,2););
 
-        } else if (vfrac(i,j,k) > 0.0) {
-
+        } else if (vfrac(i,j,k) > 0.0 &&
+           ((i >= domain.smallEnd(0) && i <= domain.bigEnd(0)) || is_periodic_x ) &&
+#if (AMREX_SPACEDIM == 3)
+           ((k >= domain.smallEnd(2) && k <= domain.bigEnd(2)) || is_periodic_z ) &&
+#endif
+           ((j >= domain.smallEnd(1) && j <= domain.bigEnd(1)) || is_periodic_y ) )
+        {
 #if (AMREX_SPACEDIM == 2)
             int kk = 0;
-#else
-            for (int kk = -1; kk <= 1; kk++)  
-#endif
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
-#if (AMREX_SPACEDIM == 2)
                 int index = (jj+1)*3 + (ii+1);
 #else
+            for (int kk = -1; kk <= 1; kk++)  
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
                 int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                 if (nbor(i,j,k,index) == 1)
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    int t = k+kk;
+                    int r = i+ii; int s = j+jj; int t = k+kk;
                     AMREX_D_TERM(cent_hat(i,j,k,0) += (ccent(r,s,t,0) + ii) * vfrac(r,s,t) / nrs(r,s,t);,
                                  cent_hat(i,j,k,1) += (ccent(r,s,t,1) + jj) * vfrac(r,s,t) / nrs(r,s,t);,
                                  cent_hat(i,j,k,2) += (ccent(r,s,t,2) + kk) * vfrac(r,s,t) / nrs(r,s,t););
@@ -303,22 +308,20 @@ redistribution::state_redistribute_update (
 
 #if (AMREX_SPACEDIM == 2)
             int kk = 0;
-#else
-            for (int kk = -1; kk <= 1; kk++)  
-#endif
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
-#if (AMREX_SPACEDIM == 2)
                 int index = (jj+1)*3 + (ii+1);
 #else
+            for (int kk = -1; kk <= 1; kk++)  
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
                 int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                 if (nbor(i,j,k,index) == 1)
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    int t = k+kk;
+                    int r = i+ii; int s = j+jj; int t = k+kk;
                     soln_hat(i,j,k,n) += dUdt_in(r,s,t,n) * vfrac(r,s,t) / nrs(r,s,t);
                 }
             }
@@ -359,28 +362,26 @@ redistribution::state_redistribute_update (
         {
 #if (AMREX_SPACEDIM == 2)
             int kk = 0;
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
+                int index = (jj+1)*3 + (ii+1);
 #else
             for (int kk = -1; kk <= 1; kk++)  
-#endif
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
                 // Note every cell is at least in its own neighborhood so this will update every (i,j,k)
-#if (AMREX_SPACEDIM == 2)
-                int index = (jj+1)*3 + (ii+1);
-#else
                 int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                 if (nbor(i,j,k,index) == 1)
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    int t = k+kk;
-                    dUdt(r,s,t,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,t,0)-cent_hat(i,j,k,0))
+                    int r = i+ii; int s = j+jj; int t = k+kk;
+                    dUdt(r,s,t,n) += soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,t,0)-cent_hat(i,j,k,0))
 #if (AMREX_SPACEDIM == 3)
-                                                        + slopes_hat(i,j,k,2) * (ccent(r,s,t,2)-cent_hat(i,j,k,2))
+                                                       + slopes_hat(i,j,k,2) * (ccent(r,s,t,2)-cent_hat(i,j,k,2))
 #endif
-                                                        + slopes_hat(i,j,k,1) * (ccent(r,s,t,1)-cent_hat(i,j,k,1)) );
+                                                       + slopes_hat(i,j,k,1) * (ccent(r,s,t,1)-cent_hat(i,j,k,1));
                 }
             }
         });
@@ -416,7 +417,7 @@ redistribution::state_redistribute_update (
         }
         if (std::abs(sum1-sum2) > 1.e-8 * sum1 && std::abs(sum1-sum2) > 1.e-8)
         {
-//         amrex::Print() << " SUMS DO NOT MATCH IN STATE REDIST: " << sum1 << " " << sum2 << std::endl;
+           printf("SUMS DO NOT MATCH IN STATE REDIST UPDATE: %f %f ",sum1,sum2);
            amrex::Abort();
         }
       }
@@ -440,7 +441,7 @@ redistribution::state_redistribute_full (
                        Array4<Real const> const& ccent,
                        Geometry& lev_geom, Real l_dt) 
 {
-    // We identify the cells with the following ordering
+    // We identify the cells with the following ordering in 2D
     //
     // ^  6 7 8
     // |  3 4 5
@@ -457,6 +458,13 @@ redistribution::state_redistribute_full (
 
     Box const& bxg1 = amrex::grow(bx,1);
     Box const& bxg2 = amrex::grow(bx,2);
+
+    Box bx_per_grown = bx;
+    if (is_periodic_x) bx_per_grown.grow(0,1);
+    if (is_periodic_y) bx_per_grown.grow(1,1);
+#if (AMREX_SPACEDIM == 3)
+    if (is_periodic_z) bx_per_grown.grow(2,1);
+#endif
 
     // Set to 1 if cell is in my nbhd, otherwise 0
 #if (AMREX_SPACEDIM == 2)
@@ -507,17 +515,21 @@ redistribution::state_redistribute_full (
             cent_hat(i,j,k,n) = 0.;
             slopes_hat(i,j,k,n) = 0.;
 	}
+	for (int n = 0; n < ncomp; n++)
+	{
+            soln_hat(i,j,k,n) = 0.;
+	}
     });
 
     // It is essential that only one of these be true;
     bool vertical_only   = false;
-    bool horizontal_only = false;
-    bool all_four        = true;
+    bool horizontal_only = true;
+    bool all_four        = false;
 
     amrex::ParallelFor(bxg1,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
-        if (!flag(i,j,k).isCovered())
+        if (!flag(i,j,k).isCovered() && bx_per_grown.contains(IntVect(i,j)))
         {
           // Always include the cell itself
           nbor(i,j,k,4) = 1;
@@ -537,7 +549,7 @@ redistribution::state_redistribute_full (
             {
                 if (all_four)
                 {
-                        if (fcx(i,j,k,0) <= 0. && allow_lo_y)
+                    if (fcx(i,j,k,0) <= 0. && allow_lo_y)
                     {
                         if (vfrac(i-1,j-1,k) > 0.) nbor(i,j,k,0) = 1;
                         if (vfrac(i  ,j-1,k) > 0.) nbor(i,j,k,1) = 1;
@@ -616,9 +628,7 @@ redistribution::state_redistribute_full (
 #endif
             if (nbor(i,j,k,index) == 1)
             {
-                int r = i+ii;
-                int s = j+jj;
-                int t = k+kk;
+                int r = i+ii; int s = j+jj; int t = k+kk;
                 nrs(r,s,t) += 1.;
             }
         }
@@ -638,27 +648,20 @@ redistribution::state_redistribute_full (
             {
 #if (AMREX_SPACEDIM == 2)
                 int kk = 0;
-#else
-                for (int kk = -1; kk <= 1; kk++)  
-#endif
                 for (int jj = -1; jj <= 1; jj++)  
                 for (int ii = -1; ii <= 1; ii++)  
                 {
-#if (AMREX_SPACEDIM == 2)
                     int index = (jj+1)*3 + (ii+1);
 #else
+                for (int kk = -1; kk <= 1; kk++)  
+                for (int jj = -1; jj <= 1; jj++)  
+                for (int ii = -1; ii <= 1; ii++)  
+                {
                     int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                     if (nbor(i,j,k,index) == 1)
                     {
-                        int r = i+ii;
-                        int s = j+jj;
-                        int t = k+kk;
-                        if ( ( (r >= domain.smallEnd(0) && r <= domain.bigEnd(0)) || is_periodic_x ) &&
-#if (AMREX_SPACEDIM == 3)
-                             ( (t >= domain.smallEnd(2) && t <= domain.bigEnd(2)) || is_periodic_z ) &&
-#endif
-                             ( (s >= domain.smallEnd(1) && s <= domain.bigEnd(1)) || is_periodic_y ) )
+                        int r = i+ii; int s = j+jj; int t = k+kk;
                         nbhd_vol(i,j,k) += vfrac(r,s,t) / nrs(r,s,t);
                     }
                 }
@@ -676,26 +679,29 @@ redistribution::state_redistribute_full (
                          cent_hat(i,j,k,1) = ccent(i,j,k,1);,
                          cent_hat(i,j,k,2) = ccent(i,j,k,2););
 
-        } else if (vfrac(i,j,k) > 0.0) {
-
+        } else if (vfrac(i,j,k) > 0.0 &&
+           ((i >= domain.smallEnd(0) && i <= domain.bigEnd(0)) || is_periodic_x ) &&
+#if (AMREX_SPACEDIM == 3)
+           ((k >= domain.smallEnd(2) && k <= domain.bigEnd(2)) || is_periodic_z ) &&
+#endif
+           ((j >= domain.smallEnd(1) && j <= domain.bigEnd(1)) || is_periodic_y ) )
+        {
 #if (AMREX_SPACEDIM == 2)
             int kk = 0;
-#else
-            for (int kk = -1; kk <= 1; kk++)  
-#endif
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
-#if (AMREX_SPACEDIM == 2)
                 int index = (jj+1)*3 + (ii+1);
 #else
+            for (int kk = -1; kk <= 1; kk++)  
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
                 int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                 if (nbor(i,j,k,index) == 1)
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    int t = k+kk;
+                    int r = i+ii; int s = j+jj; int t = k+kk;
                     AMREX_D_TERM(cent_hat(i,j,k,0) += (ccent(r,s,t,0) + ii) * vfrac(r,s,t) / nrs(r,s,t);,
                                  cent_hat(i,j,k,1) += (ccent(r,s,t,1) + jj) * vfrac(r,s,t) / nrs(r,s,t);,
                                  cent_hat(i,j,k,2) += (ccent(r,s,t,2) + kk) * vfrac(r,s,t) / nrs(r,s,t););
@@ -723,22 +729,20 @@ redistribution::state_redistribute_full (
 
 #if (AMREX_SPACEDIM == 2)
             int kk = 0;
-#else
-            for (int kk = -1; kk <= 1; kk++)  
-#endif
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
-#if (AMREX_SPACEDIM == 2)
                 int index = (jj+1)*3 + (ii+1);
 #else
+            for (int kk = -1; kk <= 1; kk++)  
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
                 int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
                 if (nbor(i,j,k,index) == 1)
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    int t = k+kk;
+                    int r = i+ii; int s = j+jj; int t = k+kk;
                     soln_hat(i,j,k,n) += (dUdt_in(r,s,t,n) + U_in(r,s,t,n) / l_dt)* vfrac(r,s,t) / nrs(r,s,t);
                 }
             }
@@ -780,24 +784,21 @@ redistribution::state_redistribute_full (
         {
 #if (AMREX_SPACEDIM == 2)
             int kk = 0;
-#else
-            for (int kk = -1; kk <= 1; kk++)  
-#endif
             for (int jj = -1; jj <= 1; jj++)  
             for (int ii = -1; ii <= 1; ii++)  
             {
-                // Note every cell is at least in its own neighborhood so this will update every (i,j,k)
-#if (AMREX_SPACEDIM == 2)
                 int index = (jj+1)*3 + (ii+1);
 #else
+            for (int kk = -1; kk <= 1; kk++)  
+            for (int jj = -1; jj <= 1; jj++)  
+            for (int ii = -1; ii <= 1; ii++)  
+            {
                 int index = (kk+1)*9 + (jj+1)*3 + (ii+1);
 #endif
+                // Note every cell is at least in its own neighborhood so this will update every (i,j,k)
                 if (nbor(i,j,k,index) == 1)
                 {
-                    int r = i+ii;
-                    int s = j+jj;
-                    int t = k+kk;
-
+                    int r = i+ii; int s = j+jj; int t = k+kk;
                     dUdt(r,s,t,n) += (soln_hat(i,j,k,n) + slopes_hat(i,j,k,0) * (ccent(r,s,t,0)-cent_hat(i,j,k,0))
 #if (AMREX_SPACEDIM == 3)
                                                         + slopes_hat(i,j,k,2) * (ccent(r,s,t,2)-cent_hat(i,j,k,2))
@@ -844,7 +845,7 @@ redistribution::state_redistribute_full (
         }
         if (std::abs(sum1-sum2) > 1.e-8 * sum1 && std::abs(sum1-sum2) > 1.e-8)
         {
-//         amrex::Print() << " SUMS DO NOT MATCH IN STATE REDIST: " << sum1 << " " << sum2 << std::endl;
+           printf("SUMS DO NOT MATCH IN STATE REDIST FULL: %f %f ",sum1,sum2);
            amrex::Abort();
         }
       }
