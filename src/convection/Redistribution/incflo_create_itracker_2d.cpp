@@ -16,7 +16,7 @@ redistribution::make_itracker (
                        Array4<int> const& itracker,
                        Geometry& lev_geom)
 {
-    int debug_verbose = 1;
+    int debug_verbose = 0;
 
     const Box domain = lev_geom.Domain();
 
@@ -40,8 +40,8 @@ redistribution::make_itracker (
     const auto& is_periodic_x = lev_geom.isPeriodic(0);
     const auto& is_periodic_y = lev_geom.isPeriodic(1);
 
-    // int preferred_direction = 0; // x-direction is preferred
-    int preferred_direction = 1; // y-direction is preferred
+    int preferred_direction = 0; // x-direction is preferred
+    // int preferred_direction = 1; // y-direction is preferred
 
     if (debug_verbose > 0)
         amrex::Print() << " IN MAKE_ITRACKER DOING BOX " << bx << std::endl;

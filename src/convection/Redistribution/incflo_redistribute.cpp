@@ -5,7 +5,7 @@ using namespace amrex;
 
 void redistribution::redistribute_eb (Box const& bx, int ncomp,
                                       Array4<Real      > const& dUdt_out,
-                                      Array4<Real const> const& dUdt_in,
+                                      Array4<Real      > const& dUdt_in,
                                       Array4<Real const> const& U_in,
                                       Array4<Real> const& scratch,
                                       AMREX_D_DECL(amrex::Array4<amrex::Real const> const& umac,
@@ -46,35 +46,62 @@ void redistribution::redistribute_eb (Box const& bx, int ncomp,
     {
         flux_redistribute_eb (bx, ncomp, dUdt_out, dUdt_in, scratch, flag, vfrac, lev_geom);
 
-    } else if (redistribution_type == "MergeRedistUpdate") {
+    } else if (redistribution_type == "MergeRedistUpdate" || redistribution_type == "MergeRedistFull") {
+
         Array4<int> itr = itracker.array();
         make_itracker(bx,
                       AMREX_D_DECL(apx, apy, apz), vfrac,
                       itr, lev_geom);
 
-        merge_redistribute_update(bx, ncomp, dUdt_out, dUdt_in,
-                                  AMREX_D_DECL(apx, apy, apz), vfrac,
-                                  itr, lev_geom);
+        if (redistribution_type == "MergeRedistFull") 
+        {
+            amrex::ParallelFor(bx, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                {
+                    dUdt_in(i,j,k,n) = U_in(i,j,k,n) + dt * dUdt_in(i,j,k,n);
+                }
+            );
+        }
 
-    } else if (redistribution_type == "MergeRedistFull") {
-        Array4<int> itr = itracker.array();
-        make_itracker(bx,
-                      AMREX_D_DECL(apx, apy, apz), vfrac,
-                      itr, lev_geom);
+        merge_redistribute(bx, ncomp, dUdt_out, dUdt_in,
+                           AMREX_D_DECL(apx, apy, apz), vfrac,
+                           itr, lev_geom);
 
-        merge_redistribute_full(bx, ncomp, dUdt_out, dUdt_in, U_in,
-                                AMREX_D_DECL(apx, apy, apz), vfrac,
-                                itr, lev_geom, dt);
+        if (redistribution_type == "MergeRedistFull") 
+        {
+           amrex::ParallelFor(bx, ncomp,
+           [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+               {
+                   dUdt_out(i,j,k,n) = (dUdt_out(i,j,k,n) - U_in(i,j,k,n)) / dt;
+               }
+           );
+        }
 
-    } else if (redistribution_type == "StateRedistUpdate") {
-        state_redistribute_update(bx, ncomp, dUdt_out, dUdt_in, flag,
-                                  AMREX_D_DECL(apx, apy, apz), vfrac,
-                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 
-    } else if (redistribution_type == "StateRedistFull") {
-        state_redistribute_full(bx, ncomp, dUdt_out, dUdt_in, U_in, flag,
-                                AMREX_D_DECL(apx, apy, apz), vfrac,
-                                AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom, dt);
+    } else if (redistribution_type == "StateRedistUpdate" || redistribution_type == "StateRedistFull") {
+        if (redistribution_type == "StateRedistFull") 
+        {
+            amrex::ParallelFor(bx, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                {
+                    dUdt_in(i,j,k,n) = U_in(i,j,k,n) + dt * dUdt_in(i,j,k,n);
+                }
+            );
+        }
+
+        state_redistribute(bx, ncomp, dUdt_out, dUdt_in, flag,
+                           AMREX_D_DECL(apx, apy, apz), vfrac,
+                           AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
+
+        if (redistribution_type == "StateRedistFull") 
+        {
+            amrex::ParallelFor(bx, ncomp,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+                {
+                    dUdt_out(i,j,k,n) = (dUdt_out(i,j,k,n) - U_in(i,j,k,n)) / dt;
+                }
+            );
+        }
 
     } else if (redistribution_type == "NoRedist") {
         amrex::ParallelFor(bx, ncomp,
@@ -128,14 +155,14 @@ void redistribution::redistribute_initial_data (Box const& bx, int ncomp,
                       AMREX_D_DECL(apx, apy, apz), vfrac,
                       itr, lev_geom);
 
-        merge_redistribute_update(bx, ncomp, uout_array, U_inout,
-                                  AMREX_D_DECL(apx, apy, apz), vfrac,
-                                  itr, lev_geom);
+        merge_redistribute(bx, ncomp, uout_array, U_inout,
+                           AMREX_D_DECL(apx, apy, apz), vfrac,
+                           itr, lev_geom);
 
     } else if (redistribution_type == "StateRedistFull") {
-        state_redistribute_update(bx, ncomp, uout_array, U_inout, flag,
-                                  AMREX_D_DECL(apx, apy, apz), vfrac,
-                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
+        state_redistribute(bx, ncomp, uout_array, U_inout, flag,
+                           AMREX_D_DECL(apx, apy, apz), vfrac,
+                           AMREX_D_DECL(fcx, fcy, fcz), ccc, lev_geom);
 
     } else {
        amrex::Error("Shouldnt be here with this redist type");
