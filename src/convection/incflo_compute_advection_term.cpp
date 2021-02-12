@@ -286,7 +286,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
             if (m_advection_type == "MOL") 
                 gbx.grow(2);
             else if (m_advection_type == "Godunov") 
-                gbx.grow(1);
+                gbx.grow(2);
             else 
                 amrex::Abort("Huh??");
         }
