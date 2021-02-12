@@ -17,7 +17,7 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
                                        Array4<Real const> const& fcy,
                                        Array4<Real const> const& fcz,
                                        Real& trans_y, Real& trans_z,
-                                       const Real l_dt, const Real dy, const Real dz)
+                                       const Real dy, const Real dz)
 {
     Real v_tmp_j, v_tmp_jp1;
     Real w_tmp_k, w_tmp_kp1;
@@ -37,8 +37,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j;
         int kc = k;
 
-        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -74,8 +74,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j+1;
         int kc = k;
 
-        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -111,8 +111,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j;
         int kc = k;
 
-        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -148,8 +148,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j;
         int kc = k+1;
 
-        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -195,7 +195,7 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
                                        Array4<Real const> const& fcx,
                                        Array4<Real const> const& fcz,
                                        Real& trans_x, Real& trans_z,
-                                       const Real l_dt, const Real dx, const Real dz)
+                                       const Real dx, const Real dz)
 {
     Real u_tmp_i, u_tmp_ip1;
     Real w_tmp_k, w_tmp_kp1;
@@ -215,8 +215,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i;
         int kc = k;
 
-        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -252,8 +252,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i+1;
         int kc = k;
 
-        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -289,8 +289,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i;
         int kc = k;
 
-        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -326,8 +326,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i;
         int kc = k+1;
 
-        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -373,7 +373,7 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
                                        Array4<Real const> const& fcx,
                                        Array4<Real const> const& fcy,
                                        Real& trans_x, Real& trans_y,
-                                       const Real l_dt, const Real dx, const Real dy)
+                                       const Real dx, const Real dy)
 {
     Real u_tmp_i, u_tmp_ip1;
     Real v_tmp_j, v_tmp_jp1;
@@ -393,8 +393,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i;
         int jc = j;
 
-        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -430,8 +430,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i+1;
         int jc = j;
 
-        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -467,8 +467,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i;
         int jc = j;
 
-        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -504,8 +504,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i;
         int jc = j+1;
 
-        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;

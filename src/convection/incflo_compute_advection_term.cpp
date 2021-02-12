@@ -288,7 +288,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
             else if (m_advection_type == "Godunov") 
                 gbx.grow(2);
             else 
-                amrex::Abort("Huh??");
+                amrex::Abort("Dont know this advection type");
         }
         // This one holds the convective term on a grown region so we can redistribute
         FArrayBox dUdt_tmpfab(gbx,nmaxcomp);

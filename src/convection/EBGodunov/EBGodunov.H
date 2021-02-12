@@ -164,7 +164,9 @@ namespace ebgodunov {
                                  AMREX_D_DECL(amrex::Array4<amrex::Real const> const& epx,
                                               amrex::Array4<amrex::Real const> const& apy,
                                               amrex::Array4<amrex::Real const> const& apz),
+#if (AMREX_SPACEDIM == 3)
                                  amrex::Array4<amrex::Real const> const& vfrac,
+#endif
                                  AMREX_D_DECL(amrex::Array4<amrex::Real const> const& fcx,
                                               amrex::Array4<amrex::Real const> const& fcy,
                                               amrex::Array4<amrex::Real const> const& fcz),
