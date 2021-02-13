@@ -218,6 +218,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                 // Only over-write normal velocity with Dirichlet bc at hi face
                 if (i == domain_ihi+1 && (bc.hi(0) == BCType::ext_dir)) 
                     if (is_velocity && n == 0) qmns = q(i,j,k,n);
+
             }
 
             Ipx(i-1,j,k,n) = qmns;
@@ -291,14 +292,14 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
                                              vfrac(i  ,j,k) == 1. and vfrac(i+1,j,k) == 1.) 
                 {
                     int order = 4;
-                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i-1,j,k) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i,j,k) * dtdx) *
                         amrex_calc_xslope(i-1,j,k,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
                 } else if (vfrac(i-1,j,k) == 1. and vfrac(i-2,j,k) == 1. and vfrac(i  ,j,k) == 1.) 
                 {
                     int order = 2;
-                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i-1,j,k) * dtdx) *
+                    qmns = q(i-1,j,k,n) + 0.5 * ( 1.0 - umac(i,j,k) * dtdx) *
                         amrex_calc_xslope(i-1,j,k,n,order,q);
 
                 // We need to use LS slopes
