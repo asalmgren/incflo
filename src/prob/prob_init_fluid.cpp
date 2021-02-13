@@ -425,8 +425,14 @@ void incflo::init_channel_slant (Box const& vbx, Box const& gbx,
         amrex::ParallelFor(vbx, [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {   
             if (density(i,j,k)>0) {
-                vel(i,j,k,1) = magvel*std::cos(rotation);
-                vel(i,j,k,0) = magvel*std::sin(rotation);
+                
+                if (direction == 0) {
+                    vel(i,j,k,0) = magvel*std::cos(rotation);
+                    vel(i,j,k,1) = magvel*std::sin(rotation);
+                } else if (direction == 1) {
+                    vel(i,j,k,1) = magvel*std::cos(rotation);
+                    vel(i,j,k,0) = magvel*std::sin(rotation);
+                }
     
                 const int nt = tracer.nComp();
                 for (int n = 0; n < nt; ++n) 
