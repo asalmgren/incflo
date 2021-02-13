@@ -29,6 +29,12 @@ void ebgodunov::predict_godunov (Real /*time*/,
 
     auto const& areafrac = ebfact->getAreaFrac();
 
+    // Since we don't fill all the ghost cells in the mac vel arrays
+    // we need to initialize to something which won't make the code crash
+    AMREX_D_TERM(u_mac.setVal(1.e40);,
+                 v_mac.setVal(1.e40);,
+                 w_mac.setVal(1.e40););
+
     const int ncomp = AMREX_SPACEDIM;
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
@@ -68,7 +74,6 @@ void ebgodunov::predict_godunov (Real /*time*/,
 
 //            Elixir eli = scratch.elixir(); // not needed because of streamSynchronize later
 
-    
             AMREX_D_TERM(Box const& xbx = mfi.nodaltilebox(0);,
                          Box const& ybx = mfi.nodaltilebox(1);,
                          Box const& zbx = mfi.nodaltilebox(2));;
@@ -76,6 +81,15 @@ void ebgodunov::predict_godunov (Real /*time*/,
             AMREX_D_TERM(Box xebx(Box(bx).grow(1).surroundingNodes(0));,
                          Box yebx(Box(bx).grow(1).surroundingNodes(1));,
                          Box zebx(Box(bx).grow(1).surroundingNodes(2)));
+
+#if (AMREX_SPACEDIM == 2)
+            Box xebx_g2(Box(bx).grow(1).grow(1,1).surroundingNodes(0));
+            Box yebx_g2(Box(bx).grow(1).grow(0,1).surroundingNodes(1));
+#else
+            Box xebx_g2(Box(bx).grow(1).grow(1,1).grow(2,1).surroundingNodes(0));
+            Box yebx_g2(Box(bx).grow(1).grow(0,1).grow(2,1).surroundingNodes(1));
+            Box zebx_g2(Box(bx).grow(1).grow(0,1).grow(1,1).surroundingNodes(2));
+#endif
 
             Array4<Real> Imx = makeArray4(p,bxg2,ncomp);
             p +=         Imx.size();
@@ -86,9 +100,9 @@ void ebgodunov::predict_godunov (Real /*time*/,
             Array4<Real> Ipy = makeArray4(p,bxg2,ncomp);
             p +=         Ipy.size();
 
-            Array4<Real> u_ad = makeArray4(p,Box(xebx).grow(1),1);
+            Array4<Real> u_ad = makeArray4(p,xebx_g2,1);
             p +=         u_ad.size();
-            Array4<Real> v_ad = makeArray4(p,Box(yebx).grow(1),1);
+            Array4<Real> v_ad = makeArray4(p,yebx_g2,1);
             p +=         v_ad.size();
 
 #if (AMREX_SPACEDIM == 3)
@@ -97,24 +111,23 @@ void ebgodunov::predict_godunov (Real /*time*/,
             Array4<Real> Ipz = makeArray4(p,bxg2,ncomp);
             p +=         Ipz.size();
 
-            Array4<Real> w_ad = makeArray4(p,Box(zebx).grow(1),1);
+            Array4<Real> w_ad = makeArray4(p,zebx_g2,1);
             p +=         w_ad.size();
 #endif
 
             // This tests on covered cells just in the box itself
             if (flagfab.getType(bx) == FabType::covered)
             {
-                // We shouldn't need to zero these ... I think?
 
             // This tests on only regular cells including two rows of ghost cells
             } else if (flagfab.getType(amrex::grow(bx,2)) == FabType::regular) {
 
-                godunov::predict_plm_x (xebx, Imx, Ipx, a_vel, a_vel,
+                godunov::predict_plm_x (xebx_g2, Imx, Ipx, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
-                godunov::predict_plm_y (yebx, Imy, Ipy, a_vel, a_vel,
+                godunov::predict_plm_y (yebx_g2, Imy, Ipy, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
 #if (AMREX_SPACEDIM == 3)
-                godunov::predict_plm_z (zebx, Imz, Ipz, a_vel, a_vel,
+                godunov::predict_plm_z (zebx_g2, Imz, Ipz, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
 #endif
 
@@ -144,22 +157,22 @@ void ebgodunov::predict_godunov (Real /*time*/,
                 Array4<Real const> const& ccent_arr = ccent.const_array(mfi);
                 Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
 
-                ebgodunov::predict_plm_x(xebx, Imx, Ipx, a_vel, a_vel,
+                ebgodunov::predict_plm_x(xebx_g2, Imx, Ipx, a_vel, a_vel,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_y(yebx, Imy, Ipy, a_vel, a_vel,
+                ebgodunov::predict_plm_y(yebx_g2, Imy, Ipy, a_vel, a_vel,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
 #if (AMREX_SPACEDIM == 3)
-                ebgodunov::predict_plm_z(zebx, Imz, Ipz, a_vel, a_vel,
+                ebgodunov::predict_plm_z(zebx_g2, Imz, Ipz, a_vel, a_vel,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
 #endif
 
-                ebgodunov::make_trans_velocities(AMREX_D_DECL(xebx, yebx, zebx), 
+                ebgodunov::make_trans_velocities(AMREX_D_DECL(xebx_g2, yebx_g2, zebx_g2), 
                                                  AMREX_D_DECL(u_ad, v_ad, w_ad),
                                                  AMREX_D_DECL(Imx, Imy, Imz), 
                                                  AMREX_D_DECL(Ipx, Ipy, Ipz), a_vel, 
@@ -171,7 +184,7 @@ void ebgodunov::predict_godunov (Real /*time*/,
     
                 ebgodunov::predict_godunov_on_box(bx, ncomp, 
                                        AMREX_D_DECL(xbx,ybx,zbx),
-                                       AMREX_D_DECL(xebx,yebx,zebx),
+                                       AMREX_D_DECL(xebx_g2,yebx_g2,zebx_g2),
                                        AMREX_D_DECL(a_umac, a_vmac, a_wmac),
                                        a_vel, 
                                        AMREX_D_DECL(u_ad, v_ad, w_ad), 

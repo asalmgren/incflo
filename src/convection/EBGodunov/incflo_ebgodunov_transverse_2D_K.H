@@ -8,11 +8,10 @@ using namespace amrex;
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
 Real
 linear_interp (Real xout,
-               Real x1in, Real val1,
-               Real x2in, Real val2)
+               Real x1, Real val1,
+               Real x2, Real val2)
 {
-   Real val_out =  val1 + (xout-x1in)/(x2in-x1in) * (val2-val1);
-   return val_out;
+   return (val1 + (xout-x1)/(x2-x1) * (val2-val1));
 }
 
 AMREX_GPU_HOST_DEVICE AMREX_INLINE
@@ -92,7 +91,7 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         x_hat_i = linear_interp(0.0, fcx(ic,jc,k), xhat(ic,jc,k), (yoff+fcx(ic,jj,k)), xhat(ic,jj,k));
     }
 
-    // Tangential extrapolation in the x-direction at j+1/2
+    // Tangential extrapolation in the x-direction at i+1/2
     if (apx(i+1,jc,k) == 1.0)
     {
         u_tmp_ip1 = u_ad(i+1,jc,k);

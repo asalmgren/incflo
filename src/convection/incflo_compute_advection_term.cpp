@@ -136,7 +136,7 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
                          w_mac[lev]->FillBoundary(geom[lev].periodicity()););
         }
 
-        MultiFab divu(vel[lev]->boxArray(),vel[lev]->DistributionMap(),1,2);
+        MultiFab divu(vel[lev]->boxArray(),vel[lev]->DistributionMap(),1,4);
         divu.setVal(0.);
         Array<MultiFab const*, AMREX_SPACEDIM> u;
         u[0] = u_mac[lev];
@@ -159,8 +159,7 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
 #ifdef _OPENMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-        // Turn off tiling -- HACK HACK HACK
-        for (MFIter mfi(*density[lev],false); mfi.isValid(); ++mfi)
+        for (MFIter mfi(*density[lev],TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
 
             Box const& bx = mfi.tilebox();
