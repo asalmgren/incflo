@@ -40,10 +40,8 @@ void ebgodunov::predict_godunov (Real /*time*/,
         for (MFIter mfi(vel,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             Box const& bx = mfi.tilebox();
-            Box const& bxg1 = amrex::grow(bx,1);
-            Box const& xbx = mfi.nodaltilebox(0);
-            Box const& ybx = mfi.nodaltilebox(1);
-            Box const& zbx = mfi.nodaltilebox(2);
+            Box const& bxg2 = amrex::grow(bx,2);
+            Box const& bxg3 = amrex::grow(bx,3);
 
             EBCellFlagFab const& flagfab = flags[mfi];
             Array4<EBCellFlag const> const& flagarr = flagfab.const_array();
@@ -59,27 +57,36 @@ void ebgodunov::predict_godunov (Real /*time*/,
             Array4<Real const> const& a_vel       = vel.const_array(mfi);
             Array4<Real const> const& a_f         = vel_forces.const_array(mfi);
 
-            scratch.resize(bxg1, ncomp*12+3);
-//            Elixir eli = scratch.elixir(); // not needed because of streamSynchronize later
-            Real* p = scratch.dataPtr();
+            // Not all the arrays have exactly the size of bxg3 but none are bigger
+            // 12*ncomp are:  Imx, Ipx, Imy, Ipy, Imz, Ipz, xlo/xhi, ylo/yhi, zlo/zhi 
+            //  3       are:  u_ad, v_ad, w_ad
+            scratch.resize(bxg3, ncomp*12+3);
+            Real* p  = scratch.dataPtr();
 
-            Array4<Real> Imx = makeArray4(p,bxg1,ncomp);
+//            Elixir eli = scratch.elixir(); // not needed because of streamSynchronize later
+
+            Array4<Real> Imx = makeArray4(p,bxg2,ncomp);
             p +=         Imx.size();
-            Array4<Real> Ipx = makeArray4(p,bxg1,ncomp);
+            Array4<Real> Ipx = makeArray4(p,bxg2,ncomp);
             p +=         Ipx.size();
-            Array4<Real> Imy = makeArray4(p,bxg1,ncomp);
+            Array4<Real> Imy = makeArray4(p,bxg2,ncomp);
             p +=         Imy.size();
-            Array4<Real> Ipy = makeArray4(p,bxg1,ncomp);
+            Array4<Real> Ipy = makeArray4(p,bxg2,ncomp);
             p +=         Ipy.size();
-            Array4<Real> Imz = makeArray4(p,bxg1,ncomp);
+            Array4<Real> Imz = makeArray4(p,bxg2,ncomp);
             p +=         Imz.size();
-            Array4<Real> Ipz = makeArray4(p,bxg1,ncomp);
+            Array4<Real> Ipz = makeArray4(p,bxg2,ncomp);
             p +=         Ipz.size();
-            Array4<Real> u_ad = makeArray4(p,Box(bx).grow(1,1).grow(2,1).surroundingNodes(0),1);
+
+            Box xebox(Box(bx).grow(1).surroundingNodes(0));
+            Box yebox(Box(bx).grow(1).surroundingNodes(1));
+            Box zebox(Box(bx).grow(1).surroundingNodes(2));
+
+            Array4<Real> u_ad = makeArray4(p,Box(xebox).grow(1),1);
             p +=         u_ad.size();
-            Array4<Real> v_ad = makeArray4(p,Box(bx).grow(0,1).grow(2,1).surroundingNodes(1),1);
+            Array4<Real> v_ad = makeArray4(p,Box(yebox).grow(1),1);
             p +=         v_ad.size();
-            Array4<Real> w_ad = makeArray4(p,Box(bx).grow(0,1).grow(1,1).surroundingNodes(2),1);
+            Array4<Real> w_ad = makeArray4(p,Box(zebox).grow(1),1);
             p +=         w_ad.size();
 
             // This tests on covered cells just in the box itself
@@ -90,11 +97,11 @@ void ebgodunov::predict_godunov (Real /*time*/,
             // This tests on only regular cells including two rows of ghost cells
             } else if (flagfab.getType(amrex::grow(bx,2)) == FabType::regular) {
 
-                godunov::predict_plm_x (Box(u_ad), Imx, Ipx, a_vel, a_vel,
+                godunov::predict_plm_x (xebox, Imx, Ipx, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
-                godunov::predict_plm_y (Box(v_ad), Imy, Ipy, a_vel, a_vel,
+                godunov::predict_plm_y (yebox, Imy, Ipy, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
-                godunov::predict_plm_z (Box(w_ad), Imz, Ipz, a_vel, a_vel,
+                godunov::predict_plm_z (zebox, Imz, Ipz, a_vel, a_vel,
                                         geom, l_dt, h_bcrec, d_bcrec);
 
             } else {
@@ -106,21 +113,21 @@ void ebgodunov::predict_godunov (Real /*time*/,
                 Array4<Real const> const& ccent_arr = ccent.const_array(mfi);
                 Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
 
-                ebgodunov::predict_plm_x (Box(u_ad), Imx, Ipx, a_vel, a_vel,
+                ebgodunov::predict_plm_x(xebox, Imx, Ipx, a_vel, a_vel,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_y (Box(v_ad), Imy, Ipy, a_vel, a_vel,
+                ebgodunov::predict_plm_y(yebox, Imy, Ipy, a_vel, a_vel,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_z (Box(w_ad), Imz, Ipz, a_vel, a_vel,
+                ebgodunov::predict_plm_z(zebox, Imz, Ipz, a_vel, a_vel,
                                          flagarr, vfrac_arr,
                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
                                          geom, l_dt, h_bcrec, d_bcrec);
             }
 
-            make_trans_velocities(Box(u_ad), Box(v_ad), Box(w_ad),
+            make_trans_velocities(xebox, yebox, zebox, 
                                   u_ad, v_ad, w_ad,
                                   Imx, Imy, Imz, Ipx, Ipy, Ipz, a_vel, 
                                   flagarr, domain, d_bcrec);
@@ -134,6 +141,10 @@ void ebgodunov::predict_godunov (Real /*time*/,
                          Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
 
             Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
+
+            Box const& xbx = mfi.nodaltilebox(0);
+            Box const& ybx = mfi.nodaltilebox(1);
+            Box const& zbx = mfi.nodaltilebox(2);
 
             predict_godunov_on_box(bx, ncomp, xbx, ybx, zbx, a_umac, a_vmac, a_wmac,
                                    a_vel, u_ad, v_ad, w_ad, 
@@ -190,22 +201,25 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     Real dy = dx_arr[1];
     Real dz = dx_arr[2];
 
-   //  BCRec const* pbc = get_velocity_bcrec_device_ptr();
+    Box xebox = Box(bx).grow(1).surroundingNodes(0);
+    Box yebox = Box(bx).grow(1).surroundingNodes(1);
+    Box zebox = Box(bx).grow(1).surroundingNodes(2);
 
-    Box xebox = Box(bx).grow(1,1).grow(2,1).surroundingNodes(0);
-    Box yebox = Box(bx).grow(0,1).grow(2,1).surroundingNodes(1);
-    Box zebox = Box(bx).grow(0,1).grow(1,1).surroundingNodes(2);
-    Array4<Real> xlo = makeArray4(p, xebox, ncomp);
+    Box xebox_g2 = Box(bx).grow(2).surroundingNodes(0);
+    Box yebox_g2 = Box(bx).grow(2).surroundingNodes(1);
+    Box zebox_g2 = Box(bx).grow(2).surroundingNodes(1);
+
+    Array4<Real> xlo = makeArray4(p, Box(xebox_g2), ncomp);
     p += xlo.size();
-    Array4<Real> xhi = makeArray4(p, xebox, ncomp);
+    Array4<Real> xhi = makeArray4(p, Box(xebox_g2), ncomp);
     p += xhi.size();
-    Array4<Real> ylo = makeArray4(p, yebox, ncomp);
+    Array4<Real> ylo = makeArray4(p, Box(yebox_g2), ncomp);
     p += ylo.size();
-    Array4<Real> yhi = makeArray4(p, yebox, ncomp);
+    Array4<Real> yhi = makeArray4(p, Box(yebox_g2), ncomp);
     p += yhi.size();
-    Array4<Real> zlo = makeArray4(p, zebox, ncomp);
+    Array4<Real> zlo = makeArray4(p, Box(zebox_g2), ncomp);
     p += zlo.size();
-    Array4<Real> zhi = makeArray4(p, zebox, ncomp);
+    Array4<Real> zhi = makeArray4(p, Box(zebox_g2), ncomp);
     p += zhi.size();
 
     amrex::ParallelFor(
@@ -261,7 +275,6 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Imz(i, j, k, n) = fu*st + (1.0 - fu)*0.5*(hi + lo); // store zedge
         });
 
-
     Array4<Real> divu = makeArray4(Ipx.dataPtr(), grow(bx,1), 1);
     amrex::ParallelFor(Box(divu), [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept {
         divu(i,j,k) = 0.0;
@@ -278,13 +291,11 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 
     // Grow in x-direction
     Box const xbxtmp = Box(xbx).enclosedCells().grow(0,1);
-    Array4<Real> yzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(xbxtmp,1), 1);
-    Array4<Real> zylo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(xbxtmp,2), 1);
 
     // Need to grow these in y,z directions 1) because these are on y/z faces
     //                                      2) because we will do tangential interpolation
-    // Array4<Real> yzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(xbxtmp,1).grow(2,1), 1);
-    // Array4<Real> zylo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(xbxtmp,2).grow(1,1), 1);
+    Array4<Real> yzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(xbxtmp,1).grow(2,1).grow(0,1), 1);
+    Array4<Real> zylo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(xbxtmp,2).grow(1,1).grow(0,1), 1);
 
     // Add d/dy term to z-faces
     // Start with {zlo,zhi} --> {zylo, zyhi} and upwind using w_ad to {zylo}
@@ -294,7 +305,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         constexpr int n = 0;
-        const auto bc = pbc[n]; 
+        auto bc = pbc[n];
         Real l_zylo, l_zyhi;
         EBGodunov_corner_couple_zy(l_zylo, l_zyhi,
                                    i, j, k, n, l_dt, dy, false,
@@ -312,7 +323,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         constexpr int n = 0;
-        const auto bc = pbc[n];
+        auto bc = pbc[n];
         Real l_yzlo, l_yzhi;
         EBGodunov_corner_couple_yz(l_yzlo, l_yzhi,
                                    i, j, k, n, l_dt, dz, false,
@@ -435,13 +446,11 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     //
     // Grow in y-direction
     Box const ybxtmp = Box(ybx).enclosedCells().grow(1,1);
-    Array4<Real> xzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(ybxtmp,0), 1);
-    Array4<Real> zxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(ybxtmp,2), 1);
 
     // Need to grow these in x,z directions 1) because these are on x/z faces
     //                                      2) because we will do tangential interpolation
-    // Array4<Real> xzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(ybxtmp,0).grow(2,1), 1);
-    // Array4<Real> zxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(ybxtmp,2).grow(0,1), 1);
+    Array4<Real> xzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(ybxtmp,0).grow(2,1).grow(1,1), 1);
+    Array4<Real> zxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(ybxtmp,2).grow(0,1).grow(1,1), 1);
 
     // Add d/dz to x-faces
     // Start with {xlo,xhi} --> {xzlo, xzhi} and upwind using u_ad to {xzlo}
@@ -593,13 +602,11 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     //
     // Grow in z-direction
     Box const zbxtmp = Box(zbx).enclosedCells().grow(2,1);
-    Array4<Real> xylo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(zbxtmp,0), 1);
-    Array4<Real> yxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(zbxtmp,1), 1);
 
     // Need to grow these in x,y directions 1) because these are on x/y faces
     //                                      2) because we will do tangential interpolation
-    // Array4<Real> xylo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(zbxtmp,0).grow(1,1), 1);
-    // Array4<Real> yxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(zbxtmp,1).grow(0,1), 1);
+    Array4<Real> xylo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(zbxtmp,0).grow(1,1).grow(2,1), 1);
+    Array4<Real> yxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(zbxtmp,1).grow(0,1).grow(2,1), 1);
 
     amrex::ParallelFor(Box(xylo), Box(yxlo),
     //
