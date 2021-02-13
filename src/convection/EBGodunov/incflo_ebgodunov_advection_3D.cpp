@@ -37,10 +37,16 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     Box const& xbx = amrex::surroundingNodes(bx,0);
     Box const& ybx = amrex::surroundingNodes(bx,1);
     Box const& zbx = amrex::surroundingNodes(bx,2);
-    Box const& bxg1 = amrex::grow(bx,1);
+
     Box xebox = Box(xbx).grow(1,1).grow(2,1);
     Box yebox = Box(ybx).grow(0,1).grow(2,1);
     Box zebox = Box(zbx).grow(0,1).grow(1,1);
+
+    Box xebox_g2 = Box(bx).grow(2).surroundingNodes(0);
+    Box yebox_g2 = Box(bx).grow(2).surroundingNodes(1);
+    Box zebox_g2 = Box(bx).grow(2).surroundingNodes(2);
+
+    Box const& bxg2 = amrex::grow(bx,2);
 
     const Real dx = geom.CellSize(0);
     const Real dy = geom.CellSize(1);
@@ -54,33 +60,35 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     const auto dhi = amrex::ubound(domain);
     const auto dxinv = geom.InvCellSizeArray();
 
-    Array4<Real> Imx = makeArray4(p, bxg1, ncomp);
+    Array4<Real> Imx = makeArray4(p, bxg2, ncomp);
     p +=         Imx.size();
-    Array4<Real> Ipx = makeArray4(p, bxg1, ncomp);
+    Array4<Real> Ipx = makeArray4(p, bxg2, ncomp);
     p +=         Ipx.size();
-    Array4<Real> Imy = makeArray4(p, bxg1, ncomp);
+    Array4<Real> Imy = makeArray4(p, bxg2, ncomp);
     p +=         Imy.size();
-    Array4<Real> Ipy = makeArray4(p, bxg1, ncomp);
+    Array4<Real> Ipy = makeArray4(p, bxg2, ncomp);
     p +=         Ipy.size();
-    Array4<Real> Imz = makeArray4(p, bxg1, ncomp);
+    Array4<Real> Imz = makeArray4(p, bxg2, ncomp);
     p +=         Imz.size();
-    Array4<Real> Ipz = makeArray4(p, bxg1, ncomp);
+    Array4<Real> Ipz = makeArray4(p, bxg2, ncomp);
     p +=         Ipz.size();
-    Array4<Real> xlo = makeArray4(p, xebox, ncomp);
+
+    Array4<Real> xlo = makeArray4(p, xebox_g2, ncomp);
     p +=         xlo.size();
-    Array4<Real> xhi = makeArray4(p, xebox, ncomp);
+    Array4<Real> xhi = makeArray4(p, xebox_g2, ncomp);
     p +=         xhi.size();
-    Array4<Real> ylo = makeArray4(p, yebox, ncomp);
+    Array4<Real> ylo = makeArray4(p, yebox_g2, ncomp);
     p +=         ylo.size();
-    Array4<Real> yhi = makeArray4(p, yebox, ncomp);
+    Array4<Real> yhi = makeArray4(p, yebox_g2, ncomp);
     p +=         yhi.size();
-    Array4<Real> zlo = makeArray4(p, zebox, ncomp);
+    Array4<Real> zlo = makeArray4(p, zebox_g2, ncomp);
     p +=         zlo.size();
-    Array4<Real> zhi = makeArray4(p, zebox, ncomp);
+    Array4<Real> zhi = makeArray4(p, zebox_g2, ncomp);
     p +=         zhi.size();
-    Array4<Real> xyzlo = makeArray4(p, bxg1, ncomp);
+
+    Array4<Real> xyzlo = makeArray4(p, bxg2, ncomp);
     p +=         xyzlo.size();
-    Array4<Real> xyzhi = makeArray4(p, bxg1, ncomp);
+    Array4<Real> xyzhi = makeArray4(p, bxg2, ncomp);
     p +=         xyzhi.size();
 
     for (int n = 0; n < ncomp; n++)
@@ -162,11 +170,15 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     Array4<Real> zedge = Imz;
 
     //
-    // x-direction
+    // Grow in x-direction
     //
     Box const& xbxtmp = amrex::grow(bx,0,1);
-    Array4<Real> yzlo = makeArray4(xyzlo.dataPtr(), amrex::surroundingNodes(xbxtmp,1), ncomp);
-    Array4<Real> zylo = makeArray4(xyzhi.dataPtr(), amrex::surroundingNodes(xbxtmp,2), ncomp);
+
+    // Need to grow these in y,z directions 1) because these are on y/z faces
+    //                                      2) because we will do tangential interpolation
+    Array4<Real> yzlo = makeArray4(xyzlo.dataPtr(), amrex::surroundingNodes(xbxtmp,1).grow(2,1).grow(0,1), ncomp);
+    Array4<Real> zylo = makeArray4(xyzhi.dataPtr(), amrex::surroundingNodes(xbxtmp,2).grow(1,1).grow(0,1), ncomp);
+
     amrex::ParallelFor(
     Box(zylo), ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -252,11 +264,15 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     });
 
     //
-    // y-direction
+    // Grow in y-direction
     //
     Box const& ybxtmp = amrex::grow(bx,1,1);
-    Array4<Real> xzlo = makeArray4(xyzlo.dataPtr(), amrex::surroundingNodes(ybxtmp,0), ncomp);
-    Array4<Real> zxlo = makeArray4(xyzhi.dataPtr(), amrex::surroundingNodes(ybxtmp,2), ncomp);
+
+    // Need to grow these in x,z directions 1) because these are on x/z faces
+    //                                      2) because we will do tangential interpolation
+    Array4<Real> xzlo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(ybxtmp,0).grow(2,1).grow(1,1), ncomp);
+    Array4<Real> zxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(ybxtmp,2).grow(0,1).grow(1,1), ncomp);
+
     amrex::ParallelFor(
     Box(xzlo), ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -342,11 +358,15 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
     });
 
     //
-    // z-direcion
+    // z-direction
     //
     Box const& zbxtmp = amrex::grow(bx,2,1);
-    Array4<Real> xylo = makeArray4(xyzlo.dataPtr(), amrex::surroundingNodes(zbxtmp,0), ncomp);
-    Array4<Real> yxlo = makeArray4(xyzhi.dataPtr(), amrex::surroundingNodes(zbxtmp,1), ncomp);
+
+    // Need to grow these in y,z directions 1) because these are on y/z faces
+    //                                      2) because we will do tangential interpolation
+    Array4<Real> xylo = makeArray4(Ipy.dataPtr(), amrex::surroundingNodes(zbxtmp,0).grow(1,1).grow(2,1), ncomp);
+    Array4<Real> yxlo = makeArray4(Ipz.dataPtr(), amrex::surroundingNodes(zbxtmp,1).grow(0,1).grow(2,1), ncomp);
+
     amrex::ParallelFor(
     Box(xylo), ncomp,
     [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
@@ -443,9 +463,16 @@ ebgodunov::compute_godunov_advection (Box const& bx, int ncomp,
                                    apz(i,j,k+1)*w_mac(i,j,k+1)*qz(i,j,k+1,n) );
 
 #if 0
-        if ( n == 0 and i == 2 and (j ==  3 or j == 28) and (k == 3 or k == 28) ) 
+        if (k > 15 and n < 2 and std::abs(dqdt(i,j,k,n) - dqdt(i,j,31-k,n)) > 1.e-8)
+           amrex::Print() << "DQDT DIFF " << IntVect(i,j,k) << " " << n << " " 
+                          << dqdt(i,j,k,n) - dqdt(i,j,31-k,n) << std::endl;
+        if (k > 15 and n == 2 and std::abs(dqdt(i,j,k,n) + dqdt(i,j,31-k,n)) > 1.e-8)
+           amrex::Print() << "DQDT DIFF " << IntVect(i,j,k) << " " << n << " " 
+                          << dqdt(i,j,k,n) + dqdt(i,j,31-k,n) << std::endl;
+
+        if ( n == 0 and i == 0 and j == 4 and (k == 15 or k == 16) ) 
         {
-           amrex::Print() << "DQDT FOR V " << IntVect(i,j,k) << " " << dqdt(i,j,k,n) << std::endl;
+           amrex::Print() << "DQDT FOR U " << IntVect(i,j,k) << " " << dqdt(i,j,k,n) << std::endl;
            amrex::Print() << "QX         " << qx(i,j,k,n) << " " << qx(i+1,j,k,n) << std::endl;
            amrex::Print() << "QY         " << qy(i,j,k,n) << " " << qy(i,j+1,k,n) << std::endl;
            amrex::Print() << "QZ         " << qz(i,j,k,n) << " " << qz(i,j,k+1,n) << std::endl;

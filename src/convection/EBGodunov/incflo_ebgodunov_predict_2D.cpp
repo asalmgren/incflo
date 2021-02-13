@@ -6,140 +6,9 @@
 
 using namespace amrex;
 
-void ebgodunov::predict_godunov (Real /*time*/, 
-                                 MultiFab& u_mac, MultiFab& v_mac,
-                                 MultiFab const& vel, 
-                                 MultiFab const& vel_forces,
-                                 Vector<BCRec> const& h_bcrec,
-                                        BCRec  const* d_bcrec,
-                                 EBFArrayBoxFactory const* ebfact,
-                                 Geometry& geom, 
-                                 Real l_dt, 
-                                 MultiFab const& gmacphi_x, MultiFab const& gmacphi_y,
-                                 bool use_mac_phi_in_godunov)
-{
-    Box const& domain = geom.Domain();
-    const Real* dx    = geom.CellSize();
-
-    auto const& flags = ebfact->getMultiEBCellFlagFab();
-    auto const& fcent = ebfact->getFaceCent();
-    auto const& ccent = ebfact->getCentroid();
-    auto const& vfrac = ebfact->getVolFrac();
-
-    auto const& areafrac = ebfact->getAreaFrac();
-
-    const int ncomp = AMREX_SPACEDIM;
-#ifdef _OPENMP
-#pragma omp parallel if (Gpu::notInLaunchRegion())
-#endif
-    {
-        FArrayBox scratch;
-        for (MFIter mfi(vel,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-        {
-            Box const& bx = mfi.tilebox();
-            Box const& bxg1 = amrex::grow(bx,1);
-            Box const& xbx = mfi.nodaltilebox(0);
-            Box const& ybx = mfi.nodaltilebox(1);
-
-            EBCellFlagFab const& flagfab = flags[mfi];
-            Array4<EBCellFlag const> const& flagarr = flagfab.const_array();
-
-            Array4<Real> const& a_umac = u_mac.array(mfi);
-            Array4<Real> const& a_vmac = v_mac.array(mfi);
-
-            Array4<Real const> const& gmacphi_x_arr = gmacphi_x.const_array(mfi);
-            Array4<Real const> const& gmacphi_y_arr = gmacphi_y.const_array(mfi);
-
-            Array4<Real const> const& a_vel = vel.const_array(mfi);
-            Array4<Real const> const& a_f = vel_forces.const_array(mfi);
-
-            scratch.resize(bxg1, ncomp*(4*AMREX_SPACEDIM)+AMREX_SPACEDIM);
-            Real* p = scratch.dataPtr();
-
-            Array4<Real> Imx = makeArray4(p,bxg1,ncomp);
-            p +=         Imx.size();
-            Array4<Real> Ipx = makeArray4(p,bxg1,ncomp);
-            p +=         Ipx.size();
-            Array4<Real> Imy = makeArray4(p,bxg1,ncomp);
-            p +=         Imy.size();
-            Array4<Real> Ipy = makeArray4(p,bxg1,ncomp);
-            p +=         Ipy.size();
-            Array4<Real> u_ad = makeArray4(p,Box(bx).grow(1,1).surroundingNodes(0),1);
-            p +=         u_ad.size();
-            Array4<Real> v_ad = makeArray4(p,Box(bx).grow(0,1).surroundingNodes(1),1);
-            p +=         v_ad.size();
-
-            // This tests on covered cells just in the box itself
-            if (flagfab.getType(bx) == FabType::covered)
-            {
-                // We shouldn't need to zero these ... I think?
-
-            // This tests on only regular cells including two rows of ghost cells
-            } else if (flagfab.getType(amrex::grow(bx,2)) == FabType::regular) {
-
-                godunov::predict_plm_x (Box(u_ad), Imx, Ipx, a_vel, a_vel,
-                                        geom, l_dt, h_bcrec, d_bcrec);
-                godunov::predict_plm_y (Box(v_ad), Imy, Ipy, a_vel, a_vel,
-                                        geom, l_dt, h_bcrec, d_bcrec);
-
-                bool local_use_forces_in_trans = false;
-                godunov::make_trans_velocities(Box(u_ad), Box(v_ad), u_ad, v_ad,
-                                               Imx, Imy, Ipx, Ipy, a_vel, a_f,
-                                               domain, l_dt, d_bcrec, local_use_forces_in_trans);
-
-                godunov::predict_godunov_on_box(bx, ncomp, xbx, ybx, 
-                                                a_umac, a_vmac, a_vel, u_ad, v_ad, 
-                                                Imx, Imy, Ipx, Ipy, a_f, 
-                                                domain, dx, l_dt, d_bcrec, 
-                                                local_use_forces_in_trans,
-                                                gmacphi_x_arr, gmacphi_y_arr, 
-                                                use_mac_phi_in_godunov, p);
-
-            } else {
- 
-                AMREX_D_TERM(Array4<Real const> const& fcx = fcent[0]->const_array(mfi);,
-                             Array4<Real const> const& fcy = fcent[1]->const_array(mfi);,
-                             Array4<Real const> const& fcz = fcent[2]->const_array(mfi););
-
-                Array4<Real const> const& ccent_arr = ccent.const_array(mfi);
-                Array4<Real const> const& vfrac_arr = vfrac.const_array(mfi);
-
-                ebgodunov::predict_plm_x (Box(u_ad), Imx, Ipx, a_vel, a_vel,
-                                          flagarr, vfrac_arr,
-                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
-                                          geom, l_dt, h_bcrec, d_bcrec);
-                ebgodunov::predict_plm_y (Box(v_ad), Imy, Ipy, a_vel, a_vel,
-                                          flagarr, vfrac_arr,
-                                          AMREX_D_DECL(fcx,fcy,fcz),ccent_arr,
-                                          geom, l_dt, h_bcrec, d_bcrec);
-
-                ebgodunov::make_trans_velocities(Box(u_ad), Box(v_ad),
-                                                 u_ad, v_ad,
-                                                 Imx, Imy, Ipx, Ipy, a_vel,
-                                                 flagarr, domain, d_bcrec);
-   
-                AMREX_D_TERM(Array4<Real const> const& apx = areafrac[0]->const_array(mfi);,
-                             Array4<Real const> const& apy = areafrac[1]->const_array(mfi);,
-                             Array4<Real const> const& apz = areafrac[2]->const_array(mfi););
-
-                ebgodunov::predict_godunov_on_box(bx, ncomp, xbx, ybx, 
-                                                  a_umac, a_vmac,
-                                                  a_vel, u_ad, v_ad, 
-                                                  Imx, Imy, Ipx, Ipy, a_f, 
-                                                  domain, dx, l_dt, d_bcrec, 
-                                                  flagarr, apx, apy,
-                                                  fcx,fcy,
-                                                  gmacphi_x_arr, gmacphi_y_arr, 
-                                                  use_mac_phi_in_godunov, p);
-            }
-
-            Gpu::streamSynchronize();  // otherwise we might be using too much memory
-        }
-    }
-}
-
 void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                                         Box const& xbx, Box const& ybx, 
+                                        Box const& xebx, Box const& yebx, 
                                         Array4<Real> const& qx,
                                         Array4<Real> const& qy,
                                         Array4<Real const> const& q,
@@ -164,25 +33,24 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
 {
     const Dim3 dlo = amrex::lbound(domain);
     const Dim3 dhi = amrex::ubound(domain);
+
     Real dx = dx_arr[0];
     Real dy = dx_arr[1];
 
-    Box xebox = Box(bx).grow(1,1).surroundingNodes(0);
-    Box yebox = Box(bx).grow(0,1).surroundingNodes(1);
-    Array4<Real> xlo = makeArray4(p, xebox, ncomp);
+    Array4<Real> xlo = makeArray4(p, xebx, ncomp);
     p += xlo.size();
-    Array4<Real> xhi = makeArray4(p, xebox, ncomp);
+    Array4<Real> xhi = makeArray4(p, xebx, ncomp);
     p += xhi.size();
-    Array4<Real> ylo = makeArray4(p, yebox, ncomp);
+    Array4<Real> ylo = makeArray4(p, yebx, ncomp);
     p += ylo.size();
-    Array4<Real> yhi = makeArray4(p, yebox, ncomp);
+    Array4<Real> yhi = makeArray4(p, yebx, ncomp);
     p += yhi.size();
 
     //
     // Upwind the states that result from plm_x and plm_y
     //
     amrex::ParallelFor(
-        xebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+        xebx, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real lo = Ipx(i-1,j,k,n);
             Real hi = Imx(i  ,j,k,n);
@@ -199,7 +67,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
             Real fu = (amrex::Math::abs(uad) < small_vel) ? 0.0 : 1.0;
             Imx(i, j, k, n) = fu*st + (1.0 - fu) *0.5 * (hi + lo); // store xedge
         },
-        yebox, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
+        yebx, ncomp, [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
             Real lo = Ipy(i,j-1,k,n);
             Real hi = Imy(i,j  ,k,n);
