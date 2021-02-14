@@ -322,7 +322,6 @@ void EBGodunov_corner_couple_yz (amrex::Real& lo1, amrex::Real& hi1,
                          + dt/(3.0*dz)*s(i,j,k,n)*(apz(i,j,k+1)*wmac(i,j,k+1) 
                                                   -apz(i,j,k)*wmac(i,j,k)) ) / vfrac(i,j,k) 
                          - dt/(3.0)   *s(i,j,k,n)*divu_cc(i,j,k);
-
             } else {
 
                 hi1 += - dt/(6.0*dz)*( wmac(i,j  ,k+1)   +  wmac(i,j  ,k))

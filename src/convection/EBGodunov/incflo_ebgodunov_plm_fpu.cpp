@@ -212,7 +212,6 @@ void ebgodunov::plm_fpu_x (Box const& xebox, int ncomp,
                 // Only over-write normal velocity with Dirichlet bc at hi face
                 if (i == domain_ihi+1 && (bc.hi(0) == BCType::ext_dir)) 
                     if (is_velocity && n == 0) qmns = q(i,j,k,n);
-
             }
 
             Ipx(i-1,j,k,n) = qmns;
@@ -889,7 +888,7 @@ void ebgodunov::plm_fpu_z (Box const& zebox, int ncomp,
                         amrex_calc_zslope(i,j,k-1,n,order,q);
 
                 // We have enough cells to do 2nd order slopes with all values at cell centers
-                } else if (vfrac(i,j-1,k) == 1. and vfrac(i,j-2,k) == 1. and vfrac(i,j  ,k) == 1.) 
+                } else if (vfrac(i,j,k-1) == 1. and vfrac(i,j,k-2) == 1. and vfrac(i,j,k  ) == 1.) 
                 {
                     int order = 2;
                     qmns = q(i,j,k-1,n) + 0.5 * ( 1.0 - wmac(i,j,k) * dtdz) *
@@ -905,7 +904,7 @@ void ebgodunov::plm_fpu_z (Box const& zebox, int ncomp,
                                 Real delta_x = xf  - ccc(i,j,k-1,0);,
                                 Real delta_y = yf  - ccc(i,j,k-1,1););
     
-                   const auto& slopes_eb_lo = amrex_lim_slopes_eb(i,j,k,n,q,ccc,
+                   const auto& slopes_eb_lo = amrex_lim_slopes_eb(i,j,k-1,n,q,ccc,
                                                                   AMREX_D_DECL(fcx,fcy,fcz), flag);
 
                    qmns = q(i,j,k-1,n) + delta_x * slopes_eb_lo[0]
