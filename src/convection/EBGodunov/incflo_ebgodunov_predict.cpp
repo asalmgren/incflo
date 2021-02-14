@@ -45,7 +45,6 @@ void ebgodunov::predict_godunov (Real /*time*/,
         {
             Box const& bx = mfi.tilebox();
             Box const& bxg2 = amrex::grow(bx,2);
-            Box const& bxg3 = amrex::grow(bx,3);
 
             EBCellFlagFab const& flagfab = flags[mfi];
             Array4<EBCellFlag const> const& flagarr = flagfab.const_array();
@@ -69,6 +68,7 @@ void ebgodunov::predict_godunov (Real /*time*/,
             // In 3-d:
             // 12*ncomp are:  Imx, Ipx, Imy, Ipy, Imz, Ipz, xlo/xhi, ylo/yhi, zlo/zhi 
             //  3       are:  u_ad, v_ad, w_ad
+            Box const& bxg3 = amrex::grow(bx,3);
             scratch.resize(bxg3, 4*AMREX_SPACEDIM*ncomp + AMREX_SPACEDIM);
             Real* p  = scratch.dataPtr();
 

@@ -21,7 +21,7 @@ namespace {
 }
 
 // This version is called after the MAC projection
-void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
+void ebgodunov::plm_fpu_x (Box const& xebox, int ncomp,
                            Array4<Real> const& Imx, Array4<Real> const& Ipx,
                            Array4<Real const> const& q,
                            Array4<Real const> const& umac,
@@ -60,12 +60,6 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
     auto extdir_lohi_z = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::z));
     bool has_extdir_or_ho_lo_z = extdir_lohi_z.first;
     bool has_extdir_or_ho_hi_z = extdir_lohi_z.second;
-#endif
-
-#if (AMREX_SPACEDIM == 3)
-    Box xebox = Box(bx_in).grow(1,1).grow(2,1).surroundingNodes(0);
-#else
-    Box xebox = Box(bx_in).grow(1,1).surroundingNodes(0);
 #endif
 
     if ( (has_extdir_or_ho_lo_x and domain_ilo >= xebox.smallEnd(0)-1) or
@@ -336,7 +330,7 @@ void ebgodunov::plm_fpu_x (Box const& bx_in, int ncomp,
 }
 
 // This version is called after the MAC projection
-void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
+void ebgodunov::plm_fpu_y (Box const& yebox, int ncomp,
                            Array4<Real> const& Imy, Array4<Real> const& Ipy,
                            Array4<Real const> const& q,
                            Array4<Real const> const& vmac,
@@ -375,12 +369,6 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
     auto extdir_lohi_z = has_extdir_or_ho(h_bcrec.data(), ncomp, static_cast<int>(Direction::z));
     bool has_extdir_or_ho_lo_z = extdir_lohi_z.first;
     bool has_extdir_or_ho_hi_z = extdir_lohi_z.second;
-#endif
-
-#if (AMREX_SPACEDIM == 3)
-    Box yebox = Box(bx_in).grow(0,1).grow(2,1).surroundingNodes(1);
-#else
-    Box yebox = Box(bx_in).grow(0,1).surroundingNodes(1);
 #endif
 
     if ( (has_extdir_or_ho_lo_x and domain_ilo >= yebox.smallEnd(0)-1) or
@@ -653,7 +641,7 @@ void ebgodunov::plm_fpu_y (Box const& bx_in, int ncomp,
 
 #if (AMREX_SPACEDIM == 3)
 // This version is called after the MAC projection
-void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
+void ebgodunov::plm_fpu_z (Box const& zebox, int ncomp,
                            Array4<Real> const& Imz, Array4<Real> const& Ipz,
                            Array4<Real const> const& q,
                            Array4<Real const> const& wmac,
@@ -690,8 +678,6 @@ void ebgodunov::plm_fpu_z (Box const& bx_in, int ncomp,
     bool has_extdir_or_ho_hi_y = extdir_lohi_y.second;
     bool has_extdir_or_ho_lo_z = extdir_lohi_z.first;
     bool has_extdir_or_ho_hi_z = extdir_lohi_z.second;
-
-    Box zebox = Box(bx_in).grow(0,1).grow(1,1).surroundingNodes(2);
 
     if ( (has_extdir_or_ho_lo_x and domain_ilo >= zebox.smallEnd(0)-1) or
          (has_extdir_or_ho_hi_x and domain_ihi <= zebox.bigEnd(0)    ) or

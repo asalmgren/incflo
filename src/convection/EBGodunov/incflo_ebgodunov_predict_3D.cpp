@@ -48,21 +48,21 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
     Real dy = dx_arr[1];
     Real dz = dx_arr[2];
 
-    Box xebox_g2 = Box(bx).grow(2).surroundingNodes(0);
-    Box yebox_g2 = Box(bx).grow(2).surroundingNodes(1);
-    Box zebox_g2 = Box(bx).grow(2).surroundingNodes(2);
+    Box xebx_g2 = Box(bx).grow(2).surroundingNodes(0);
+    Box yebx_g2 = Box(bx).grow(2).surroundingNodes(1);
+    Box zebx_g2 = Box(bx).grow(2).surroundingNodes(2);
 
-    Array4<Real> xlo = makeArray4(p, Box(xebox_g2), ncomp);
+    Array4<Real> xlo = makeArray4(p, Box(xebx_g2), ncomp);
     p += xlo.size();
-    Array4<Real> xhi = makeArray4(p, Box(xebox_g2), ncomp);
+    Array4<Real> xhi = makeArray4(p, Box(xebx_g2), ncomp);
     p += xhi.size();
-    Array4<Real> ylo = makeArray4(p, Box(yebox_g2), ncomp);
+    Array4<Real> ylo = makeArray4(p, Box(yebx_g2), ncomp);
     p += ylo.size();
-    Array4<Real> yhi = makeArray4(p, Box(yebox_g2), ncomp);
+    Array4<Real> yhi = makeArray4(p, Box(yebx_g2), ncomp);
     p += yhi.size();
-    Array4<Real> zlo = makeArray4(p, Box(zebox_g2), ncomp);
+    Array4<Real> zlo = makeArray4(p, Box(zebx_g2), ncomp);
     p += zlo.size();
-    Array4<Real> zhi = makeArray4(p, Box(zebox_g2), ncomp);
+    Array4<Real> zhi = makeArray4(p, Box(zebx_g2), ncomp);
     p += zhi.size();
 
     amrex::ParallelFor(
