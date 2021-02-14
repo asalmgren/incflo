@@ -834,7 +834,7 @@ void ebgodunov::plm_fpu_z (Box const& zebox, int ncomp,
             Real qmns(0.);
 
             // This means apz(i,j,k) > 0 and we have un-covered cells on both sides
-            if (flag(i,j,k).isConnected(0,-1,0))
+            if (flag(i,j,k).isConnected(0,0,-1))
             {
                 // *************************************************
                 // Making qpls

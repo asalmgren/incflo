@@ -24,8 +24,6 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
     Real y_hat_j, y_hat_jp1;
     Real z_hat_k, z_hat_kp1;
 
-    int ii, jj, kk;
-
     // Tangential extrapolation in the x- and z-directions at j-1/2
     if (apy(ic,j,k) == 1.0)
     {
@@ -37,8 +35,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j;
         int kc = k;
 
-        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -74,8 +72,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j+1;
         int kc = k;
 
-        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -111,8 +109,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j;
         int kc = k;
 
-        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -148,8 +146,8 @@ void create_transverse_terms_for_xface(int ic, int j, int k,
         int jc = j;
         int kc = k+1;
 
-        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -202,8 +200,6 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
     Real x_hat_i, x_hat_ip1;
     Real z_hat_k, z_hat_kp1;
 
-    int ii, jj, kk;
-
     // Tangential extrapolation in the y- and z-directions at i-1/2
     if (apx(i,jc,k) == 1.0)
     {
@@ -215,8 +211,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i;
         int kc = k;
 
-        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -252,8 +248,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i+1;
         int kc = k;
 
-        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -289,8 +285,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i;
         int kc = k;
 
-        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -326,8 +322,8 @@ void create_transverse_terms_for_yface(int i, int jc, int k,
         int ic = i;
         int kc = k+1;
 
-        ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
+        int ii = (fcz(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int jj = (fcz(ic,jc,kc,1) <= 0.0) ? jc-1 : jc+1;
 
         Real xoff = (fcz(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real yoff = (fcz(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -380,8 +376,6 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
     Real x_hat_i, x_hat_ip1;
     Real y_hat_j, y_hat_jp1;
 
-    int ii, jj, kk;
-
     // Tangential extrapolation in the y- and z-directions at i-1/2
     if (apx(i,j,kc) == 1.0)
     {
@@ -393,8 +387,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i;
         int jc = j;
 
-        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -430,8 +424,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i+1;
         int jc = j;
 
-        jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
-        kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int jj = (fcx(ic,jc,kc,0) <= 0.0) ? jc-1 : jc+1;
+        int kk = (fcx(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real yoff = (fcx(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcx(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -467,8 +461,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i;
         int jc = j;
 
-        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
@@ -504,8 +498,8 @@ void create_transverse_terms_for_zface(int i, int j, int kc,
         int ic = i;
         int jc = j+1;
 
-        ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
-        kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
+        int ii = (fcy(ic,jc,kc,0) <= 0.0) ? ic-1 : ic+1;
+        int kk = (fcy(ic,jc,kc,1) <= 0.0) ? kc-1 : kc+1;
 
         Real xoff = (fcy(ic,jc,kc,0) <= 0.0) ? -1. : 1.;
         Real zoff = (fcy(ic,jc,kc,1) <= 0.0) ? -1. : 1.;
