@@ -49,7 +49,9 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
 {
     int ngmac = nghost_mac();
 
+#ifdef AMREX_USE_EB
     amrex::Print() << "REDISTRIBUTION TYPE " << m_redistribution_type << std::endl;
+#endif
 
     // We first compute the velocity forcing terms to be used in predicting
     //    to faces before the MAC projection
