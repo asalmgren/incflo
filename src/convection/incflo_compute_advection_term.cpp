@@ -13,9 +13,11 @@ void incflo::init_advection ()
 #ifdef AMREX_USE_EB
     if (m_advection_type == "Godunov")
     {
+       // We default to conservative if doing Godunov
        m_iconserv_velocity.resize(AMREX_SPACEDIM, 1);
        m_iconserv_velocity_d.resize(AMREX_SPACEDIM, 1);
     } else {
+       // We default to non-conservative if doing MOL
        m_iconserv_velocity.resize(AMREX_SPACEDIM, 0);
        m_iconserv_velocity_d.resize(AMREX_SPACEDIM, 0);
     }
@@ -46,6 +48,8 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
                                  Real time)
 {
     int ngmac = nghost_mac();
+
+    amrex::Print() << "REDISTRIBUTION TYPE " << m_redistribution_type << std::endl;
 
     // We first compute the velocity forcing terms to be used in predicting
     //    to faces before the MAC projection
@@ -96,7 +100,6 @@ incflo::compute_convective_term (Vector<MultiFab*> const& conv_u,
         }
     }
 
-    // Note we pass conv_u in here just as a temporary
     compute_MAC_projected_velocities(vel, 
                                      AMREX_D_DECL(u_mac,v_mac,w_mac),
                                      AMREX_D_DECL(GetVecOfPtrs(inv_rho_x), GetVecOfPtrs(inv_rho_y),
@@ -300,7 +303,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
 
         if (!regular)
         {
-            amrex::Print() << "DOING VELOCITY " << std::endl;
+            // amrex::Print() << "DOING VELOCITY " << std::endl;
             ebgodunov::compute_godunov_advection(gbx, AMREX_SPACEDIM,
                                                  dUdt_tmp, vel,
                                                  AMREX_D_DECL(umac, vmac, wmac), 
@@ -318,7 +321,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                             AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
 
             if (!m_constant_density) {
-                amrex::Print() << "DOING DENSITY " << std::endl;
+                // amrex::Print() << "DOING DENSITY " << std::endl;
                 ebgodunov::compute_godunov_advection(gbx, 1,
                                                      dUdt_tmp, rho,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
@@ -336,7 +339,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                 AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
             }
             if (m_advect_tracer) {
-                amrex::Print() << "DOING TRACER " << std::endl;
+                // amrex::Print() << "DOING TRACER " << std::endl;
                 ebgodunov::compute_godunov_advection(gbx, m_ntrac,
                                                      dUdt_tmp, rhotrac,
                                                      AMREX_D_DECL(umac, vmac, wmac), 

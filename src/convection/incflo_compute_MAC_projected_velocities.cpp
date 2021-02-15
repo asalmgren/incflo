@@ -171,12 +171,5 @@ incflo::compute_MAC_projected_velocities (
     } else {
         macproj->project(m_mac_mg_rtol,m_mac_mg_atol);
     }
-
-    for (int lev=0; lev <= finest_level; ++lev)
-    {
-        AMREX_D_TERM(u_mac[lev]->FillBoundary(geom[lev].periodicity());,
-                     v_mac[lev]->FillBoundary(geom[lev].periodicity());,
-                     w_mac[lev]->FillBoundary(geom[lev].periodicity()));
-    }
 }
 

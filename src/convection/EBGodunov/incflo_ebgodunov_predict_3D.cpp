@@ -396,7 +396,7 @@ void ebgodunov::predict_godunov_on_box (Box const& bx, int ncomp,
                    apz(i  ,jc,k+1) > 0. && apz(i,jc,k) > 0.) 
         {
             create_transverse_terms_for_yface(i, jc, k, u_ad, w_ad, xzlo, zxlo,
-                                              apy, apz, fcy, fcz, trans_x, trans_z,
+                                              apx, apz, fcx, fcz, trans_x, trans_z,
                                               dx, dz); 
 
             sth += -0.5 * l_dt * (trans_x + trans_z);
