@@ -305,7 +305,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
 
         if (!regular)
         {
-            // amrex::Print() << "DOING VELOCITY " << std::endl;
+            amrex::Print() << "DOING VELOCITY " << std::endl;
             ebgodunov::compute_godunov_advection(gbx, AMREX_SPACEDIM,
                                                  dUdt_tmp, vel,
                                                  AMREX_D_DECL(umac, vmac, wmac), 
@@ -317,13 +317,12 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                  AMREX_D_DECL(apx, apy, apz), vfrac,
                                                  AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                  geom[lev], true); // is_velocity
-            redistribution::redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, vel, scratch,
-                                            AMREX_D_DECL(umac, vmac, wmac), flag,
+            redistribution::redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, vel, scratch, flag,
                                             AMREX_D_DECL(apx, apy, apz), vfrac,
                                             AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
 
             if (!m_constant_density) {
-                // amrex::Print() << "DOING DENSITY " << std::endl;
+                amrex::Print() << "DOING DENSITY " << std::endl;
                 ebgodunov::compute_godunov_advection(gbx, 1,
                                                      dUdt_tmp, rho,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
@@ -335,13 +334,12 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      AMREX_D_DECL(apx, apy, apz), vfrac,
                                                      AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                      geom[lev]);
-                redistribution::redistribute_eb(bx, 1, drdt, dUdt_tmp, rho, scratch,
-                                                AMREX_D_DECL(umac, vmac, wmac), flag,
+                redistribution::redistribute_eb(bx, 1, drdt, dUdt_tmp, rho, scratch, flag,
                                                 AMREX_D_DECL(apx, apy, apz), vfrac,
                                                 AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
             }
             if (m_advect_tracer) {
-                // amrex::Print() << "DOING TRACER " << std::endl;
+                amrex::Print() << "DOING TRACER " << std::endl;
                 ebgodunov::compute_godunov_advection(gbx, m_ntrac,
                                                      dUdt_tmp, rhotrac,
                                                      AMREX_D_DECL(umac, vmac, wmac), 
@@ -353,8 +351,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                      AMREX_D_DECL(apx, apy, apz), vfrac,
                                                      AMREX_D_DECL(fcx, fcy, fcz), ccc, 
                                                      geom[lev]);
-                redistribution::redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, rhotrac, scratch,
-                                                AMREX_D_DECL(umac, vmac, wmac), flag,
+                redistribution::redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, rhotrac, scratch, flag,
                                                 AMREX_D_DECL(apx, apy, apz), vfrac,
                                                 AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
             }
@@ -433,8 +430,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                               flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
             mol::compute_convective_rate_eb(gbx, AMREX_SPACEDIM, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
                                             flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
-            redistribution::redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, vel, scratch,
-                                            AMREX_D_DECL(umac, vmac, wmac), flag,
+            redistribution::redistribute_eb(bx, AMREX_SPACEDIM, dvdt, dUdt_tmp, vel, scratch, flag,
                                             AMREX_D_DECL(apx, apy, apz), vfrac,
                                             AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
 
@@ -449,8 +445,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                   flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
                 mol::compute_convective_rate_eb( gbx, 1, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
                                                 flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
-                redistribution::redistribute_eb(bx, 1, drdt, dUdt_tmp, rho, scratch,
-                                                AMREX_D_DECL(umac, vmac, wmac), flag,
+                redistribution::redistribute_eb(bx, 1, drdt, dUdt_tmp, rho, scratch, flag,
                                                 AMREX_D_DECL(apx, apy, apz), vfrac,
                                                 AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
             }
@@ -465,8 +460,7 @@ incflo::compute_convective_term (Box const& bx, int lev, MFIter const& mfi,
                                                   flag, AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev]);
                 mol::compute_convective_rate_eb(gbx, m_ntrac, dUdt_tmp, AMREX_D_DECL(fx, fy, fz),
                                                 flag, vfrac, AMREX_D_DECL(apx, apy, apz), geom[lev]);
-                redistribution::redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, rhotrac, scratch,
-                                                AMREX_D_DECL(umac, vmac, wmac), flag,
+                redistribution::redistribute_eb(bx, m_ntrac, dtdt, dUdt_tmp, rhotrac, scratch, flag,
                                                 AMREX_D_DECL(apx, apy, apz), vfrac,
                                                 AMREX_D_DECL(fcx, fcy, fcz), ccc, geom[lev], l_dt, m_redistribution_type);
             }

@@ -14,7 +14,8 @@ redistribution::make_itracker (
                        Array4<Real const> const& apy,
                        Array4<Real const> const& vfrac,
                        Array4<int> const& itracker,
-                       Geometry& lev_geom)
+                       Geometry& lev_geom,
+                       std::string redist_type) 
 {
     int debug_verbose = 0;
 
@@ -43,16 +44,18 @@ redistribution::make_itracker (
     int preferred_direction = 0; // x-direction is preferred
     // int preferred_direction = 1; // y-direction is preferred
 
-    if (debug_verbose > 0)
+//  if (debug_verbose > 0)
         amrex::Print() << " IN MAKE_ITRACKER DOING BOX " << bx << std::endl;
 
-    amrex::ParallelFor(bx, 
+    Box const& bxg1 = amrex::grow(bx,1);
+
+    amrex::ParallelFor(Box(itracker), 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
         itracker(i,j,k,0) = 0;
     });
 
-    amrex::ParallelFor(bx, 
+    amrex::ParallelFor(bxg1, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
        if (vfrac(i,j,k) > 0.0 && vfrac(i,j,k) < 0.5)
@@ -65,11 +68,11 @@ redistribution::make_itracker (
            Real nx = dapx * apnorm_inv;
            Real ny = dapy * apnorm_inv;
 
-           // We use small_norm as an off just to break the tie when at 45 degrees ...
+           // We use small_norm as an offset just to break the tie when at 45 degrees ...
 
            if (preferred_direction == 1)
            {
-              // y-direction is preferred
+               // y-direction is preferred
                if (nx > 0)
                   nx -= small_norm;
                else
@@ -217,11 +220,13 @@ redistribution::make_itracker (
        }
     });
 
+    if (redist_type == "State") return;
+
     // At this point every cell knows who it wants to merge with, but
     //   (1) not who wants to merge with it
     //   (2) not who its neighbor also wants to merge with
     // In this loop we only address (1)
-    amrex::ParallelFor(bx, 
+    amrex::ParallelFor(bxg1, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
        // Here we don't test on vfrac because some of the neighbors are full cells
@@ -234,35 +239,38 @@ redistribution::make_itracker (
                int ioff = imap[itracker(i,j,k,ipair)];
                int joff = jmap[itracker(i,j,k,ipair)];
 
-               int n_of_nbor = itracker(i+ioff,j+joff,k,0);
-               bool found = false;
-               for (int ipair_nbor = 1; ipair_nbor <= n_of_nbor; ipair_nbor++)
+               if (bxg1.contains(IntVect(i+ioff,j+joff)))
                {
-                   if (imap[itracker(i+ioff,j+joff,k,ipair_nbor)] + ioff == 0 && 
-                       jmap[itracker(i+ioff,j+joff,k,ipair_nbor)] + joff == 0)
-                       found = true;
-               }
-               if  (!found)  
-               {
-                   // My neigbor didn't know about me so add me to my nbor's list of neighbors
-                   itracker(i+ioff,j+joff,k,0) += 1;
-                   itracker(i+ioff,j+joff,k,n_of_nbor+1) = inv_map[itracker(i,j,k,ipair)];
-                   if (debug_verbose > 1)
-                       amrex::Print() << "Cell   " << IntVect(i,j) << " had nbor " << IntVect(i+ioff,j+joff) 
-                                      << " in its nbor list by taking inverse of " << itracker(i,j,k,ipair) 
-                                      << " which gave " << inv_map[itracker(i,j,k,ipair)] << std::endl;
-                   if (debug_verbose > 1)
-                       amrex::Print() << "Adding " << IntVect(i+ioff+imap[itracker(i+ioff,j+joff,k,n_of_nbor+1)],
-                                                              j+joff+jmap[itracker(i+ioff,j+joff,k,n_of_nbor+1)])
-                                      << " to the nbor list of " << IntVect(i+ioff,j+joff) << std::endl;
-               }
-          }
-       }
+                   int n_of_nbor = itracker(i+ioff,j+joff,k,0);
+                   bool found = false;
+                   for (int ipair_nbor = 1; ipair_nbor <= n_of_nbor; ipair_nbor++)
+                   {
+                       if (imap[itracker(i+ioff,j+joff,k,ipair_nbor)] + ioff == 0 && 
+                           jmap[itracker(i+ioff,j+joff,k,ipair_nbor)] + joff == 0)
+                           found = true;
+                   }
+
+                   if  (!found)  
+                   {
+                       // My neigbor didn't know about me so add me to my nbor's list of neighbors
+                       itracker(i+ioff,j+joff,k,0) += 1;
+                       itracker(i+ioff,j+joff,k,n_of_nbor+1) = inv_map[itracker(i,j,k,ipair)];
+                       if (debug_verbose > 1)
+                           amrex::Print() << "Cell   " << IntVect(i,j) << " had nbor " << IntVect(i+ioff,j+joff) 
+                                          << " in its nbor list by taking inverse of " << itracker(i,j,k,ipair) 
+                                          << " which gave " << inv_map[itracker(i,j,k,ipair)] << std::endl;
+                       if (debug_verbose > 1)
+                           amrex::Print() << "Adding " << IntVect(i+ioff+imap[itracker(i+ioff,j+joff,k,n_of_nbor+1)],
+                                                                  j+joff+jmap[itracker(i+ioff,j+joff,k,n_of_nbor+1)])
+                                          << " to the nbor list of " << IntVect(i+ioff,j+joff) << std::endl;
+                   } // found
+               } // bxg1 contains
+          } // ipair
+       } // itracker
     });
 
-
     // Here we address (2), i.e. we want the neighbor of my neighbor to be my neighbor
-    amrex::ParallelFor(bx, 
+    amrex::ParallelFor(bxg1, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
        // Test on whether this cell has any neighbors and not already all three neighbors
@@ -275,11 +283,14 @@ redistribution::make_itracker (
                int i_n = i + imap[itracker(i,j,k,ipair)];
                int j_n = j + jmap[itracker(i,j,k,ipair)];
 
-               // Loop over the neighbors of my neighbors
-               // If any of these aren't already my neighbor, make them my neighbor
-               int ipair_n = 1;
-               while (ipair_n <= itracker(i_n,j_n,k,0))
+               if (bxg1.contains(IntVect(i_n,j_n)))
                {
+
+                 // Loop over the neighbors of my neighbors
+                 // If any of these aren't already my neighbor, make them my neighbor
+                 int ipair_n = 1;
+                 while (ipair_n <= itracker(i_n,j_n,k,0))
+                 {
                     // (i_nn,j_nn) is in the nbhd of (i_n,j_n)
                     int i_nn = i_n + imap[itracker(i_n,j_n,k,ipair_n)];
                     int j_nn = j_n + jmap[itracker(i_n,j_n,k,ipair_n)];
@@ -327,9 +338,10 @@ redistribution::make_itracker (
                                 IntVect(i+imap[itracker(i,j,k,n_nbor)],j+jmap[itracker(i,j,k,n_nbor)]) << std::endl;
                     }
                     ipair_n++; 
-               }
-          }
-       }
+                 } // while
+               } // bxg1 contains
+          } // ipair
+       } // itracker
     });
                
 }
