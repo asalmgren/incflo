@@ -47,7 +47,7 @@ redistribution::make_itracker (
 //  if (debug_verbose > 0)
         amrex::Print() << " IN MAKE_ITRACKER DOING BOX " << bx << std::endl;
 
-    Box const& bxg1 = amrex::grow(bx,1);
+    Box const& bxg4 = amrex::grow(bx,4);
 
     amrex::ParallelFor(Box(itracker), 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -55,7 +55,7 @@ redistribution::make_itracker (
         itracker(i,j,k,0) = 0;
     });
 
-    amrex::ParallelFor(bxg1, 
+    amrex::ParallelFor(bxg4, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
        if (vfrac(i,j,k) > 0.0 && vfrac(i,j,k) < 0.5)
@@ -226,7 +226,7 @@ redistribution::make_itracker (
     //   (1) not who wants to merge with it
     //   (2) not who its neighbor also wants to merge with
     // In this loop we only address (1)
-    amrex::ParallelFor(bxg1, 
+    amrex::ParallelFor(bxg4, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
        // Here we don't test on vfrac because some of the neighbors are full cells
@@ -239,7 +239,7 @@ redistribution::make_itracker (
                int ioff = imap[itracker(i,j,k,ipair)];
                int joff = jmap[itracker(i,j,k,ipair)];
 
-               if (bxg1.contains(IntVect(i+ioff,j+joff)))
+               if (bxg4.contains(IntVect(i+ioff,j+joff)))
                {
                    int n_of_nbor = itracker(i+ioff,j+joff,k,0);
                    bool found = false;
@@ -264,13 +264,13 @@ redistribution::make_itracker (
                                                                   j+joff+jmap[itracker(i+ioff,j+joff,k,n_of_nbor+1)])
                                           << " to the nbor list of " << IntVect(i+ioff,j+joff) << std::endl;
                    } // found
-               } // bxg1 contains
+               } // bxg4 contains
           } // ipair
        } // itracker
     });
 
     // Here we address (2), i.e. we want the neighbor of my neighbor to be my neighbor
-    amrex::ParallelFor(bxg1, 
+    amrex::ParallelFor(bxg4, 
     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
     {
        // Test on whether this cell has any neighbors and not already all three neighbors
@@ -283,7 +283,7 @@ redistribution::make_itracker (
                int i_n = i + imap[itracker(i,j,k,ipair)];
                int j_n = j + jmap[itracker(i,j,k,ipair)];
 
-               if (bxg1.contains(IntVect(i_n,j_n)))
+               if (bxg4.contains(IntVect(i_n,j_n)))
                {
 
                  // Loop over the neighbors of my neighbors
@@ -339,7 +339,7 @@ redistribution::make_itracker (
                     }
                     ipair_n++; 
                  } // while
-               } // bxg1 contains
+               } // bxg4 contains
           } // ipair
        } // itracker
     });
