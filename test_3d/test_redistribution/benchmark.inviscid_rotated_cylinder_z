@@ -18,9 +18,9 @@ incflo.cfl              =   0.45        # CFL factor
 incflo.advection_type   = "Godunov"
 incflo.cfl              =   0.9         # CFL factor
 
-incflo.redistribution_type   = "StateRedist"
 incflo.redistribution_type   = "NoRedist"
 incflo.redistribution_type   = "FluxRedist"
+incflo.redistribution_type   = "StateRedist"
 
 incflo.do_initial_proj    = 0
 incflo.initial_iterations = 0
@@ -38,11 +38,11 @@ incflo.gravity          =   0.  0.  0.  # Gravitational force (3D)
 incflo.ro_0             =   1.          # Reference density 
 
 incflo.fluid_model      =   "newtonian" # Fluid model (rheology)
-incflo.mu               =   0.001       # Dynamic viscosity coefficient
+incflo.mu               =   0.0         # Dynamic viscosity coefficient
 
 incflo.ntrac            =   1           # Number of tracers
 incflo.advect_tracer    =   true        # Should we update them?
-incflo.mu_s             =   0.001       # Scalar diffusion coefficient
+incflo.mu_s             =   0.0         # Scalar diffusion coefficient
 
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #        ADAPTIVE MESH REFINEMENT       #
@@ -60,14 +60,14 @@ geometry.prob_hi        =   1.0   1.0   1.0 # Hi corner coordinates
 geometry.is_periodic    =   0     0     0   # Periodicity x y z (0/1)
 
 # Boundary conditions
-xlo.type                =   "nsw"
+xlo.type                =   "sw"
 xlo.velocity            =   0.  0.  0.
-xhi.type                =   "nsw"
+xhi.type                =   "sw"
 xhi.velocity            =   0.  0.  0.
 
-ylo.type                =   "nsw"
+ylo.type                =   "sw"
 ylo.velocity            =   0.  0.  0.
-yhi.type                =   "nsw"
+yhi.type                =   "sw"
 yhi.velocity            =   0.  0.  0.
 
 # Inflow on low side
@@ -112,8 +112,6 @@ incflo.ic_p             =  0.0          #
 incflo.verbose            =   1         # incflo itself
 mac_proj.verbose          =   1         # MAC Projector
 nodal_proj.verbose        =   1         # Nodal Projector
-scalar_diffusion.verbose  =   1         # Scalar Diffusion 
-tensor_diffusion.verbose  =   1         # Tensor Diffusion
 
 amr.plt_vfrac           =   1
 amr.plt_ccse_regtest    =   1
