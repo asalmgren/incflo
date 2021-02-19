@@ -36,6 +36,7 @@ incflo.mu               =  0.001        # Dynamic viscosity coefficient
 
 incflo.constant_density =  false        #
 incflo.advect_tracer    =  true         #
+incflo.mu_s             =  0.001
 
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #        ADAPTIVE MESH REFINEMENT       #

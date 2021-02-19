@@ -33,8 +33,9 @@ incflo.ro_0             =  1.           # Reference density
 incflo.fluid_model      =  "newtonian"  # Fluid model (rheology)
 incflo.mu               =  0.001        # Dynamic viscosity coefficient
 
-incflo.constant_density =  true        #
-incflo.advect_tracer    =  false         #
+incflo.constant_density =  false        #
+incflo.advect_tracer    =  true         #
+incflo.mu_s             =  0.001        # Dynamic viscosity coefficient
 
 #¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨¨#
 #        ADAPTIVE MESH REFINEMENT       #
